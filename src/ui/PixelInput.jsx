@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { PixelText } from "./pixel";
-import { fontFor } from "./fonts";
+import { fontFor, measure } from "./fonts";
 import "./pixel-input.css";
 
 /**
@@ -51,6 +51,7 @@ export const PixelInput = forwardRef(function PixelInput(
   const face = fontFor(size, weight);
   const innerRef = useRef(null);
   const [offset, setOffset] = useState(0);
+  const [box, setBox] = useState(0);
 
   const setRefs = useCallback(
     (el) => {
@@ -63,7 +64,9 @@ export const PixelInput = forwardRef(function PixelInput(
 
   const sync = useCallback(() => {
     const el = innerRef.current;
-    if (el) setOffset(Math.round(el.scrollLeft));
+    if (!el) return;
+    setOffset(Math.round(el.scrollLeft));
+    setBox(el.clientWidth);
   }, []);
 
   useLayoutEffect(sync, [value, sync]);
@@ -71,6 +74,27 @@ export const PixelInput = forwardRef(function PixelInput(
   const text = String(value ?? "");
   const shown = upper ? text.toUpperCase() : text;
   const empty = text.length === 0;
+
+  /**
+   * Where the painted text starts.
+   *
+   * `align` was reaching the real input and nothing else, so a centred field
+   * put the caret in the middle of the box while the glyphs stayed pinned to
+   * the left. The painted layer has to be placed the same way the input lays
+   * its own text out, which means measuring the string and doing the
+   * arithmetic here — it is absolutely positioned, so no amount of
+   * text-align on an ancestor reaches it.
+   *
+   * Never past the left edge: once the value outgrows the box the field
+   * scrolls instead, and `offset` follows it.
+   */
+  const inkLeft = (() => {
+    const painted = measure(empty ? placeholder : shown, size, weight);
+    const slack = Math.max(0, box - painted);
+    if (align === "center") return Math.round(slack / 2) - offset;
+    if (align === "right") return Math.round(slack) - offset;
+    return -offset;
+  })();
 
   return (
     <span
@@ -87,7 +111,7 @@ export const PixelInput = forwardRef(function PixelInput(
           size={size}
           weight={weight}
           className={`pxi__ink${empty ? " pxi__ink--placeholder" : ""}`}
-          style={{ left: -offset }}
+          style={{ left: inkLeft }}
         >
           {empty ? placeholder : shown}
         </PixelText>
