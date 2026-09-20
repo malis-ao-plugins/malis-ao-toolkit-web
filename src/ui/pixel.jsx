@@ -82,33 +82,35 @@ function maskFor(text, size, weight, scale) {
  * happens to re-render it, which reads as text resizing when you click near
  * it. And choosing a different face changes all of them outright.
  *
- * One subscription per mounted PixelText, one listener between them.
+ * The listeners are wired once and never taken down. Tying them to the
+ * first subscriber looked tidier and was wrong: whichever PixelText mounted
+ * first owned them, and the moment it unmounted — which happens constantly,
+ * every time a list redraws — they were removed for everyone still on
+ * screen. Changing the face then did nothing until the page was reloaded.
  */
-let tick = 0;
 const subscribers = new Set();
+let wired = false;
 
 function refreshAll() {
   cache.clear();
-  tick += 1;
   for (const fn of subscribers) fn();
+}
+
+function wire() {
+  if (wired) return;
+  wired = true;
+  onDeviceScaleChange(refreshAll);
+  onFamilyChange(refreshAll);
 }
 
 function useFontRefresh() {
   const [, force] = useState(0);
 
   useEffect(() => {
-    const bump = () => force(tick);
+    wire();
+    const bump = () => force((n) => n + 1);
     subscribers.add(bump);
-
-    const stop =
-      subscribers.size === 1
-        ? [onDeviceScaleChange(refreshAll), onFamilyChange(refreshAll)]
-        : null;
-
-    return () => {
-      subscribers.delete(bump);
-      if (stop) for (const off of stop) off?.();
-    };
+    return () => subscribers.delete(bump);
   }, []);
 }
 
