@@ -146,7 +146,11 @@ export function TooltipBody({ data }) {
                             .replace(" - ", "-")
                             .replace(/^[+-]/, "");
                           if (!/^\d/.test(normalized)) return undefined;
-                          return l.negative ? "#f44336" : "#4caf50";
+                          // The kit's own semantics, so these follow the
+                          // theme like everything else.
+                          return l.negative
+                            ? "var(--c-bad)"
+                            : "var(--c-good)";
                         })()}
                       />
                     </div>

@@ -32,6 +32,11 @@ export const GROUPS = [
     hint: "Everything that is read rather than pressed",
   },
   {
+    id: "items",
+    title: "Items",
+    hint: "What a modifier gains or costs you",
+  },
+  {
     id: "surface",
     title: "Surfaces",
     hint: "The window, the panels on it, and the lines between",
@@ -70,6 +75,22 @@ export const THEME = [
     label: "Secondary",
     type: "color",
     value: "#7c8b9c",
+  },
+  {
+    key: "good",
+    group: "items",
+    token: "--c-good",
+    label: "Gain",
+    type: "color",
+    value: "#8ce99a",
+  },
+  {
+    key: "bad",
+    group: "items",
+    token: "--c-bad",
+    label: "Loss",
+    type: "color",
+    value: "#ff6b6b",
   },
   {
     key: "window",

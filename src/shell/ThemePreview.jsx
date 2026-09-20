@@ -11,6 +11,7 @@ import {
   Toggle,
 } from "../ui";
 import Tabs from "../components/Tabs";
+import { ItemIcon } from "../items";
 
 /**
  * A live example of what a group of colours actually drives.
@@ -72,6 +73,48 @@ function TextPreview() {
   );
 }
 
+/**
+ * An item row and two lines of its tooltip.
+ *
+ * Assembled from the real classes rather than from ItemRow itself: a real
+ * row carries a hover that fetches the item's stats, and a preview has no
+ * business opening sockets to demonstrate a colour.
+ */
+function ItemsPreview() {
+  return (
+    <Stack gap={2}>
+      <div className="irow">
+        <div className="irow__main">
+          <ItemIcon className="irow__icon" />
+          <div className="irow__id">
+            <PixelText fit className="irow__name">
+              Pristine Kevlar Vest
+            </PixelText>
+            <Row gap={1} className="iids">
+              <PixelText className="iids__tag">ID 100201</PixelText>
+              <PixelText className="iids__tag">QL 1-300</PixelText>
+            </Row>
+          </div>
+          <div className="irow__actions">
+            <PixelText className="irow__ql">200</PixelText>
+          </div>
+        </div>
+      </div>
+
+      <Stack gap={1}>
+        <div className="tt-row">
+          <PixelText className="tt-label">Agility</PixelText>
+          <PixelText style={{ color: "var(--c-good)" }}>+12</PixelText>
+        </div>
+        <div className="tt-row">
+          <PixelText className="tt-label">Damage</PixelText>
+          <PixelText style={{ color: "var(--c-bad)" }}>10-20</PixelText>
+        </div>
+      </Stack>
+    </Stack>
+  );
+}
+
 function SurfacePreview() {
   return (
     <div className="set__surface">
@@ -94,6 +137,7 @@ const PREVIEWS = {
   accent: AccentPreview,
   data: DataPreview,
   text: TextPreview,
+  items: ItemsPreview,
   surface: SurfacePreview,
 };
 

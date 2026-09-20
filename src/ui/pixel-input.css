@@ -81,7 +81,7 @@
 /* Translucent, so the highlight washes over the painted pixels instead of
    covering them. */
 .pxi__field::selection {
-  background: rgba(86, 212, 232, 0.45);
+  background: color-mix(in srgb, var(--c-info) 45%, transparent);
   color: transparent;
 }
 
