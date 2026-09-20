@@ -104,11 +104,20 @@ export const TypeAhead = forwardRef(function TypeAhead(
         createPortal(
           <div
             className="ta__list ph"
+            /* As wide as the field at least, and as wide as its longest
+               option at most. Taking the field's width outright cut every
+               label in a tag field, where the input is only the sliver left
+               over beside the tags. Capped at the window edge so a long
+               option cannot push the list off screen. */
             style={{
               position: "fixed",
               top: Math.round(rect.bottom + 2),
               left: Math.round(rect.left),
-              width: Math.round(rect.width),
+              minWidth: Math.round(rect.width),
+              maxWidth: Math.max(
+                Math.round(rect.width),
+                Math.round(window.innerWidth - rect.left - 8),
+              ),
             }}
           >
             {options.length === 0 ? (

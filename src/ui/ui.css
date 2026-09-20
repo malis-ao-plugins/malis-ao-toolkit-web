@@ -921,6 +921,8 @@
    so it gets the kit's font even though it sits outside the app root. */
 .ta__list {
   z-index: 10000;
+  /* Sized by its longest option, between the bounds the field gives it. */
+  width: max-content;
   max-height: 220px;
   overflow-y: auto;
   background: var(--c-bg-2);
@@ -936,6 +938,7 @@
   padding: 0 var(--u2);
   cursor: pointer;
   color: var(--c-fg);
+  white-space: nowrap;
 }
 
 /* One highlight, driven by both the pointer and the arrow keys, so there is a
@@ -946,8 +949,8 @@
 }
 
 .ta__label {
-  flex: 1 1 auto;
-  overflow: hidden;
+  flex: 0 0 auto;
+  margin-right: auto;
 }
 
 .ta__hint {
