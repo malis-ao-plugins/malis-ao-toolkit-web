@@ -879,11 +879,18 @@
 
 /* ─── Collapse ─────────────────────────────────────────────────────────── */
 
-/* Height only — the content is never scaled, so glyphs stay sharp. */
+/* Height only — the content is never scaled, so glyphs stay sharp.
+
+   This used to step in four, on the reasoning that a fractional height puts
+   the text inside on a fractional offset. It does, but stepping does not
+   avoid it: the row is a fraction of the content's height at every stop, and
+   a quarter of an arbitrary height is no more a whole pixel than any other
+   point on the way. So it cost the smoothness and bought nothing, and eases
+   instead — soft only while it is actually moving. */
 .ph-collapse {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 120ms steps(4, end);
+  transition: grid-template-rows 140ms cubic-bezier(0.22, 0.85, 0.3, 1);
   min-width: 0;
 }
 

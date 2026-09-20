@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { cx } from "./cx";
 import { PixelText, pixelize } from "./pixel";
 
@@ -90,6 +91,9 @@ export function ListRow({ on = false, className, children, ...rest }) {
   );
 }
 
+/** Keep in step with the transition in ui.css. */
+const COLLAPSE_MS = 140;
+
 /**
  * Height-only reveal — content is never scaled, so glyphs stay sharp.
  *
@@ -102,11 +106,26 @@ export function ListRow({ on = false, className, children, ...rest }) {
  * being built on every visit to the tab — 184 number inputs nobody could
  * see, which is most of what made switching to that tab take a fifth of a
  * second. Every item row mounts a variant table the same way.
+ *
+ * The content does outlive `open` by one transition, though, or closing
+ * would snap shut while opening eased — there would be nothing left to
+ * collapse.
  */
 export function Collapse({ open, className, children }) {
+  const [render, setRender] = useState(open);
+
+  useEffect(() => {
+    if (open) {
+      setRender(true);
+      return undefined;
+    }
+    const timer = setTimeout(() => setRender(false), COLLAPSE_MS);
+    return () => clearTimeout(timer);
+  }, [open]);
+
   return (
     <div className={cx("ph-collapse", open && "ph-collapse--open", className)}>
-      <div className="ph-collapse__inner">{open ? children : null}</div>
+      <div className="ph-collapse__inner">{render ? children : null}</div>
     </div>
   );
 }
