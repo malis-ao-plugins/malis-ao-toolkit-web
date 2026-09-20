@@ -168,7 +168,7 @@ export default defineApp({
     { id: "tab-browse", label: "Browse", panels: ["browser"] },
     {
       id: "tab-cfg",
-      label: "Config",
+      label: "Opt",
       panels: ["types", "behaviour", "sliders", "zones"],
     },
   ],
