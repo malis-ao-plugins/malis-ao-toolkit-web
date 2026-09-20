@@ -1,6 +1,5 @@
 import { useState } from "react";
-import { Empty, List, SearchInput, Stack } from "../../ui";
-import { PixelSelect, PixelText } from "../../packages/pixel-text";
+import { Empty, List, PixelSelect, PixelText, SearchInput, Stack } from "../../ui";
 import { ItemRow } from "../../items";
 import { useInventory } from "./useInventory";
 import "./item-assistant.css";
@@ -50,14 +49,14 @@ export function InventoryPanel({ settings, set, send }) {
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search inventory…"
-        count={loading ? "…" : (results.length ?? null)}
+        placeholder="Search inventory..."
+        count={loading ? "..." : (results.length ?? null)}
       />
 
       {results.length === 0 ? (
         <Empty>
           {loading
-            ? "Loading…"
+            ? "Loading..."
             : total === 0
               ? "No inventory recorded"
               : "Nothing matches"}

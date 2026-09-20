@@ -5,11 +5,12 @@ const path = require("path");
 
 // Turn ClearType off for this process.
 //
-// The UI is drawn in generated pixel fonts whose glyphs are rectangles on an
-// exact pixel grid (see tools/build-pixel-font.py). Subpixel antialiasing
-// undoes that work: ClearType filters every edge across the R/G/B stripes, so
-// even a correctly aligned one-pixel stem comes out with a blue edge down one
-// side and a red edge down the other.
+// The UI's text is drawn from bitmap atlases (see src/pixelfont), so it is
+// already immune to this. The handful of characters that do go through the
+// font stack — a panel's caret, the number field's nudge buttons — are not.
+// ClearType filters every edge across the R/G/B stripes, so even a correctly
+// aligned one-pixel stem comes out with a blue edge down one side and a red
+// edge down the other.
 //
 // CSS cannot switch it off — `-webkit-font-smoothing` is macOS-only in Blink
 // and is ignored on Windows. This switch is the supported lever. With

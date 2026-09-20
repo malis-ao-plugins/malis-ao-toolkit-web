@@ -1,4 +1,4 @@
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "../ui";
 import "./tabs.css";
 
 /**

@@ -115,7 +115,7 @@ const [drag, setDrag] = useState(null);
 Build for **320px wide** and treat anything more as a bonus — the windows are
 meant to sit over the game. See [`src/ui/README.md`](../ui/README.md) for the
 kit, the tokens and the pixel-grid rules, and
-[`src/packages/pixel-text/README.md`](../packages/pixel-text/README.md) for
+[`src/pixelfont/README.md`](../pixelfont/README.md) for
 why text is drawn from an atlas rather than by the font.
 
 The window sets `container-type: inline-size`, so `@container` queries respond

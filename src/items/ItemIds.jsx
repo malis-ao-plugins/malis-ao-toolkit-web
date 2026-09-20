@@ -1,5 +1,4 @@
-import { Button, Row } from "../ui";
-import { PixelText } from "../packages/pixel-text";
+import { Button, PixelText, Row } from "../ui";
 
 /**
  * The identity line under an item's name: which template you are looking at,
@@ -19,7 +18,7 @@ export function ItemIds({ members, active, expanded, onToggle }) {
         {`ID ${(active ?? members[0]).id}`}
       </PixelText>
       <PixelText className="iids__tag">
-        {low === high ? `QL ${low}` : `QL ${low}–${high}`}
+        {low === high ? `QL ${low}` : `QL ${low}-${high}`}
       </PixelText>
 
       {onToggle && (

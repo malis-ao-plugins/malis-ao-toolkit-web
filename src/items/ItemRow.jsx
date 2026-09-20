@@ -1,6 +1,5 @@
 import { memo, useState } from "react";
-import { Button, Collapse, NumberInput } from "../ui";
-import { PixelText } from "../packages/pixel-text";
+import { Button, Collapse, NumberInput, PixelText } from "../ui";
 import { ItemIcon } from "./ItemIcon";
 import { ItemIds } from "./ItemIds";
 import { VariantTable } from "./VariantTable";

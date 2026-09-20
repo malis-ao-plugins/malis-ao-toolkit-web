@@ -13,68 +13,75 @@ component styles. There is nothing else to wire up.
 
 ---
 
-## The fonts are generated
+## The text is drawn, not typeset
 
-`tools/build-pixel-font.py` reads the monochrome bitmap strikes out of
-TerminusTTF and re-emits each one as a font whose glyphs are literal
-rectangles, with `unitsPerEm` set to an exact multiple of that strike's pixel
-size. Run it after changing which sizes the kit offers:
+Every visible string goes through `PixelText`, which paints glyphs from an
+atlas in [`src/pixelfont`](../pixelfont/README.md) — a junction to the shared
+aowebui folder. Those atlases are rasterised out of Windows' own font
+machinery at a fixed pixel height, so they are the shapes the game itself
+draws.
 
-```
-python tools/build-pixel-font.py
-```
+**Do not edit anything under `src/pixelfont`.** It is shared with other
+projects and is not tracked by this repository. If an atlas is missing a
+character or a size, ask for it — give the face, the style, and the cell
+height in pixels.
 
-This is not a flourish. Shipping TerminusTTF as-is does not work in a browser
-on Windows:
+This is not a flourish. A browser will not give you guaranteed bilevel text:
 
-- `-webkit-font-smoothing: none` is a **macOS-only** property in Blink. On
-  Windows it is parsed and ignored, so it cannot turn ClearType off.
-- Chromium rasterises through DirectWrite, which ignores monochrome embedded
-  bitmaps — so it draws Terminus' *outlines* instead.
-- Those outlines are not grid-aligned: `unitsPerEm` is 1000 against strikes at
-  12/14/16/…px, and the coordinate GCD is 1. At every size except 20px a glyph
-  edge lands mid-pixel, and ClearType smears that edge across the RGB
-  subpixels. That is the blue fringing.
+- Every `@font-face` is run through OpenType Sanitizer, which strips the
+  embedded bitmap strikes (`EBDT`/`EBLC`) a pixel font carries. A font with
+  hand-made pixel bitmaps loses them on the way into the browser.
+- Chromium then antialiases the outlines from the *system* font-smoothing
+  setting, which nothing in CSS or in the font can override.
 
-Rebuilt as rectangles on an exact grid there is nothing left to antialias:
-every device pixel is wholly inside a rectangle or wholly outside it, so
-greyscale coverage is 0 or 1 and the glyph is hard-edged.
+So the glyphs are rasterised ahead of time and blitted. The kit paints them
+through a **CSS mask** over `currentColor` rather than into a canvas, which
+is the one thing it does differently from aowebui's own `<pixel-text>`
+element: about forty rules in this file colour text on hover, on active, on
+selection, and a canvas cannot see any of them. The composing and the
+device-pixel snapping are still pixelfont's.
 
-**Geometry is only half of it — the other half is not ours to control.**
+The real string stays in the DOM underneath, transparent, so selecting drags
+over real text and the clipboard gets text.
 
-Chromium on Windows antialiases text from the *system* font-smoothing setting.
-Nothing in CSS or in the font can override it. All three of the obvious levers
-were tried and measured on this machine:
+The app also ships `--disable-lcd-text` in `electron.js`. It no longer
+matters for the drawn text, only for the handful of characters that still go
+through the font stack.
 
-| Lever | Result |
-| --- | --- |
-| `-webkit-font-smoothing: none` | **No effect.** macOS-only in Blink. Rendering `auto` / `none` / `antialiased` came out byte-identical. |
-| `--disable-lcd-text` (Chrome/Electron switch) | Removes the *colour* only. A one-pixel stem still renders `93/228/93` across three pixels — greyscale, but filtered. |
-| `gasp` table without `DOGRAY` | **No effect.** Skia reads `gasp` but never lets it disable antialiasing. |
-| Windows font smoothing **off** | **Binary.** 0 partial pixels at 12, 16 and 24px. |
+### The atlases, and the ones that are missing
 
-So the app ships with `--disable-lcd-text` in `electron.js` (it costs nothing
-and kills the colour fringing), and true one-bit output additionally requires
-**Windows font smoothing to be off** — Settings → Performance Options → untick
-"Smooth edges of screen fonts", or `HKCU\Control Panel\Desktop\FontSmoothing`.
-That is a machine-wide choice affecting every application, so it is the user's
-to make, not the app's.
+| Step | Atlas | Notes |
+| --- | --- | --- |
+| `--fs-12` | `verdana-13` | the base size |
+| bold | `verdana-bold-13` | |
+| `--fs-16` | `verdana-16` | |
+| `--fs-24` | `verdana-bold-20` | nearest that exists, and bold |
 
-With smoothing off there is a second payoff: aliased rendering snaps glyphs to
-whole pixels, so text centred in an odd-width box stops landing on a half pixel
-and rule 3 below stops being load-bearing.
+`fontFor(size, weight)` resolves a request to the nearest atlas, matching
+weight first so a bold request stays bold. Exact coverage of the kit's own
+scale would want **verdana-bold-16** and a **verdana-24** pair.
+
+The atlases are latin1 (U+0020–U+00FF). A character outside that draws
+nothing at all and logs a warning once — which is why the kit uses `...`
+rather than `…`, `-` rather than `–`, and a CSS border triangle rather than
+`▼`. A wider `--chars` export would let those come back.
 
 ## The three rules
 
 Break any of these and the text goes blurry. That is the whole reason the kit
 exists.
 
-**1. A size always travels with its family.** Each generated face is correct at
-exactly one size (and whole multiples of it). There are three — **12, 16, 24** —
-and setting `--fs-16` without `--ff-16` gets you the 12px face stretched to
-16px, which is precisely the problem this kit was built to avoid. Use the
-`.t12` / `.t16` / `.t24` helpers, or set both custom properties together. Never
-set a size in `rem`, `em` or `%`, and never invent a step.
+**1. A size always travels with its family.** An atlas is exact only at the
+pixel height it was exported at, so the steps are the atlases that exist —
+**13, 16, 20 bold**. `PixelText` resolves whatever you ask for to the nearest
+one. For DOM text, use the `.t12` / `.t16` / `.t24` helpers, or set `--fs-*`
+and `--ff-*` together. Never set a size in `rem`, `em` or `%`.
+
+**1b. Measure, never count characters.** The faces are proportional. A
+string's width is the sum of its advances, so `measure(text, size)` and
+`fitToWidth(text, px, size)` from `ui/fonts.js` are how anything gets a fixed
+box or an ellipsis. The kit used to be monospaced and counted cells; nothing
+should any more.
 
 **2. Every length is a whole multiple of `--u` (4px).** Use `--u` … `--u8`, or
 the `ph-gap-*` classes. No `padding: 0.75em`, no `calc()` that can land on a
@@ -99,8 +106,7 @@ All tokens live on `:root` in `ui.css`. Use the variable, never the literal.
 | Group | Tokens |
 | --- | --- |
 | Grid | `--u` `--u2` `--u3` `--u4` `--u5` `--u6` `--u8` |
-| Type | `--ff-12` `--ff-16` `--ff-24` with `--fs-12`/`--lh-12`, `--fs-16`/`--lh-16`, `--fs-24`/`--lh-24` |
-| Cells | `--cell-12` (6px) `--cell-16` (8px) `--cell-24` (12px) — the glyph width at each step |
+| Type | `--ff-12` `--ff-16` `--ff-24` with `--fs-12`/`--lh-12`, `--fs-16`/`--lh-16`, `--fs-24`/`--lh-24`. These style DOM text only — drawn text takes its face from the atlas. |
 | Controls | `--ctl-h` `--ctl-h-sm` `--ctl-h-lg` `--icon` `--icon-sm` |
 | Surfaces | `--c-bg-0` … `--c-bg-4`, `--c-window`, `--c-panel`, `--c-line`, `--c-line-hi` |
 | Text | `--c-fg` `--c-fg-hi` `--c-fg-dim` `--c-fg-mute` |
@@ -158,14 +164,18 @@ interaction ends. Push local state from `onChange` and send to the socket from
 ## Working at 320px
 
 - A `Panel` body at default density costs 8px of padding each side, leaving
-  **302px** of usable width — **50 characters** of Px12, or 37 of Px16.
+  **302px** of usable width. How many characters that is depends on the
+  characters: the face is proportional, so measure with `measure()` rather
+  than assuming.
 - AO icon art is 48x48, which is what `--icon` is. Only whole divisors of it
   resample cleanly, so `--icon-sm` is 24px and `ItemIcon` offers 48/24/16.
   Six small `Slot`s plus 4px gaps come to 164px.
 - `Toggle` and `Button` are 20px tall; two rows of controls plus a panel head
   is 60px.
-- Size boxes in `ch` where you can. With a monospaced face 1ch is exactly one
-  cell, so `width: 4ch` is 24px at Px12 and never lands mid-glyph.
+- `ch` is still a fair unit for a column of digits — it is the advance of
+  "0" in the same face at the same size — but it is only a proxy for
+  anything else. Note that a `width` in a stylesheet cannot size a
+  `PixelText` at all: it carries an inline width, so use `flex-basis`.
 - Prefer stacked `Panel`s over side-by-side columns. Below ~360px there is no
   honest two-column layout, and squeezing one in is what makes text wrap into
   a single character per line.

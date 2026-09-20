@@ -11,8 +11,7 @@
  */
 
 import { defineApp } from "./defineApp";
-import { Button, Empty, List, ListRow, Row, Stack, Stat, Toggle } from "../ui";
-import { PixelText } from "../packages/pixel-text";
+import { Button, Empty, List, ListRow, PixelText, Row, Stack, Stat, Toggle } from "../ui";
 
 /* ── Panels ────────────────────────────────────────────────────────────────
  *

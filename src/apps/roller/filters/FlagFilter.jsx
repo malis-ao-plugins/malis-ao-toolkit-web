@@ -47,7 +47,7 @@ export default function FlagFilter({ flags, value, onChange, placeholder }) {
           setQuery("");
           fieldRef.current?.focus();
         }}
-        placeholder={value.length === 0 ? (placeholder ?? "Add…") : ""}
+        placeholder={value.length === 0 ? (placeholder ?? "Add...") : ""}
         onKeyDownExtra={(e) => {
           if (e.key === "Backspace" && query === "" && value.length) {
             remove(value[value.length - 1]);

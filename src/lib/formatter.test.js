@@ -395,7 +395,9 @@ describe("formatStats", () => {
     );
     const value = (label) => stats.find((s) => s.label === label)?.value;
 
-    expect(value("Damage")).toBe("10–20(5)");
+    // A hyphen, not an en dash: the atlases are latin1 and an en dash would
+    // draw nothing at all.
+    expect(value("Damage")).toBe("10-20(5)");
     expect(value("Attack")).toBe("1.50s");
     expect(value("Range")).toBe("20m");
   });

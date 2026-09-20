@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button, Row, Slot } from "../../ui";
-import { PixelText } from "../../packages/pixel-text";
+import { Button, PixelText, Row, Slot } from "../../ui";
 import { useResolvedItems } from "../../hooks/useResolvedItems";
 import { getIcon } from "../../lib/db";
 import { PLAYFIELDS } from "../../lib/data";
@@ -9,10 +8,11 @@ import { compact, exact } from "./rollerData";
 const REWARD_SLOTS = 6;
 const NO_REWARDS = [];
 
-// Card width at the 320px target leaves ~254px beside the icon; at the 16px
-// step that is 31 cells, so the name truncates at 30 plus an ellipsis.
-const NAME_CH = 30;
-const ZONE_CH = 18;
+// Card width at the 320px target leaves ~254px beside the icon. The face is
+// proportional now, so these are widths rather than a count of cells —
+// PixelText measures the string and spends the tail on an ellipsis.
+const NAME_PX = 248;
+const ZONE_PX = 112;
 
 const playfieldName = (id) =>
   PLAYFIELDS.find((p) => p.id === Number(id))?.name || `PF ${id}`;
@@ -34,7 +34,7 @@ const iconFor = (item) => {
  *
  * Text goes through PixelText rather than the font, because Chromium on
  * Windows antialiases every glyph it rasterises and offers no way to stop it.
- * See src/packages/pixel-text/README.md.
+ * See src/pixelfont/README.md.
  */
 export function MissionCard({ mission, onAccept, onPing, noteBind }) {
   const rewards = useResolvedItems(mission.rewards ?? NO_REWARDS);
@@ -61,7 +61,7 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         <div className="rl-mission__id">
           <PixelText
             size={16}
-            maxCh={NAME_CH}
+            maxPx={NAME_PX}
             className="rl-mission__name"
             title={mission.name}
           >
@@ -69,12 +69,12 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
           </PixelText>
 
           <Row gap={2} className="rl-mission__meta">
-            <PixelText maxCh={ZONE_CH} className="rl-mission__zone" title={zone}>
+            <PixelText maxPx={ZONE_PX} className="rl-mission__zone" title={zone}>
               {zone}
             </PixelText>
             <PixelText
               className="ph-num"
-              title={`${exact(mission.credits)} – ${exact(mission.creditsMax)} credits`}
+              title={`${exact(mission.credits)} - ${exact(mission.creditsMax)} credits`}
             >
               {`${compact(mission.creditsMax)}cr`}
             </PixelText>

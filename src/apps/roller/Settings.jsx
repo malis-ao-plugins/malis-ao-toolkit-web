@@ -100,7 +100,7 @@ function ZoneRow({ id, zone, patchZone }) {
           title="Bounds"
           onClick={() => setOpen((v) => !v)}
         >
-          {bounded ? "▣" : "□"}
+          {bounded ? "[x]" : "[ ]"}
         </Button>
       </ListRow>
 
@@ -190,7 +190,7 @@ export function ZonesPanel({ settings, set, state }) {
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Filter zones…"
+        placeholder="Filter zones..."
         count={`${activeCount}/${entries.length}`}
       />
       <Row gap={1}>

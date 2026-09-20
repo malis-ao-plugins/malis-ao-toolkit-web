@@ -86,8 +86,8 @@ export function Browser({ settings, set }) {
           onQueryChange(v);
           if (open) setOpen(false);
         }}
-        placeholder={"Find item…"}
-        count={loading ? "…" : results.length || null}
+        placeholder={"Find item..."}
+        count={loading ? "..." : results.length || null}
         right={
           <Button
             variant={open ? "primary" : "default"}
@@ -109,14 +109,14 @@ export function Browser({ settings, set }) {
           </Panel>
           <Panel title="Requirements">
             <StatRangeFilter
-              placeholder="Add requirement…"
+              placeholder="Add requirement..."
               value={reqFilter}
               onChange={(v) => setFilter("reqFilter", v)}
             />
           </Panel>
           <Panel title="Stats">
             <StatRangeFilter
-              placeholder="Add stat…"
+              placeholder="Add stat..."
               value={statFilter}
               onChange={(v) => setFilter("statFilter", v)}
             />
@@ -127,13 +127,13 @@ export function Browser({ settings, set }) {
                 flags={CanFlags}
                 value={canFilter}
                 onChange={(v) => setFilter("canFilter", v)}
-                placeholder="Add can…"
+                placeholder="Add can..."
               />
               <FlagFilter
                 flags={ItemFlags}
                 value={itemFilter}
                 onChange={(v) => setFilter("itemFilter", v)}
-                placeholder="Add flag…"
+                placeholder="Add flag..."
               />
             </Stack>
           </Panel>
@@ -143,7 +143,7 @@ export function Browser({ settings, set }) {
       {results.length === 0 ? (
         <Empty>
           {loading
-            ? "Searching…"
+            ? "Searching..."
             : error
               ? "Item database not answering"
               : query

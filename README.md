@@ -66,7 +66,7 @@ src/index.js          mounts App and the stylesheets
     item-assistant/   Item Assistant   (plugin on :7068)
   items/              shared item row, tooltip and their data hooks
   ui/                 PHOSPHOR: the UI kit — see ui/README.md
-  packages/pixel-text bitmap text the browser cannot antialias
+  pixelfont/          SHARED, junctioned in — see "The font" below
   lib/                item database client, cache, formatter, game data
 ```
 
@@ -114,7 +114,15 @@ or the other.
 it rasterises and offers no way to stop it, so text goes through `PixelText`,
 which paints a mask built from a bitmap atlas. A raw string in JSX renders as
 ordinary DOM text and will look soft next to everything else. See
-[`packages/pixel-text/README.md`](src/packages/pixel-text/README.md).
+[`src/ui/README.md`](src/ui/README.md).
+
+**The atlases are latin1.** A character outside U+0020–U+00FF draws nothing
+at all. That is why the UI writes `...` rather than an ellipsis character and
+`-` rather than an en dash, and why the select's caret is a CSS triangle.
+
+**Measure, do not count characters.** The face is proportional. A string's
+width is the sum of its advances, so use `measure()` and `fitToWidth()` from
+`src/ui/fonts.js` rather than assuming a character count.
 
 **Whole pixels, everywhere.** A window at `x = 10.5` puts every glyph inside
 it on a half pixel. Positions are rounded once, at the point they are
@@ -146,21 +154,33 @@ fetched once per row.
 **A PixelText cannot be sized by `width`.** It carries an inline width from
 the mask it built, and an inline style beats a stylesheet rule, so
 `width: 10ch` in a class is ignored and `text-align` has no text to act on.
-Use `flex-basis` for the box and `mask-position` for the alignment — see
-[`packages/pixel-text/README.md`](src/packages/pixel-text/README.md).
+Use `flex-basis` for the box and `mask-position` for the alignment.
 
 ---
 
-## Tooling notes
+## The font
 
-`tools/` holds the font pipeline — `build-pixel-font.py` reads the monochrome
-bitmap strikes out of TerminusTTF and re-emits each as a font whose glyphs are
-literal rectangles; `build-pixel-atlas.py` renders the sheets in
-`packages/pixel-text/atlas/`. Neither runs as part of a build; the generated
-files are committed.
+`src/pixelfont` is **not part of this repository**. It is a directory
+junction to a folder shared with other projects, and it is gitignored. A
+fresh clone has to create it before `npm start` will compile:
+
+```powershell
+New-Item -ItemType Junction -Path "src/pixelfont" -Target "C:/Users/abdul/aowebui/pixelfont"
+```
+
+Anything changed in there changes for every project that links it, so don't.
+If an atlas is missing a character or a size, ask for it — give the face, the
+style, and the cell height in pixels, which is not a point size. The
+workbench that produces the atlases, and the research behind how the game
+renders text, live in `aowebui`.
+
+Wanted, and not yet exported: **verdana-bold-16** and a **verdana-24** pair,
+which would cover the kit's scale exactly; and a wider `--chars` set than
+latin1, which would bring back the ellipsis, the en dash and the caret
+triangles.
+
+## Tooling notes
 
 `tools/mock-backends.js` needs `ws`, which is currently only present as a
 transitive dependency. If `npm run mock` ever fails to resolve it, install it
 as a dev dependency.
-
-Terminus Font is © Dimitar Zhekov, SIL Open Font License 1.1.

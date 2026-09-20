@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { pixelize } from "../packages/pixel-text";
+import { pixelize } from "./pixel";
 
 /**
  * Mutually exclusive choice, sized to fill its container.

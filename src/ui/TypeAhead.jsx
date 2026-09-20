@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { PixelInput, PixelText } from "../packages/pixel-text";
+import { PixelInput } from "./PixelInput";
+import { PixelText } from "./pixel";
 import { cx } from "./cx";
 
 /**
@@ -23,7 +24,7 @@ export const TypeAhead = forwardRef(function TypeAhead(
     onPick,
     onCancel,
     onKeyDownExtra,
-    placeholder = "Search…",
+    placeholder = "Search...",
     className,
     emptyHint,
   },

@@ -35,7 +35,7 @@ export const BEHAVIOURS = [
 
 /** Compact number for a 320px column. The exact value goes in a title. */
 export function compact(n) {
-  if (n == null || Number.isNaN(n)) return "—";
+  if (n == null || Number.isNaN(n)) return "-";
   const abs = Math.abs(n);
   if (abs < 10000) return n.toLocaleString();
   if (abs < 1e6) return (n / 1e3).toFixed(1).replace(/\.0$/, "") + "k";

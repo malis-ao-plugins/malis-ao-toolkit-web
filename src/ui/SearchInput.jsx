@@ -1,6 +1,6 @@
 import { cx } from "./cx";
-import { PixelInput } from "../packages/pixel-text";
-import { PixelText } from "../packages/pixel-text";
+import { PixelInput } from "./PixelInput";
+import { PixelText } from "./pixel";
 
 /**
  * Text filter with an inline clear affordance, an optional result count and
@@ -9,7 +9,7 @@ import { PixelText } from "../packages/pixel-text";
 export function SearchInput({
   value,
   onChange,
-  placeholder = "Search…",
+  placeholder = "Search...",
   count,
   right,
   className,

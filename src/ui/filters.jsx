@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { PixelInput, PixelText } from "../packages/pixel-text";
+import { PixelInput } from "./PixelInput";
+import { PixelText } from "./pixel";
 import { Button } from "./Button";
 import { Toggle } from "./Toggle";
 import { cx } from "./cx";

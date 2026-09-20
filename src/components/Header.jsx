@@ -1,5 +1,5 @@
 import "./header.css";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "../ui";
 
 /**
  * Window title bar, and the handle the window is dragged by.

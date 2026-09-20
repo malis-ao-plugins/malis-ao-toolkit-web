@@ -1,7 +1,6 @@
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Badge, NumberInput, Row } from "../ui";
-import { PixelText } from "../packages/pixel-text";
+import { Badge, NumberInput, PixelText, Row } from "../ui";
 import { TooltipBody } from "./TooltipBody";
 
 const MAX_H = 600;
@@ -95,7 +94,7 @@ export function ItemTooltip({
       <div className="itt__body">
         {loading && !data ? (
           <PixelText upper className="itt__loading">
-            Loading…
+            Loading...
           </PixelText>
         ) : data ? (
           <TooltipBody data={data} />

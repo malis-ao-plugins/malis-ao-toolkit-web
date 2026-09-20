@@ -51,7 +51,7 @@ export default function StatRangeFilter({ value, onChange, placeholder }) {
           ]);
           setQuery("");
         }}
-        placeholder={placeholder ?? "Add stat…"}
+        placeholder={placeholder ?? "Add stat..."}
       />
 
       {rows.length === 0 ? (

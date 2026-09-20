@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { PixelText, pixelize } from "../packages/pixel-text";
+import { PixelText, pixelize } from "./pixel";
 
 /** Vertical flex stack. `gap` is in grid units (1 = 4px). */
 export function Stack({ gap = 2, className, children, ...rest }) {

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "../ui";
 import "./launcher.css";
 
 const PUCK = 32;

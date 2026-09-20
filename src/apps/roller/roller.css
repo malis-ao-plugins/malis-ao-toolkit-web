@@ -38,9 +38,13 @@
   cursor: help;
 }
 
+/* The name and the zone are truncated to a measured width by the card, but
+   the card is resizable and the atlas is proportional — so this clips too,
+   and a long name can never paint over the reward row beside it. */
 .rl-mission__id {
   flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -51,6 +55,7 @@
    done by character count in the component, not by text-overflow. */
 .rl-mission__name {
   color: var(--c-fg-hi);
+  overflow: hidden;
 }
 
 .rl-mission__meta {

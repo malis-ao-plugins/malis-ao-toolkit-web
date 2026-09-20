@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cx } from "./cx";
-import { PixelInput } from "../packages/pixel-text";
+import { PixelInput } from "./PixelInput";
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 

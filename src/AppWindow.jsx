@@ -124,7 +124,7 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
           </div>
         </>
       ) : (
-        <div className="disconnected-message">Waiting for the plugin…</div>
+        <div className="disconnected-message">Waiting for the plugin...</div>
       )}
 
       <div className="resize-e" {...handlers("e")} />

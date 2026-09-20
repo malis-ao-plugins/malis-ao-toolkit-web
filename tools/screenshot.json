@@ -4,6 +4,6 @@
   "width": 1280,
   "height": 880,
   "wait": 6000,
-  "script": "screenshot-firstrun.js",
+  "script": "screenshot-setup.js",
   "afterScript": 8000
 }

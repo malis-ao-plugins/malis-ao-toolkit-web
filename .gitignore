@@ -32,3 +32,6 @@ __pycache__/
 # screenshot tool output
 /tools/*.png
 /tools/screenshot.log
+
+# shared piece, junctioned from C:\Usersbdulowebui\pixelfont
+/src/pixelfont

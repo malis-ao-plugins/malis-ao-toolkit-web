@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "./pixel";
 
 /**
  * On/off control. Deliberately a hard 8px box rather than a sliding switch —

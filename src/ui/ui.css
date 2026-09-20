@@ -4,98 +4,59 @@
    Everything here is built for one constraint first: a 320px-wide overlay
    sitting on top of the game. Wider is a bonus, never a requirement.
 
-   ── Why the type scale looks the way it does ──────────────────────────────
+   ── Where the text comes from ─────────────────────────────────────────────
 
-   The fonts are generated, not downloaded. `tools/build-pixel-font.py` reads
-   the monochrome bitmap strikes out of TerminusTTF and re-emits each one as a
-   font whose glyphs are literal rectangles, with unitsPerEm set to an exact
-   multiple of that strike's pixel size.
+   Not from the font stack. Every visible string is drawn by PixelText from
+   an atlas in src/pixelfont — a junction to the shared aowebui folder, whose
+   glyphs are rasterised out of Windows' own font machinery at a fixed pixel
+   height. They are the shapes the game itself draws.
 
-   This is not decoration. Shipping TerminusTTF directly does not work in a
-   browser on Windows:
+   That is not a flourish. A browser will not give you guaranteed bilevel
+   text: every @font-face is run through OpenType Sanitizer, which strips the
+   embedded bitmap strikes a pixel font carries, and Chromium then antialiases
+   the outlines from a system setting that CSS cannot reach. Drawing the
+   glyphs ourselves is the only reliable route, and src/pixelfont/README.md
+   sets out why in full.
 
-     * `-webkit-font-smoothing: none` is a macOS-only property in Blink. On
-       Windows it is parsed and ignored, so it cannot switch ClearType off.
-     * Chromium rasterises through DirectWrite, which ignores monochrome
-       embedded bitmaps — so it draws Terminus' outlines instead.
-     * Those outlines are not grid-aligned. unitsPerEm is 1000 against strikes
-       at 12/14/16/…px, and the coordinate GCD is 1, so at every size except
-       20px a glyph edge lands mid-pixel. ClearType then spreads that edge
-       across the RGB subpixels, which is the blue/orange fringing.
+   The kit paints those glyphs through a CSS mask rather than into a canvas,
+   so `currentColor` still drives the colour and the rules below — a button
+   brightening its label, a toggle turning amber — keep working.
 
-   Rebuilt as rectangles on an exact grid there is nothing left to antialias:
-   each device pixel is either fully inside a rectangle or fully outside, so
-   greyscale coverage comes out 0 or 1 and the glyph is hard-edged.
+   ── The scale ────────────────────────────────────────────────────────────
 
-   That handles the geometry but not the rasteriser. Chromium on Windows
-   antialiases from the system font-smoothing setting, and nothing in CSS or
-   in the font can override it — -webkit-font-smoothing is macOS-only,
-   --disable-lcd-text removes only the colour, and Skia ignores the font's
-   gasp table. Genuine one-bit output additionally needs Windows font
-   smoothing turned off, which is the user's choice to make. See
-   src/ui/README.md for the measurements.
+   An atlas is exact only at the pixel height it was exported at, so the
+   steps are the atlases that exist: 13, 16, and 20 bold. A requested size
+   resolves to the nearest one rather than scaling something to fit. Reach
+   for `--fs-*` and `--ff-*` as a pair, or the .t12/.t16/.t24 helpers.
 
-   The catch, and the reason the scale is so short: a generated face is only
-   correct at the size it was built for, and at whole multiples of it. There
-   are three — 12, 16 and 24 — and a size always travels with its family.
-   Reach for `--fs-*` and `--ff-*` as a pair, or use the .t12/.t16/.t24
-   helpers, and never set a size the kit does not define.
+   The faces are proportional, so a string's width is the sum of its
+   advances. Anything that needs a fixed box measures the string — see
+   `measure` and `fitToWidth` in ui/fonts.js. The kit used to be monospaced
+   and counted characters instead; nothing should any more.
 
    ── The other two rules ──────────────────────────────────────────────────
 
    Every length is a whole multiple of --u (4px); and nothing that carries
    text may be transformed, scaled or given a fractional offset, because a
-   glyph drawn at x=10.5 is blurred no matter how exact the font is.
+   glyph drawn at x=10.5 is blurred no matter how exact the atlas is.
 
    Consumers import from "src/ui", which pulls this file in once.
    ========================================================================= */
 
-/* ─── Fonts ────────────────────────────────────────────────────────────── */
+/* ─── Fonts ────────────────────────────────────────────────────────────────
 
-@font-face {
-  font-family: "TerminusPx12";
-  src: url("./fonts/TerminusPx12-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "TerminusPx12";
-  src: url("./fonts/TerminusPx12-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: block;
-}
+   There is no @font-face here any more.
 
-@font-face {
-  font-family: "TerminusPx16";
-  src: url("./fonts/TerminusPx16-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "TerminusPx16";
-  src: url("./fonts/TerminusPx16-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: block;
-}
+   Visible text is drawn by PixelText from the atlases in src/pixelfont, so
+   the only thing the CSS font controls is the handful of characters that
+   never go through it — a panel's +/- caret, the number field's nudge
+   buttons — and the invisible <input> a PixelInput lays over its own pixels.
 
-@font-face {
-  font-family: "TerminusPx24";
-  src: url("./fonts/TerminusPx24-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-style: normal;
-  font-display: block;
-}
-@font-face {
-  font-family: "TerminusPx24";
-  src: url("./fonts/TerminusPx24-Bold.ttf") format("truetype");
-  font-weight: 700;
-  font-style: normal;
-  font-display: block;
-}
+   That font is Verdana, at the pixel heights the atlases were exported at,
+   because those atlases came out of Windows' own rasteriser for Verdana. It
+   is a system font on the platform this ships to, so there is nothing to
+   download and nothing for the sanitiser to strip.
+   ========================================================================= */
 
 /* ─── Tokens ───────────────────────────────────────────────────────────── */
 
@@ -115,23 +76,19 @@
        16/20 -> (20-16)/2 = 2px
        24/28 -> (28-24)/2 = 2px
      so the baseline itself also lands on a whole pixel. */
-  --ff-12: "TerminusPx12", "Consolas", monospace;
-  --ff-16: "TerminusPx16", "Consolas", monospace;
-  --ff-24: "TerminusPx24", "Consolas", monospace;
+  --ff-12: Verdana, sans-serif;
+  --ff-16: Verdana, sans-serif;
+  --ff-24: Verdana, sans-serif;
 
-  --fs-12: 12px;
+  /* The sizes are the atlases' own cell heights — 13, 16 and 20 — so DOM
+     text sits at the same height as the drawn text beside it. The line
+     heights stay on the 4px grid. */
+  --fs-12: 13px;
   --lh-12: 16px;
   --fs-16: 16px;
   --lh-16: 20px;
-  --fs-24: 24px;
-  --lh-24: 28px;
-
-  /* Cell widths, for sizing things in characters: Px12 is 6x12, Px16 is 8x16,
-     Px24 is 12x24. At the 320px target a panel body fits 50 characters of
-     Px12 or 37 of Px16. */
-  --cell-12: 6px;
-  --cell-16: 8px;
-  --cell-24: 12px;
+  --fs-24: 20px;
+  --lh-24: 24px;
 
   /* Control metrics. Compact is the default; --density flips them. */
   --ctl-h: 20px;

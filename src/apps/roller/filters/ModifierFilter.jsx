@@ -138,7 +138,7 @@ export default function ModifierFilter({ value, onChange }) {
         onPick={pick}
         onCancel={cancel}
         placeholder={
-          stage ? `Search ${stage.label.toLowerCase()}…` : "Add modifier…"
+          stage ? `Search ${stage.label.toLowerCase()}...` : "Add modifier..."
         }
       />
 

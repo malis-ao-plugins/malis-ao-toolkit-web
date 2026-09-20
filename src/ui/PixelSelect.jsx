@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { PixelText } from "./PixelText";
+import { PixelText } from "./pixel";
 import "./pixel-select.css";
 
 /**
@@ -15,15 +15,16 @@ import "./pixel-select.css";
  * trigger carries the ARIA roles a real select would.
  *
  *   options: [{ value, label }]
+ *   maxPx:   truncate a long label to this pixel width
  */
 export function PixelSelect({
   value,
   options,
   onChange,
-  placeholder = "Select…",
-  size = 12,
+  placeholder = "Select...",
+  size = 13,
   upper = false,
-  maxCh,
+  maxPx,
   className = "",
   disabled = false,
 }) {
@@ -123,14 +124,15 @@ export function PixelSelect({
         <PixelText
           size={size}
           upper={upper}
-          maxCh={maxCh}
+          maxPx={maxPx}
           className={`pxs__value${selected ? "" : " pxs__value--empty"}`}
         >
           {selected ? selected.label : placeholder}
         </PixelText>
-        <PixelText size={size} className="pxs__caret">
-          {open ? "▲" : "▼"}
-        </PixelText>
+        {/* Drawn with borders rather than a glyph: the atlases are latin1,
+            and a triangle is not in latin1. A border triangle is also exact
+            on the pixel grid, which a scaled glyph would not be. */}
+        <span className={`pxs__caret${open ? " pxs__caret--open" : ""}`} />
       </button>
 
       {open && (
@@ -148,7 +150,7 @@ export function PixelSelect({
               onPointerEnter={() => setActive(i)}
               onClick={() => commit(i)}
             >
-              <PixelText size={size} upper={upper} maxCh={maxCh}>
+              <PixelText size={size} upper={upper} maxPx={maxPx}>
                 {o.label}
               </PixelText>
             </div>

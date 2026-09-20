@@ -1,4 +1,4 @@
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "../ui";
 
 /**
  * Item tooltip contents.
@@ -8,8 +8,9 @@ import { PixelText } from "../packages/pixel-text";
  *   - Indentation is carried by leading spaces in the label strings. The
  *     atlas has a blank cell for a space, so the mask preserves them exactly;
  *     do not swap them for padding.
- *   - Terminus has no italic. The description used to lean and now does not —
- *     colour distinguishes it instead.
+ *   - There is no italic. An atlas holds one face at one size in one style,
+ *     and no italic one was exported; the description used to lean and now
+ *     does not, so colour distinguishes it instead.
  */
 
 export function Section({ title, children }) {

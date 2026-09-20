@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "./cx";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "./pixel";
 
 const KNOB = 4; // keep in sync with --u in ui.css
 

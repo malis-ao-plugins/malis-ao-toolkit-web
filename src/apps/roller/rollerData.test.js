@@ -17,9 +17,11 @@ describe("compact", () => {
   });
 
   it("renders a dash rather than NaN for a missing value", () => {
-    expect(compact(null)).toBe("—");
-    expect(compact(undefined)).toBe("—");
-    expect(compact(NaN)).toBe("—");
+    // A hyphen, not an em dash: the atlases are latin1, and an em dash
+    // would draw nothing at all.
+    expect(compact(null)).toBe("-");
+    expect(compact(undefined)).toBe("-");
+    expect(compact(NaN)).toBe("-");
   });
 
   it("keeps the sign on a negative", () => {

@@ -10,8 +10,6 @@
   mask-repeat: no-repeat;
   -webkit-mask-position: 0 0;
   mask-position: 0 0;
-  -webkit-mask-size: auto;
-  mask-size: auto;
 
   flex: 0 0 auto;
 }
@@ -19,10 +17,14 @@
 /**
  * The real string, laid over the mask and rendered transparent.
  *
- * It carries the matching webfont at the matching size, so its glyph boxes sit
- * exactly where the drawn pixels are: selecting drags over real text, the
- * clipboard gets real text, and find-in-page still hits. The glyphs themselves
- * are never seen, so the rasteriser blurring them costs nothing.
+ * Selecting drags over real text, the clipboard gets real text, and
+ * find-in-page still hits. The glyphs themselves are never seen, so the
+ * rasteriser blurring them costs nothing.
+ *
+ * It carries the same face at the same pixel size the atlas was exported
+ * from — Verdana is a system font, and the atlas came out of Windows' own
+ * rasteriser for it — so the invisible glyph boxes sit close to the drawn
+ * pixels and a selection covers what it appears to cover.
  */
 .pxt__text {
   position: absolute;
@@ -41,16 +43,4 @@
 .pxt__text::selection {
   background: rgba(86, 212, 232, 0.45);
   color: transparent;
-}
-
-.pxt__text::-moz-selection {
-  background: rgba(86, 212, 232, 0.45);
-  color: transparent;
-}
-
-/* Used until the atlas decodes, and for any string containing a glyph the
-   sheet does not carry. Ordinary text — softer, but never missing. */
-.pxt--fallback {
-  position: static;
-  background: none;
 }

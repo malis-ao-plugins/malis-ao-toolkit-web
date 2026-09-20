@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "../ui";
 import { ItemIcon } from "./ItemIcon";
 import { ItemTooltip } from "./ItemTooltip";
 import { useItemData } from "./useItemData";

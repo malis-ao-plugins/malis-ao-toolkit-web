@@ -1,5 +1,5 @@
 import { cx } from "./cx";
-import { PixelText } from "../packages/pixel-text";
+import { PixelText } from "./pixel";
 
 /**
  * Titled container. The head doubles as the collapse control when

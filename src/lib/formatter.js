@@ -667,7 +667,7 @@ const STAT_ROWS = [
     value: present(
       StatId.MinDamage,
       (min, sv) =>
-        `${min}–${sv(StatId.MaxDamage)}(${sv(StatId.CriticalBonus)})`,
+        `${min}-${sv(StatId.MaxDamage)}(${sv(StatId.CriticalBonus)})`,
     ),
   },
   {
