@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 const PREFIX = "windowFrame_";
 
-const DEFAULT = { x: 80, y: 80, width: 320, height: 520 };
+/** The size a window is before anyone has resized it. */
+export const DEFAULT_FRAME = { x: 80, y: 80, width: 320, height: 520 };
 const MIN_W = 240;
 const MIN_H = 160;
 
@@ -18,9 +19,12 @@ const MIN_H = 160;
  */
 function load(id) {
   try {
-    return { ...DEFAULT, ...(JSON.parse(localStorage.getItem(PREFIX + id)) ?? {}) };
+    return {
+      ...DEFAULT_FRAME,
+      ...(JSON.parse(localStorage.getItem(PREFIX + id)) ?? {}),
+    };
   } catch {
-    return { ...DEFAULT };
+    return { ...DEFAULT_FRAME };
   }
 }
 

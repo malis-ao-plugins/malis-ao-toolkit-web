@@ -3,6 +3,7 @@ import { useAppSessions } from "./hooks/useAppSessions";
 import { useShownApps } from "./shell/useShownApps";
 import { Launcher } from "./shell/Launcher";
 import AppWindow from "./AppWindow";
+import { DEFAULT_FRAME } from "./hooks/useWindowFrame";
 
 /**
  * The overlay.
@@ -17,8 +18,29 @@ import AppWindow from "./AppWindow";
  * way back. Windows are now independent and stay where they are put.
  */
 
-// Offset each first-time window so a fresh install does not stack them.
-const firstPos = (index) => ({ x: 48 + index * 28, y: 72 + index * 28 });
+const MARGIN = 48;
+const GAP = 16;
+
+/**
+ * Where a window goes the first time it is ever shown.
+ *
+ * Side by side rather than cascaded. A window is 320px wide and the step was
+ * 28px, so each one landed almost exactly on top of the one before it — the
+ * stacking the offset existed to prevent. Wraps to another row, nudged down,
+ * when the screen runs out of width.
+ */
+const firstPos = (index) => {
+  const step = DEFAULT_FRAME.width + GAP;
+  const perRow = Math.max(
+    1,
+    Math.floor((window.innerWidth - MARGIN * 2 + GAP) / step),
+  );
+
+  return {
+    x: MARGIN + (index % perRow) * step,
+    y: 72 + Math.floor(index / perRow) * GAP * 2,
+  };
+};
 
 export default function App() {
   const { connections, states, send, push } = useAppSessions(APP_CONFIGS);
