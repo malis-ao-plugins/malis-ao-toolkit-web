@@ -41,8 +41,10 @@
 /* The name and the zone are truncated to a measured width by the card, but
    the card is resizable and the atlas is proportional — so this clips too,
    and a long name can never paint over the reward row beside it. */
+/* Basis 0, for the same reason as .irow__id: the name inside measures this
+   column, so this column must not be measured from the name. */
 .rl-mission__id {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   display: flex;

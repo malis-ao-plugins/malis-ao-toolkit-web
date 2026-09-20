@@ -93,8 +93,12 @@
   animation: irow-hit 600ms steps(6, end) forwards;
 }
 
+/* Basis 0, so the column is whatever is left over after the icon and the
+   QL — and not a function of the name inside it. With `auto` the name set
+   the basis, the name truncated to the column, the column shrank to the
+   shorter name, and the two chased each other down to a few characters. */
 .irow__id {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   display: flex;

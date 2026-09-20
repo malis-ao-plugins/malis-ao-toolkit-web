@@ -139,9 +139,12 @@ export function PixelText({
    *
    * A line in a column has the opposite problem: it carries an inline width
    * from its own mask, so it can never stretch to report the column's width,
-   * and the column is the thing that knows. Either way the box being
-   * measured has to be sized independently of this text, or the measurement
-   * chases itself.
+   * and the column is the thing that knows.
+   *
+   * Either way the box being measured must be sized independently of this
+   * text — a flex basis of 0, not `auto`. With `auto` the text sets the
+   * basis, then truncates to it, then the box shrinks to the shorter text,
+   * and the two chase each other down to a few characters.
    */
   useLayoutEffect(() => {
     if (!fit) return undefined;
