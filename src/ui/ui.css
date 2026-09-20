@@ -726,7 +726,7 @@
 /* Carrying a number: tall enough to hold it, and wide enough for the widest
    one this slider can reach, so it is a fixed size whatever the value. */
 .ph-slider__knob--value {
-  height: var(--ctl-h);
+  height: var(--u4);
   display: flex;
   align-items: center;
   justify-content: center;

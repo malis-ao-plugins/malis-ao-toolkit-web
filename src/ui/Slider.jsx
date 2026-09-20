@@ -6,7 +6,7 @@ import { measure } from "./fonts";
 /** The bare knob, when it is not carrying a number. */
 const BAR = 4;
 /** Breathing room either side of the number on the knob. */
-const KNOB_PAD = 8;
+const KNOB_PAD = 4;
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
