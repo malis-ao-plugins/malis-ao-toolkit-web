@@ -73,6 +73,8 @@
   gap: var(--u2);
   padding: var(--u);
   min-width: 0;
+  /* Nothing in a row may paint outside it, however narrow the window gets. */
+  overflow: hidden;
 }
 
 /* Confirmation that a click registered. A border colour change, not a glow —
@@ -94,6 +96,7 @@
 .irow__id {
   flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -129,8 +132,20 @@
 
 /* ─── Identity line ────────────────────────────────────────────────────── */
 
+/* The identity line gives up its tags before it gives up the control that
+   opens the variant shelf, which is the only thing on it you can use. */
 .iids {
   min-width: 0;
+  overflow: hidden;
+}
+
+.iids__tag {
+  flex: 0 1 auto;
+  overflow: hidden;
+}
+
+.iids__more {
+  flex: 0 0 auto;
 }
 
 .iids__tag {
