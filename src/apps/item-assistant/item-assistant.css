@@ -129,3 +129,17 @@
     display: none;
   }
 }
+
+/* Narrower than this the QL drops below the name (see items.css), so the
+   heading for it would be sitting over nothing. The head becomes the one
+   column that is left. */
+@container (max-width: 300px) {
+  .ia-head__actions {
+    display: none;
+  }
+
+  .ia-list .irow__actions {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+  }
+}

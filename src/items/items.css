@@ -134,6 +134,26 @@
   mask-position: 100% 0;
 }
 
+/* ─── Narrow rows ──────────────────────────────────────────────────────────
+   Below this a name and its controls cannot share a line without the name
+   being cut to nothing, so the controls go underneath it instead — the same
+   shape a mission card uses, and for the same reason.
+
+   The window sets container-type: inline-size, so this follows the window
+   rather than the viewport. */
+
+@container (max-width: 300px) {
+  .irow__main {
+    flex-wrap: wrap;
+    row-gap: var(--u);
+  }
+
+  .irow__actions {
+    flex: 1 0 100%;
+    justify-content: flex-end;
+  }
+}
+
 /* ─── Identity line ────────────────────────────────────────────────────── */
 
 /* The identity line gives up its tags before it gives up the control that
