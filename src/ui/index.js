@@ -23,6 +23,8 @@ export { SearchInput } from "./SearchInput";
 export { TypeAhead } from "./TypeAhead";
 export { FilterRow, RangeField, TagField } from "./filters";
 export {
+  Defer,
+  Skeleton,
   Stack,
   Row,
   Stat,

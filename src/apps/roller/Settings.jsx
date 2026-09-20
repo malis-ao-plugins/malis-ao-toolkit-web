@@ -1,13 +1,15 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import {
   Button,
   Collapse,
+  Defer,
   Empty,
   List,
   ListRow,
   NumberInput,
   Row,
   SearchInput,
+  Skeleton,
   Slider,
   Stack,
   Toggle,
@@ -89,24 +91,26 @@ export function SlidersPanel({ settings, set }) {
   const [drag, setDrag] = useState(null); // { key, value }
 
   return (
-    <Stack gap={1} style={{ "--ph-slider-cap": `${CAP_PX}px` }}>
-      {SLIDERS.map((s) => (
-        <Slider
-          key={s.key}
-          left={s.left}
-          right={s.right}
-          min={s.min}
-          max={s.max}
-          knobPx={KNOB_PX}
-          value={drag?.key === s.key ? drag.value : (settings[s.key] ?? s.min)}
-          onChange={(v) => setDrag({ key: s.key, value: v })}
-          onCommit={(v) => {
-            setDrag(null);
-            set({ [s.key]: v });
-          }}
-        />
-      ))}
-    </Stack>
+    <Defer placeholder={<Skeleton rows={SLIDERS.length} />}>
+      <Stack gap={1} style={{ "--ph-slider-cap": `${CAP_PX}px` }}>
+        {SLIDERS.map((s) => (
+          <Slider
+            key={s.key}
+            left={s.left}
+            right={s.right}
+            min={s.min}
+            max={s.max}
+            knobPx={KNOB_PX}
+            value={drag?.key === s.key ? drag.value : (settings[s.key] ?? s.min)}
+            onChange={(v) => setDrag({ key: s.key, value: v })}
+            onCommit={(v) => {
+              setDrag(null);
+              set({ [s.key]: v });
+            }}
+          />
+        ))}
+      </Stack>
+    </Defer>
   );
 }
 
@@ -179,28 +183,11 @@ const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
 });
 
 /** Playfields the roller is allowed to roll in, with optional bounds. */
-/** A screenful, so the tab can paint before the whole list is built. */
-const FIRST_ROWS = 12;
-
 export function ZonesPanel({ settings, set, state }) {
   const zones = state.zones;
   const [query, setQuery] = useState("");
 
-  /**
-   * Draw a screenful first, then the rest on the next frame.
-   *
-   * There are 46 playfields and each row carries a drawn label, which is
-   * most of what the Config tab costs to open. Splitting it means the tab
-   * appears immediately and fills in behind, rather than waiting for all of
-   * them before showing anything.
-   */
-  const [rows, setRows] = useState(FIRST_ROWS);
 
-  useEffect(() => {
-    if (rows >= Object.keys(zones ?? {}).length) return undefined;
-    const frame = requestAnimationFrame(() => setRows(Number.MAX_SAFE_INTEGER));
-    return () => cancelAnimationFrame(frame);
-  }, [rows, zones]);
 
   const entries = Object.entries(zones ?? {});
   const needle = query.trim().toLowerCase();
@@ -256,11 +243,13 @@ export function ZonesPanel({ settings, set, state }) {
       {filtered.length === 0 ? (
         <Empty>No zone matches</Empty>
       ) : (
-        <List className="rl-scroll">
-          {filtered.slice(0, rows).map(([id, zone]) => (
-            <ZoneRow key={id} id={id} zone={zone} patchZone={patchZone} />
-          ))}
-        </List>
+        <Defer placeholder={<Skeleton rows={8} />}>
+          <List className="rl-scroll">
+            {filtered.map(([id, zone]) => (
+              <ZoneRow key={id} id={id} zone={zone} patchZone={patchZone} />
+            ))}
+          </List>
+        </Defer>
       )}
     </Stack>
   );

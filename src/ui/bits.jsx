@@ -148,3 +148,42 @@ export function Empty({ children }) {
 export function Divider() {
   return <div className="ph-hr" />;
 }
+
+/**
+ * Stand-in bars, for a panel that has not been built yet.
+ *
+ * Bars rather than a spinner: they take the shape of what is coming, so the
+ * panel does not jump when the real thing arrives.
+ */
+export function Skeleton({ rows = 3, height, className }) {
+  return (
+    <div className={cx("ph-skel", className)}>
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="ph-skel__bar" style={height ? { height } : undefined} />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Show `placeholder` for one frame, then the real children.
+ *
+ * A tab switch renders every panel on it at once, and a panel with a lot of
+ * drawn labels in it is enough work to be felt — the switch waits on all of
+ * it before anything appears. This lets the tab paint immediately and the
+ * panel arrive a frame later, which is the difference between a tab that
+ * hesitates and one that does not.
+ *
+ * The children are still constructed either way; what is deferred is
+ * mounting them, which is where the cost is.
+ */
+export function Defer({ placeholder = null, children }) {
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setReady(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+
+  return ready ? children : placeholder;
+}

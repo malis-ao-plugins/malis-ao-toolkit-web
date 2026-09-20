@@ -910,6 +910,43 @@
   }
 }
 
+/* ─── Skeleton ─────────────────────────────────────────────────────────────
+   Placeholder bars for a panel that is still being built. A pulse rather
+   than a sweeping gradient: a gradient sliding across a panel of hard-edged
+   text would be the softest thing on screen. */
+
+.ph-skel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.ph-skel__bar {
+  height: var(--ctl-h);
+  background: var(--c-bg-3);
+  animation: ph-skel 900ms ease-in-out infinite alternate;
+}
+
+.ph-skel__bar:nth-child(even) {
+  animation-delay: 150ms;
+}
+
+@keyframes ph-skel {
+  from {
+    opacity: 0.4;
+  }
+  to {
+    opacity: 0.85;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-skel__bar {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 /* ─── Divider ──────────────────────────────────────────────────────────── */
 
 .ph-hr {
