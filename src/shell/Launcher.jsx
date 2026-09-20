@@ -9,13 +9,12 @@ const RADIUS = 76;
 /** How much room a tile needs beyond the puck's centre. */
 const CLEARANCE = RADIUS + TILE / 2;
 const OPEN_DELAY = 60;
-const CLOSE_DELAY = 260;
 const DRAG_SLOP = 3;
 
 /** How far outside a lane the pointer may stray before the ring gives up. */
 const AIM_SLOP = 10;
-/** And for how long, so a flick across a gap does not close it instantly. */
-const AIM_GRACE = 140;
+/** Long enough for the slowest tile to fold back in. See launcher.css. */
+const FOLD_MS = 240;
 
 const POS_KEY = "launcherPos";
 
@@ -112,19 +111,19 @@ function initials(name) {
 export function Launcher({ apps, connections, isShown, onToggle }) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(null);
+
+  // The ring outlives `open` by one animation, so the tiles can fold back
+  // into the puck instead of vanishing. `cycle` keys the ring, so re-opening
+  // during a fold restarts the fan rather than leaving a tile mid-flight.
+  const [mounted, setMounted] = useState(false);
+  const [folding, setFolding] = useState(false);
+  const [cycle, setCycle] = useState(0);
   const [pos, setPos] = useState(loadPos);
 
   const openTimer = useRef(null);
-  const closeTimer = useRef(null);
-  const aimTimer = useRef(null);
   const dragRef = useRef(null);
 
-  const clearTimers = () => {
-    clearTimeout(openTimer.current);
-    clearTimeout(closeTimer.current);
-    clearTimeout(aimTimer.current);
-    aimTimer.current = null;
-  };
+  const clearTimers = () => clearTimeout(openTimer.current);
 
   useEffect(() => clearTimers, []);
 
@@ -135,6 +134,28 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
       /* ignore */
     }
   }, [pos]);
+
+  useEffect(() => {
+    if (open) {
+      setFolding(false);
+      setMounted(true);
+      setCycle((n) => n + 1);
+      return undefined;
+    }
+
+    let cancelled = false;
+    setFolding(true);
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      setMounted(false);
+      setFolding(false);
+    }, FOLD_MS);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -157,6 +178,9 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
    * because every lane starts at the same place — near the puck they all
    * overlap and any direction is still "towards" something — and it narrows
    * to the tile itself at the far end.
+   *
+   * Leaving every lane closes it on the spot. There is nothing to wait for:
+   * the lanes already describe every direction worth keeping it open for.
    */
   useEffect(() => {
     if (!open) return undefined;
@@ -184,24 +208,14 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
             TILE / 2 + AIM_SLOP,
         );
 
-      if (aiming) {
-        clearTimeout(aimTimer.current);
-        aimTimer.current = null;
-      } else if (!aimTimer.current) {
-        aimTimer.current = setTimeout(() => {
-          aimTimer.current = null;
-          setOpen(false);
-          setHovered(null);
-        }, AIM_GRACE);
+      if (!aiming) {
+        setOpen(false);
+        setHovered(null);
       }
     };
 
     window.addEventListener("pointermove", onMove);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      clearTimeout(aimTimer.current);
-      aimTimer.current = null;
-    };
+    return () => window.removeEventListener("pointermove", onMove);
   }, [open, pos.x, pos.y]);
 
   const enter = useCallback(() => {
@@ -211,10 +225,8 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
 
   const leave = useCallback(() => {
     clearTimers();
-    closeTimer.current = setTimeout(() => {
-      setOpen(false);
-      setHovered(null);
-    }, CLOSE_DELAY);
+    setOpen(false);
+    setHovered(null);
   }, []);
 
   // Dragging the puck moves the launcher. A click does nothing on purpose:
@@ -292,8 +304,12 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
         <span className="lch__bar" />
       </button>
 
-      {open && items.length > 0 && (
-        <div className="lch__ring" role="menu">
+      {mounted && items.length > 0 && (
+        <div
+          key={cycle}
+          className={`lch__ring${folding ? " lch__ring--folding" : ""}`}
+          role="menu"
+        >
           {tiles.map(({ app, left, top }, i) => {
             const connected = !!connections?.[app.id];
             const visible = isShown(app.id);
