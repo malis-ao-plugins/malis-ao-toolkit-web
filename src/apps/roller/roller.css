@@ -84,8 +84,9 @@
    Accept fills its row, which is right at 320px and ridiculous at three
    times that - a single button half a metre wide. Capping it alone only
    moved the problem: the button stopped growing and the card was left with
-   dead space beside it. Above 400px the buttons move up next to the rewards
-   and take that space instead. */
+   dead space beside it. From 320px up - the width the card was designed for
+   - the buttons move next to the rewards and take that space instead, so
+   the stacked shape is only for a window narrower than the target. */
 .rl-mission__foot {
   display: flex;
   flex-direction: column;
@@ -93,7 +94,7 @@
   min-width: 0;
 }
 
-@container (min-width: 400px) {
+@container (min-width: 320px) {
   .rl-mission__foot {
     flex-direction: row;
     align-items: center;
