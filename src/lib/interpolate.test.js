@@ -164,6 +164,14 @@ describe("resilience", () => {
     expect(interpolateStats([], null, 50, 0, 100)).toEqual([]);
   });
 
+  it("survives a service answering with the wrong shape entirely", () => {
+    // A stats endpoint that returns a record about the item instead of its
+    // rows. Iterating that threw straight out of a hover.
+    const low = [{ stat_id: 1, value: 5 }];
+    expect(interpolateStats(low, { id: 1, description: "x" }, 50, 0, 100)).toEqual(low);
+    expect(interpolateStats({ id: 1 }, low, 50, 0, 100)).toEqual([]);
+  });
+
   it("leaves a row whose counterpart has no value", () => {
     const low = [{ stat_id: 1, value: 5 }];
     const high = [{ stat_id: 1, value: null }];

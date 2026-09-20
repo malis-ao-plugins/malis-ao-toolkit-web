@@ -33,7 +33,10 @@ export const lerp = (low, high, ql, lowQl, highQl) => {
 function matcher(highRows, keyOf) {
   const queues = new Map();
 
-  for (const row of highRows ?? []) {
+  // Not just null: a service answering the wrong shape entirely — an object
+  // where rows were expected — should cost a tooltip its interpolation, not
+  // throw out of a hover.
+  for (const row of Array.isArray(highRows) ? highRows : []) {
     const key = keyOf(row);
     const queue = queues.get(key);
     if (queue) queue.push(row);
@@ -53,7 +56,7 @@ function matcher(highRows, keyOf) {
 function interpolateRows(lowRows, highRows, ql, lowQl, highQl, keyOf, numeric) {
   const take = matcher(highRows, keyOf);
 
-  return (lowRows ?? []).map((row) => {
+  return (Array.isArray(lowRows) ? lowRows : []).map((row) => {
     // Claimed even when it cannot be used, so that later rows sharing the
     // key still line up with the right counterpart.
     const high = take(row);

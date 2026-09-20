@@ -104,12 +104,14 @@ const NOUNS = [
 const itemName = (id) =>
   `${ADJECTIVES[id % ADJECTIVES.length]} ${NOUNS[(id >> 3) % NOUNS.length]}`;
 
+const QL_STEPS = [1, 50, 100, 150, 200, 300];
+
 /** Six QL steps per item family, ids allocated 100 apart so they never clash.
     Each template carries its own name, as the real service does — the item
     row reads the name off whichever template the QL lands on. */
 const membersFor = (lowId) => {
   const base = Math.floor(lowId / 100) * 100;
-  return [1, 50, 100, 150, 200, 300].map((ql, i) => ({
+  return QL_STEPS.map((ql, i) => ({
     id: base + i,
     ql,
     name: itemName(base + i),
@@ -219,8 +221,13 @@ const itemApi = http.createServer(async (req, res) => {
     case "/icons":
       return json(res, { iconData: makeIcon(Number(q.get("id")) % 97) });
 
-    case "/item":
-      return json(res, { id: Number(q.get("id")), description: "Mock item." });
+    case "/item": {
+      // Stat rows, which is what the front end reads it as - not a record
+      // about the item. Stat 54 is Level, which a tooltip shows as QL.
+      const id = Number(q.get("id"));
+      const ql = QL_STEPS[id % 100] ?? 1;
+      return json(res, [{ stat_id: 54, value: ql }]);
+    }
 
     case "/item/modifiers":
     case "/item/modifiers/criteria":

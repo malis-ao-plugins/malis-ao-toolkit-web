@@ -765,11 +765,13 @@ const STAT_ROWS = [
  * order is now STAT_ROWS, and this is only the driver.
  */
 export const formatStats = (rawStats, rawSkillChecks = []) => {
-  const sv = (id) => rawStats.find((s) => s.stat_id === id)?.value ?? null;
+  const rows = Array.isArray(rawStats) ? rawStats : [];
+  const checks = Array.isArray(rawSkillChecks) ? rawSkillChecks : [];
+  const sv = (id) => rows.find((s) => s.stat_id === id)?.value ?? null;
 
   const stats = [];
   for (const row of STAT_ROWS) {
-    const value = row.value(sv, rawSkillChecks);
+    const value = row.value(sv, checks);
     if (value == null || value === "") continue;
 
     const label = typeof row.label === "function" ? row.label(sv) : row.label;
