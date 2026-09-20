@@ -64,8 +64,10 @@
   height: var(--lh-12);
 }
 
+/* Its own line now, so it takes the width rather than sharing it. */
 .rl-mission__zone {
-  flex: 1 1 auto;
+  color: var(--c-fg-dim);
+  overflow: hidden;
 }
 
 .rl-mission__meta .ph-num {

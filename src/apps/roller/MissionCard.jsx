@@ -29,6 +29,9 @@ const iconFor = (item) => {
  *
  * Three fixed rows — identity, rewards, actions — so a list of cards reads as
  * a column of aligned data rather than a stack of differently-shaped boxes.
+ * The identity block is itself three lines: what it is, where it is, and
+ * what it pays. The pay used to share a line with the zone, which left both
+ * of them fighting for a 320px row.
  * Reward icons use the kit's small slot, which is 24px — AO icon art is
  * 48x48, so only its whole divisors resample cleanly.
  *
@@ -68,10 +71,11 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
             {mission.name}
           </PixelText>
 
+          <PixelText maxPx={ZONE_PX} className="rl-mission__zone" title={zone}>
+            {zone}
+          </PixelText>
+
           <Row gap={2} className="rl-mission__meta">
-            <PixelText maxPx={ZONE_PX} className="rl-mission__zone" title={zone}>
-              {zone}
-            </PixelText>
             <PixelText
               className="ph-num"
               title={`${exact(mission.credits)} - ${exact(mission.creditsMax)} credits`}
