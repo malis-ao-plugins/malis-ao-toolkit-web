@@ -8,7 +8,8 @@ import {
   Stack,
 } from "../ui";
 import { useWindowFrame } from "../hooks/useWindowFrame";
-import { THEME } from "./theme";
+import { ThemePreview } from "./ThemePreview";
+import { GROUPS, THEME } from "./theme";
 import "./settings.css";
 
 /**
@@ -17,8 +18,14 @@ import "./settings.css";
  *
  * It is not an app. An app is a declaration bound to a plugin on a port and
  * only exists while that plugin is connected; this belongs to the shell and
- * is always there. It borrows the window chrome, the frame hook and the
- * kit, and nothing else.
+ * is always there. It borrows the window chrome, the frame hook and the kit,
+ * and nothing else.
+ *
+ * Organised by what a colour visibly does, each group shown above a live
+ * example of the components it drives. A list of tokens told you nothing:
+ * "accent" turns out to mean a button's border, the open tab's underline
+ * and a toggle's fill, and no amount of naming conveys that — seeing all
+ * three change at once does.
  */
 
 /**
@@ -37,12 +44,19 @@ const SWATCHES = [
   "#ccd6e0",
 ];
 
-const SURFACES = ["#06080b", "#0c1016", "#121821", "#1a222d", "#24303e", "#35465a"];
+/** The surface ramp, so a window and a panel stay distinguishable. */
+const SURFACES = [
+  "#06080b",
+  "#0c1016",
+  "#121821",
+  "#1a222d",
+  "#24303e",
+  "#35465a",
+];
 
-const swatchesFor = (field) =>
-  field.key === "window" || field.key === "panel" || field.key === "edge"
-    ? SURFACES
-    : SWATCHES;
+const TEXT = ["#ffffff", "#ccd6e0", "#9aa7b6", "#7c8b9c", "#4d5a6a"];
+
+const SWATCHES_FOR = { surface: SURFACES, text: TEXT };
 
 export function SettingsWindow({ theme, onChange, onReset, onClose }) {
   // Wider than an app window: a colour row is swatches plus a picker, and
@@ -51,11 +65,8 @@ export function SettingsWindow({ theme, onChange, onReset, onClose }) {
     x: 120,
     y: 120,
     width: 360,
-    height: 560,
+    height: 620,
   });
-
-  const colours = THEME.filter((field) => field.type === "color");
-  const numbers = THEME.filter((field) => field.type === "px");
 
   return (
     <div
@@ -102,40 +113,46 @@ export function SettingsWindow({ theme, onChange, onReset, onClose }) {
       </div>
 
       <div className="body">
-        <Panel title="Colours">
-          <Stack gap={2}>
-            {colours.map((field) => (
-              <ColorField
-                key={field.key}
-                label={field.label}
-                hint={field.hint}
-                value={theme[field.key]}
-                swatches={swatchesFor(field)}
-                onChange={(value) => onChange(field.key, value)}
-              />
-            ))}
-          </Stack>
-        </Panel>
+        {GROUPS.map((group) => {
+          const fields = THEME.filter((field) => field.group === group.id);
 
-        <Panel title="Shape">
-          <Stack gap={2}>
-            {numbers.map((field) => (
-              <Row key={field.key} gap={2} className="set__row">
-                <PixelText upper className="set__label">
-                  {field.label}
+          return (
+            <Panel key={group.id} title={group.title}>
+              <Stack gap={2}>
+                <PixelText fit className="set__hint">
+                  {group.hint}
                 </PixelText>
-                <NumberInput
-                  value={Number(theme[field.key])}
-                  min={field.min}
-                  max={field.max}
-                  onChange={(value) => onChange(field.key, value)}
-                  onCommit={(value) => onChange(field.key, value)}
-                  title={field.hint}
-                />
-              </Row>
-            ))}
-          </Stack>
-        </Panel>
+
+                <ThemePreview group={group.id} />
+
+                {fields.map((field) =>
+                  field.type === "color" ? (
+                    <ColorField
+                      key={field.key}
+                      label={field.label}
+                      value={theme[field.key]}
+                      swatches={SWATCHES_FOR[group.id] ?? SWATCHES}
+                      onChange={(value) => onChange(field.key, value)}
+                    />
+                  ) : (
+                    <Row key={field.key} gap={2} className="set__row">
+                      <PixelText upper className="set__label">
+                        {field.label}
+                      </PixelText>
+                      <NumberInput
+                        value={Number(theme[field.key])}
+                        min={field.min}
+                        max={field.max}
+                        onChange={(value) => onChange(field.key, value)}
+                        onCommit={(value) => onChange(field.key, value)}
+                      />
+                    </Row>
+                  ),
+                )}
+              </Stack>
+            </Panel>
+          );
+        })}
       </div>
 
       <div className="resize-e" {...handlers("e")} />

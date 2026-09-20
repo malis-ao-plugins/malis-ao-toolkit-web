@@ -11,3 +11,50 @@
 .set__label {
   color: var(--c-fg-dim);
 }
+
+.set__hint {
+  color: var(--c-fg-mute);
+}
+
+/* ─── Preview ──────────────────────────────────────────────────────────────
+   Inset against the panel it sits in, so it reads as a specimen of the UI
+   rather than as more of the window's own controls. */
+
+.set__preview {
+  padding: var(--u2);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+}
+
+/* A window with panels in it, in miniature — the one preview that cannot be
+   made of real components, because a window is the thing containing all of
+   this already. */
+
+.set__surface {
+  border: var(--win-border, 1px) solid var(--c-line-hi);
+  background: var(--c-bg-1);
+}
+
+.set__surface-head {
+  padding: 0 var(--u2);
+  height: var(--ctl-h);
+  display: flex;
+  align-items: center;
+  background: var(--c-bg-3);
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+}
+
+.set__surface-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  padding: var(--u);
+}
+
+.set__surface-panel {
+  padding: var(--u) var(--u2);
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+}
