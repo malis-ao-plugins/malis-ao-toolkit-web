@@ -49,8 +49,8 @@ export function VariantTable({ members }) {
         >
           <ItemIcon src={member.iconSrc} size="tiny" />
           <PixelText className="ivar__name">{member.name ?? ""}</PixelText>
-          <PixelText className="ivar__id ph-num">{String(member.id)}</PixelText>
-          <PixelText className="ivar__ql ph-num">{String(member.ql)}</PixelText>
+          <PixelText className="ivar__id">{String(member.id)}</PixelText>
+          <PixelText className="ivar__ql">{String(member.ql)}</PixelText>
         </div>
       ))}
 
