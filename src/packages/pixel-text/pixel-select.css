@@ -21,6 +21,11 @@
   text-align: left;
 }
 
+.pxs__trigger:focus-visible {
+  outline: 1px solid var(--c-accent, #ffb454);
+  outline-offset: -1px;
+}
+
 .pxs__trigger:disabled {
   cursor: default;
   opacity: 0.5;

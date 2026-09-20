@@ -174,8 +174,6 @@
   --c-panel: var(--c-bg-2);
   --shadow: 0 0 0 1px var(--c-line), 0 4px 16px rgba(0, 0, 0, 0.55);
 
-  /* Focus ring. 1px, never blurred. */
-  --ring: 0 0 0 1px var(--c-accent);
 }
 
 /* Overlay skin: translucent surfaces so the game reads through.
@@ -212,6 +210,35 @@
   font-family: var(--ff-24);
   font-size: var(--fs-24);
   line-height: var(--lh-24);
+}
+
+/* ─── Focus ────────────────────────────────────────────────────────────────
+
+   Every control the keyboard can reach shows the same 1px amber outline.
+
+   An outline rather than a box-shadow: it takes no part in layout, so
+   nothing moves and nothing lands on a half pixel; and it does not collide
+   with a component's own shadow, which matters because the active tab draws
+   its underline that way. At -1px offset it sits exactly on the border it
+   replaces.
+
+   :focus-visible rather than :focus, so a pointer click does not leave a
+   ring behind — the launcher tiles and the panel heads are clicked
+   constantly.
+
+   Anything interactive added to the kit belongs in this list. Before it
+   existed, only Button and Toggle showed focus at all: tabs, segmented
+   items, the launcher, the minimise button, the clear button, the filter
+   tags and the select trigger could all be focused with nothing to see. */
+.ph-btn:focus-visible,
+.ph-toggle:focus-visible,
+.ph-seg__item:focus-visible,
+.ph-search__clear:focus-visible,
+.ph-panel__head--clickable:focus-visible,
+.flt-tag:focus-visible,
+.ph-listrow:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: -1px;
 }
 
 /* ─── Root ─────────────────────────────────────────────────────────────── */
@@ -407,11 +434,6 @@
   background: var(--c-bg-2);
 }
 
-.ph-btn:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
-}
-
 .ph-btn:disabled {
   color: var(--c-fg-mute);
   cursor: default;
@@ -493,11 +515,6 @@
 .ph-toggle:hover {
   border-color: var(--c-line-hi);
   color: var(--c-fg);
-}
-
-.ph-toggle:focus-visible {
-  outline: none;
-  box-shadow: var(--ring);
 }
 
 /* The 8px box is the whole affordance — no sliding knob, nothing to blur. */

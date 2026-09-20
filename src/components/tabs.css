@@ -28,6 +28,11 @@
   user-select: none;
 }
 
+.tabs__tab:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: -1px;
+}
+
 .tabs__tab:hover {
   background: var(--c-bg-3);
   color: var(--c-fg);

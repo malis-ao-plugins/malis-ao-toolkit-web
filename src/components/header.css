@@ -56,6 +56,11 @@
   cursor: pointer;
 }
 
+.header-min:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: -1px;
+}
+
 .header-min:hover {
   background: var(--c-bg-4);
   border-color: var(--c-line-hi);

@@ -36,6 +36,11 @@
   cursor: grabbing;
 }
 
+.lch__puck:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: -1px;
+}
+
 .lch__puck--open {
   border-color: var(--c-accent);
 }
@@ -95,6 +100,11 @@
   background: var(--c-bg-4);
   border-color: var(--c-line-hi);
   color: var(--c-fg-hi);
+}
+
+.lch__tile:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: -1px;
 }
 
 /* Currently on screen. */
