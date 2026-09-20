@@ -22,6 +22,9 @@ import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
  * start and end in the same place instead of each one being as long as its
  * own labels happen to allow.
  */
+/** Playfield coordinates run to four digits. */
+const BOUND = 9999;
+
 const CAP_PX = Math.ceil(
   Math.max(
     ...SLIDERS.flatMap((s) => [
@@ -103,8 +106,28 @@ export function SlidersPanel({ settings, set }) {
  */
 const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
   const [open, setOpen] = useState(false);
+
+  // The value being dragged, held here so the readout tracks the pointer.
+  // Without it the field showed the committed value and only caught up on
+  // release, because NumberInput reports a scrub through onChange and the
+  // committed one through onCommit.
+  const [draft, setDraft] = useState(null);
+
   const bounded =
-    zone.x1 !== 0 || zone.y1 !== 0 || zone.x2 !== 9999 || zone.y2 !== 9999;
+    zone.x1 !== 0 || zone.y1 !== 0 || zone.x2 !== BOUND || zone.y2 !== BOUND;
+
+  const field = (key, label) => ({
+    value: draft?.key === key ? draft.value : zone[key],
+    min: -BOUND,
+    max: BOUND,
+    onChange: (value) => setDraft({ key, value }),
+    onCommit: (value) => {
+      setDraft(null);
+      patchZone(id, { [key]: value });
+    },
+    wide: true,
+    title: label,
+  });
 
   return (
     <div className="rl-zone">
@@ -130,45 +153,13 @@ const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
         <div className="rl-zone__bounds">
           <Row gap={1}>
             <span className="ph-label rl-zone__cap">From</span>
-            <NumberInput
-              value={zone.x1}
-              min={-99999}
-              max={99999}
-              onCommit={(v) => patchZone(id, { x1: v })}
-              onChange={() => {}}
-              wide
-              title="x1"
-            />
-            <NumberInput
-              value={zone.y1}
-              min={-99999}
-              max={99999}
-              onCommit={(v) => patchZone(id, { y1: v })}
-              onChange={() => {}}
-              wide
-              title="y1"
-            />
+            <NumberInput {...field("x1", "x1")} />
+            <NumberInput {...field("y1", "y1")} />
           </Row>
           <Row gap={1}>
             <span className="ph-label rl-zone__cap">To</span>
-            <NumberInput
-              value={zone.x2}
-              min={-99999}
-              max={99999}
-              onCommit={(v) => patchZone(id, { x2: v })}
-              onChange={() => {}}
-              wide
-              title="x2"
-            />
-            <NumberInput
-              value={zone.y2}
-              min={-99999}
-              max={99999}
-              onCommit={(v) => patchZone(id, { y2: v })}
-              onChange={() => {}}
-              wide
-              title="y2"
-            />
+            <NumberInput {...field("x2", "x2")} />
+            <NumberInput {...field("y2", "y2")} />
           </Row>
         </div>
       </Collapse>

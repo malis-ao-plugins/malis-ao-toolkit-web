@@ -660,8 +660,10 @@
   cursor: text;
 }
 
+/* Five cells: four digits and a sign. 1ch is the digit advance, which is
+   what these fields hold. */
 .ph-num-input--wide .ph-num-input__field {
-  width: 7ch;
+  width: 5ch;
 }
 
 /* ─── Slider ───────────────────────────────────────────────────────────── */

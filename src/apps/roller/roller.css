@@ -142,7 +142,8 @@
   background: var(--c-bg-1);
 }
 
+/* Wide enough for "From" — at 20px it was clipping to "Fro". */
 .rl-zone__cap {
-  width: var(--u5);
+  width: var(--u8);
   flex: 0 0 auto;
 }
