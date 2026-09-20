@@ -82,7 +82,7 @@ export const ItemRow = memo(function ItemRow({
           {/* Fits the column: a mask carries its own width and cannot
               shrink, so an untruncated name widened the whole row until the
               QL slid over it and the variant button left the edge. */}
-          <PixelText fit="parent" className="irow__name" title={active.name ?? ""}>
+          <PixelText fit className="irow__name" title={active.name ?? ""}>
             {active.name ?? ""}
           </PixelText>
           <ItemIds

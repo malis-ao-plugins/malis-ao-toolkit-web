@@ -109,6 +109,8 @@
 .irow__name {
   color: var(--c-fg);
   overflow: hidden;
+  /* It fits, so it carries no width of its own: the column gives it one. */
+  align-self: stretch;
 }
 
 .irow__actions {
@@ -186,6 +188,13 @@
     grid-row: 3;
     grid-column: 2;
     justify-content: flex-start;
+  }
+
+  /* Left, not right: on its own line the QL reads as the start of that line
+     rather than as the end of a column of them. */
+  .irow .irow__ql {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
   }
 
   .iids__more {

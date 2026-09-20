@@ -32,7 +32,7 @@ export function ItemIds({ members, active, expanded, onToggle }) {
             onToggle();
           }}
         >
-          {`${expanded ? "−" : "+"} ${members.length}`}
+          {`${expanded ? "-" : "+"}${members.length}`}
         </Button>
       )}
     </Row>

@@ -103,11 +103,10 @@ function useDeviceScale() {
  *   scale   integer upscale, default 1
  *   upper   uppercase the string (a mask cannot be text-transformed)
  *   maxPx   truncate to this pixel width, with an ellipsis
- *   fit     truncate to the room actually available, measured.
- *           `true` measures this element, which needs it to be sized
- *           independently of its content — a flex item with a basis of 0.
- *           `"parent"` measures the parent instead, for the common case of
- *           a lone child of a column that has no room of its own to report.
+ *   fit     truncate to the room actually available. The element stops
+ *           carrying its own width and takes it from the layout instead, so
+ *           it must sit in something that will size it — a flex item with a
+ *           basis of 0, a stretched child of a column, a grid cell.
  *   as      element type, default "span"
  */
 export function PixelText({
@@ -130,26 +129,22 @@ export function PixelText({
   const [room, setRoom] = useState(null);
 
   /**
-   * How much room there actually is.
+   * How much room this element has actually been given.
    *
-   * Which box to measure depends on where this sits. A toggle's label is a
-   * flex item with a basis of 0, so its own box is exactly the room left
-   * over — and its parent is the whole control, box and padding included,
-   * which would hand back a budget wider than the space.
+   * Its own box. A fitting PixelText does not set a width — see below — so
+   * layout sizes it, and what layout gives it is exactly the answer. That
+   * also sidesteps having to guess which ancestor holds the real width: a
+   * parent may be the whole control with a box and padding in the way, or
+   * may be `display: contents` and have no box at all.
    *
-   * A line in a column has the opposite problem: it carries an inline width
-   * from its own mask, so it can never stretch to report the column's width,
-   * and the column is the thing that knows.
-   *
-   * Either way the box being measured must be sized independently of this
-   * text — a flex basis of 0, not `auto`. With `auto` the text sets the
-   * basis, then truncates to it, then the box shrinks to the shorter text,
-   * and the two chase each other down to a few characters.
+   * Whatever sizes it must do so independently of this text. A flex basis
+   * of 0, not `auto`: with `auto` the text sets the basis, then truncates to
+   * it, then the box shrinks to the shorter text, and the two chase each
+   * other down to a few characters.
    */
   useLayoutEffect(() => {
     if (!fit) return undefined;
-    const self = hostRef.current;
-    const el = fit === "parent" ? self?.parentElement : self;
+    const el = hostRef.current;
     if (!el) return undefined;
 
     const read = () => setRoom(Math.floor(el.getBoundingClientRect().width));
@@ -165,6 +160,7 @@ export function PixelText({
     : String(children ?? "");
   const raw = upper ? source.toUpperCase() : source;
   const budget = maxPx ?? (fit ? room : null);
+
   const text = budget != null ? fitToWidth(raw, budget, size, weight) : raw;
 
   const step = Math.max(1, Math.round(scale));
@@ -192,7 +188,10 @@ export function PixelText({
       className={`pxt ${className}`}
       title={title ?? (text !== raw ? raw : undefined)}
       style={{
-        width: mask.width,
+        // A fitting element takes its width from layout instead. The mask is
+        // drawn at its own size regardless — mask-size says so — so a box
+        // wider than the glyphs simply has room to spare.
+        ...(fit ? null : { width: mask.width }),
         height: mask.height,
         WebkitMaskImage: `url(${mask.url})`,
         maskImage: `url(${mask.url})`,

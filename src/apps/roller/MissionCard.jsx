@@ -68,14 +68,14 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         <div className="rl-mission__id">
           <PixelText
             size={16}
-            fit="parent"
+            fit
             className="rl-mission__name"
             title={mission.name}
           >
             {mission.name}
           </PixelText>
 
-          <PixelText fit="parent" className="rl-mission__zone" title={zone}>
+          <PixelText fit className="rl-mission__zone" title={zone}>
             {zone}
           </PixelText>
 

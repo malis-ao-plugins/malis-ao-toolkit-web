@@ -58,6 +58,7 @@
 .rl-mission__name {
   color: var(--c-fg-hi);
   overflow: hidden;
+  align-self: stretch;
 }
 
 .rl-mission__meta {
@@ -70,6 +71,7 @@
 .rl-mission__zone {
   color: var(--c-fg-dim);
   overflow: hidden;
+  align-self: stretch;
 }
 
 .rl-mission__meta .ph-num {
