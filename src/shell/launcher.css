@@ -79,12 +79,19 @@
 }
 
 /* Where a tile sits, and where it comes from: the ring's origin is the
-   centre of the puck, so a tile starts centred on it and travels out.
+   centre of the puck, so a tile starts centred on it and travels out, each
+   one leaving slightly after the one before it.
 
-   The step function is the whole point. These tiles carry text, and text on
-   a fractional offset is blurred — so the travel is four discrete jumps
-   rather than a smooth slide, which is also how the rest of the kit
-   animates. Each tile leaves slightly after the one before it. */
+   This used to move in four discrete steps, on the reasoning that a tile
+   carries text and text on a fractional offset is blurred. The reasoning
+   did not survive the arithmetic: steps(4) from -22px to 76px stops at 2.5
+   and 51.5, so it landed on half pixels regardless — and no step count
+   fixes that, because the two axes travel different distances (98px and
+   22px for the tile to the right) and nothing divides both.
+
+   So it eases instead. The mask is soft only while a tile is actually
+   moving, for about a sixth of a second, and every tile comes to rest on the
+   whole pixel the layout rounded it to. */
 .lch__tile {
   position: absolute;
   left: var(--lch-x);
@@ -101,16 +108,17 @@
   cursor: pointer;
   /* `backwards`, not `both`: the fill is only needed during the stagger
      delay, and resting on the animation's end state instead of the rule
-     below would leave every tile stacked on the puck anywhere the animation
+     above would leave every tile stacked on the puck anywhere the animation
      does not run. */
-  animation: lch-fan 140ms steps(4, end) backwards;
-  animation-delay: calc(var(--lch-i) * 25ms);
+  animation: lch-fan 160ms cubic-bezier(0.22, 0.85, 0.3, 1) backwards;
+  animation-delay: calc(var(--lch-i) * 30ms);
 }
 
 @keyframes lch-fan {
   from {
     left: -22px;
     top: -22px;
+    opacity: 0;
   }
 }
 
@@ -165,7 +173,7 @@
 /* ─── Readout ──────────────────────────────────────────────────────────── */
 
 .lch__readout {
-  animation: lch-readout 100ms steps(2, end) backwards;
+  animation: lch-readout 90ms ease-out backwards;
   position: absolute;
   left: -84px;
   top: 104px;
