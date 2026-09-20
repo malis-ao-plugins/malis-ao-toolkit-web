@@ -78,6 +78,14 @@
   flex: 0 0 auto;
 }
 
+/* Accept fills the row, which is right at the 320px target and ridiculous in
+   a window three times that - a single button half a metre wide. The row
+   stops at the width the card was designed for; past that the card simply
+   has space to its right, like everything else on it. */
+.rl-mission__go {
+  max-width: 302px;
+}
+
 /* Six half-size slots plus 4px gaps come to 164px. Six at native 48px would
    need 308px inside a 302px body, so the rewards are the one place the art is
    scaled — by exactly one half, which nearest-neighbour handles cleanly. */

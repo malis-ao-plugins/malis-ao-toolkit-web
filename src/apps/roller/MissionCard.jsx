@@ -8,12 +8,6 @@ import { compact, exact } from "./rollerData";
 const REWARD_SLOTS = 6;
 const NO_REWARDS = [];
 
-// Card width at the 320px target leaves ~254px beside the icon. The face is
-// proportional now, so these are widths rather than a count of cells —
-// PixelText measures the string and spends the tail on an ellipsis.
-const NAME_PX = 248;
-const ZONE_PX = 112;
-
 const playfieldName = (id) =>
   PLAYFIELDS.find((p) => p.id === Number(id))?.name || `PF ${id}`;
 
@@ -107,7 +101,7 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         })}
       </Row>
 
-      <Row gap={1}>
+      <Row gap={1} className="rl-mission__go">
         <Button variant="primary" block onClick={onAccept}>
           <PixelText>ACCEPT</PixelText>
         </Button>
