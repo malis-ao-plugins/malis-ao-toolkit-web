@@ -32,7 +32,10 @@ export function Toggle({
       onClick={() => onChange?.(!on)}
     >
       <span className="ph-toggle__box" />
-      <PixelText upper={upper} className="ph-toggle__text">
+      {/* A block toggle fills its row, so a long label has somewhere to be
+          cut: it truncates to the room left over rather than running under
+          whatever sits beside it. */}
+      <PixelText upper={upper} fit={block} className="ph-toggle__text">
         {label}
       </PixelText>
     </button>

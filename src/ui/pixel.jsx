@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { onDeviceScaleChange } from "../pixelfont/index.js";
 import { fitToWidth, fontFor } from "./fonts";
 import "./pixel.css";
@@ -103,6 +103,7 @@ function useDeviceScale() {
  *   scale   integer upscale, default 1
  *   upper   uppercase the string (a mask cannot be text-transformed)
  *   maxPx   truncate to this pixel width, with an ellipsis
+ *   fit     truncate to whatever room the parent has, measured
  *   as      element type, default "span"
  */
 export function PixelText({
@@ -112,6 +113,7 @@ export function PixelText({
   scale = 1,
   upper = false,
   maxPx,
+  fit = false,
   as: Tag = "span",
   className = "",
   style,
@@ -120,11 +122,35 @@ export function PixelText({
 }) {
   useDeviceScale();
 
+  const hostRef = useRef(null);
+  const [room, setRoom] = useState(null);
+
+  /**
+   * How much room the parent is giving us.
+   *
+   * Only for `fit`, and only worth doing where the parent's width does not
+   * depend on ours — a flex item with a basis of 0, say. Measuring a box
+   * that sizes to its content would just chase itself.
+   */
+  useLayoutEffect(() => {
+    if (!fit) return undefined;
+    const parent = hostRef.current?.parentElement;
+    if (!parent) return undefined;
+
+    const read = () => setRoom(Math.floor(parent.getBoundingClientRect().width));
+    read();
+
+    const observer = new ResizeObserver(read);
+    observer.observe(parent);
+    return () => observer.disconnect();
+  }, [fit]);
+
   const source = Array.isArray(children)
     ? children.join("")
     : String(children ?? "");
   const raw = upper ? source.toUpperCase() : source;
-  const text = maxPx ? fitToWidth(raw, maxPx, size, weight) : raw;
+  const budget = maxPx ?? (fit ? room : null);
+  const text = budget != null ? fitToWidth(raw, budget, size, weight) : raw;
 
   const step = Math.max(1, Math.round(scale));
   const face = fontFor(size, weight);
@@ -135,12 +161,19 @@ export function PixelText({
 
   if (!mask) {
     return (
-      <Tag className={`pxt ${className}`} style={style} title={title} {...rest} />
+      <Tag
+        ref={hostRef}
+        className={`pxt ${className}`}
+        style={style}
+        title={title}
+        {...rest}
+      />
     );
   }
 
   return (
     <Tag
+      ref={hostRef}
       className={`pxt ${className}`}
       title={title ?? (text !== raw ? raw : undefined)}
       style={{

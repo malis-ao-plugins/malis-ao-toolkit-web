@@ -487,6 +487,14 @@
   overflow: hidden;
 }
 
+/* A basis of 0 so the label takes what is left rather than asking for what
+   it wants — which is also what lets it measure its own room without the
+   measurement chasing the content. */
+.ph-toggle--block .ph-toggle__text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
 .ph-toggle--on {
   color: var(--c-accent);
   border-color: var(--c-accent);
@@ -983,7 +991,7 @@
 }
 
 .flt-range {
-  width: 8ch;
+  width: 6ch;
   height: var(--ctl-h);
   background: var(--c-bg-0);
   border: 1px solid var(--c-line);
