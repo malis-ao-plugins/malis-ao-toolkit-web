@@ -9,6 +9,7 @@
 import {
   formatCriteriaGroup,
   formatDuration,
+  formatMod,
   formatMods,
   formatReq,
   formatReqValue,
@@ -193,6 +194,112 @@ describe("formatMods", () => {
   });
 });
 
+describe("formatMod", () => {
+  const action = (function_type, params) => ({ function_type, params });
+
+  it("signs a stat modifier and names the stat", () => {
+    expect(
+      formatMod(action(FunctionType.ModifyStat, { 0: StatId.Agility, 39: 12 })),
+    ).toMatchObject({ label: "Agility", value: "+12" });
+  });
+
+  it("renders nothing for a stat modifier missing its stat or value", () => {
+    expect(formatMod(action(FunctionType.ModifyStat, { 39: 12 }))).toBeNull();
+    expect(
+      formatMod(action(FunctionType.ModifyStat, { 0: StatId.Agility })),
+    ).toBeNull();
+  });
+
+  it("reads a hit as damage or healing from the sign of its low end", () => {
+    const damage = formatMod(
+      action(FunctionType.Hit, { 2: -100, 37: -200, 3: 1, 4: 0 }),
+    );
+    expect(damage).toMatchObject({
+      label: "Damage",
+      value: "100 - 200",
+      negative: true,
+    });
+
+    const healing = formatMod(
+      action(FunctionType.Hit, { 2: 100, 37: 100, 3: 1, 4: 0 }),
+    );
+    expect(healing).toMatchObject({ label: "Healing", value: "100" });
+  });
+
+  it("reads a hit with no upper bound as a percentage", () => {
+    expect(
+      formatMod(action(FunctionType.Hit, { 2: -25, 37: 0, 3: 1, 4: 0 })),
+    ).toMatchObject({ value: "25%" });
+  });
+
+  it("describes repeats and delay in the suffix, and omits an empty one", () => {
+    expect(
+      formatMod(action(FunctionType.Hit, { 2: -10, 37: -10, 3: 3, 4: 150 })),
+    ).toMatchObject({ suffix: "3 hits, 1.5s delay" });
+
+    expect(
+      formatMod(action(FunctionType.Hit, { 2: -10, 37: -10, 3: 1, 4: 0 })).suffix,
+    ).toBeUndefined();
+  });
+
+  it("puts the lock duration in the suffix, not the value", () => {
+    expect(
+      formatMod(action(FunctionType.LockSkill, { 0: StatId.Agility, 39: 30 })),
+    ).toMatchObject({ label: "Agility locked for", value: "", suffix: "30s" });
+  });
+
+  it("marks a cast as a nano whose name still has to be resolved", () => {
+    expect(
+      formatMod(action(FunctionType.CastNano, { 39: 12345 })),
+    ).toMatchObject({
+      label: "Cast",
+      value: 12345,
+      isNano: true,
+      resolveItemName: true,
+    });
+  });
+
+  it("puts the chance in the label and the nano in the value", () => {
+    expect(
+      formatMod(action(FunctionType.CastChance, { 39: 25, 88: 12345 })),
+    ).toMatchObject({ label: "Cast chance (25%)", value: 12345, noColor: true });
+  });
+
+  it("attaches the target and the criteria that gate the line", () => {
+    const line = formatMod(
+      action(FunctionType.ModifyStat, {
+        0: StatId.Agility,
+        39: 1,
+        26: [{ stat: StatId.Stamina, operator: 2, value: 50 }],
+      }),
+    );
+
+    expect(line.criteria).toEqual([{ label: "Stamina", value: "from 51" }]);
+    expect(line).toHaveProperty("targetId");
+  });
+
+  it("stays quiet for the function types that deliberately render nothing", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(formatMod(action(FunctionType.HeadMesh, {}))).toBeNull();
+    expect(formatMod(action(FunctionType.AddSkill, {}))).toBeNull();
+    expect(formatMod(action(FunctionType.GfxEffect, {}))).toBeNull();
+    expect(warn).not.toHaveBeenCalled();
+
+    warn.mockRestore();
+  });
+
+  it("reports an unknown function type once, not once per modifier", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    expect(formatMod(action(987654, {}))).toBeNull();
+    expect(formatMod(action(987654, {}))).toBeNull();
+    expect(warn).toHaveBeenCalledTimes(1);
+
+    warn.mockRestore();
+  });
+});
+
 describe("formatStats", () => {
   it("returns empty sections for an item with no stats", () => {
     expect(formatStats([], [])).toEqual({ stats: [], flags: [] });
@@ -241,6 +348,66 @@ describe("formatStats", () => {
       [],
     );
     expect(nano.stats[0].label).toBe("NCU");
+  });
+
+  it("keeps the rows in tooltip order, general before combat", () => {
+    const { stats } = formatStats(
+      [
+        { stat_id: StatId.StackingOrder, value: 5 },
+        { stat_id: StatId.AttackRange, value: 20 },
+        { stat_id: StatId.Level, value: 200 },
+        { stat_id: StatId.MinDamage, value: 10 },
+        { stat_id: StatId.MaxDamage, value: 20 },
+        { stat_id: StatId.CriticalBonus, value: 5 },
+        { stat_id: StatId.Value, value: 1000 },
+        { stat_id: StatId.EquipDelay, value: 100 },
+      ],
+      [],
+    );
+
+    // Input order is deliberately scrambled: the order below comes from the
+    // row table, not from the order the service happened to send.
+    expect(stats.map((s) => s.label)).toEqual([
+      "QL",
+      "Value",
+      "Equip delay",
+      "Stacking order",
+      "Damage",
+      "Range",
+    ]);
+
+    const sections = Object.fromEntries(stats.map((s) => [s.label, s.section]));
+    expect(sections.QL).toBeUndefined();
+    expect(sections.Damage).toBe("Combat");
+    expect(sections.Range).toBe("Combat");
+  });
+
+  it("renders the composite and formatted rows the way the client does", () => {
+    const { stats } = formatStats(
+      [
+        { stat_id: StatId.MinDamage, value: 10 },
+        { stat_id: StatId.MaxDamage, value: 20 },
+        { stat_id: StatId.CriticalBonus, value: 5 },
+        { stat_id: StatId.AttackDelay, value: 150 },
+        { stat_id: StatId.AttackRange, value: 20 },
+      ],
+      [],
+    );
+    const value = (label) => stats.find((s) => s.label === label)?.value;
+
+    expect(value("Damage")).toBe("10–20(5)");
+    expect(value("Attack")).toBe("1.50s");
+    expect(value("Range")).toBe("20m");
+  });
+
+  it("keeps a chance of zero, which means it never breaks", () => {
+    const { stats } = formatStats(
+      [{ stat_id: StatId.ChanceOfUse, value: 0 }],
+      [],
+    );
+    expect(stats).toEqual([
+      { label: "Chance of break on attack", value: 0, section: "Combat" },
+    ]);
   });
 
   it("collects attack and defence skill checks into one line each", () => {

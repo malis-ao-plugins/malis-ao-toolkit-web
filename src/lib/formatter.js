@@ -351,188 +351,179 @@ export const formatCriteriaGroup = (criteriaRows) =>
     "modifier criteria",
   );
 
+/**
+ * Named parameter slots.
+ *
+ * A modifier arrives as a bag of numbered operator slots whose meaning
+ * depends on the function type, which is why each formatter still reads the
+ * bag directly — but the recurring ones are worth a name.
+ */
+const PARAM = {
+  stat: 0,
+  from: 2,
+  hits: 3,
+  delay: 4,
+  criteria: 26,
+  target: 32,
+  to: 37,
+  value: 39,
+  bodyPart: 56,
+  texture: 57,
+  text: 65,
+  mesh: 76,
+  nano: 88,
+};
+
+/** A stat modifier reads "+12"; the sign is explicit for a gain. */
+const signed = (value) => `${value >= 0 ? "+" : ""}${value}`;
+
+function modifyStat(p) {
+  const statId = p[PARAM.stat];
+  const value = p[PARAM.value];
+  if (statId == null || value == null) return null;
+  return { label: Section2003[statId], value: signed(value) };
+}
+
+/**
+ * Damage and healing share one function type: the sign of the low end says
+ * which it is, and a `to` of zero means the figure is a percentage rather
+ * than a range.
+ */
+function hit(p) {
+  const from = p[PARAM.from];
+  const to = p[PARAM.to];
+  const hits = p[PARAM.hits];
+  const delay = p[PARAM.delay] / 100;
+
+  const suffix = [];
+  if (hits > 1) suffix.push(`${hits} hits`);
+  if (delay > 0) suffix.push(`${delay}s delay`);
+
+  let value;
+  if (to === 0) value = `${Math.abs(from)}%`;
+  else if (from === to) value = `${Math.abs(from)}`;
+  else value = `${Math.abs(from)} - ${Math.abs(to)}`;
+
+  return {
+    label: from > 0 ? "Healing" : "Damage",
+    value,
+    negative: from < 0,
+    suffix: suffix.join(", ") || undefined,
+  };
+}
+
+/**
+ * One formatter per function type.
+ *
+ * Each returns only the parts of the line particular to it; the parts every
+ * line shares — the criteria that gate it, the target it applies to — are
+ * attached once, below. Returning null means "renders nothing", which is a
+ * deliberate answer and distinct from having no formatter at all: the types
+ * that swap a mesh or add a hidden skill are listed so they stay quiet
+ * rather than being reported as unmapped.
+ */
+const MOD_FORMATTERS = {
+  [FunctionType.ModifyStat]: modifyStat,
+  [FunctionType.ModifyNanoStat]: modifyStat,
+  [FunctionType.Hit]: hit,
+
+  [FunctionType.Texture]: (p) => ({
+    label: `${getTextureBodyPart(p[PARAM.bodyPart])} Texture`,
+    value: p[PARAM.texture],
+  }),
+
+  [FunctionType.ChangeBodyMesh]: (p) => ({
+    label: "Change body mesh",
+    value: p[PARAM.mesh]?.[0],
+  }),
+
+  [FunctionType.SystemText]: (p) => ({
+    label: "System text",
+    value: p[PARAM.text]?.[0],
+  }),
+
+  [FunctionType.LockSkill]: (p) => ({
+    label: `${Section2003[p[PARAM.stat]]} locked for`,
+    value: "",
+    suffix: `${p[PARAM.value]}s`,
+  }),
+
+  [FunctionType.UploadNano]: (p) => ({
+    label: "Upload",
+    value: p[PARAM.value],
+    resolveItemName: true,
+    isNano: true,
+    noColor: true,
+  }),
+
+  [FunctionType.CastNano]: (p) => ({
+    label: "Cast",
+    value: p[PARAM.value],
+    resolveItemName: true,
+    isNano: true,
+  }),
+
+  [FunctionType.CastChance]: (p) => ({
+    label: `Cast chance (${p[PARAM.value]}%)`,
+    value: p[PARAM.nano],
+    resolveItemName: true,
+    isNano: true,
+    noColor: true,
+  }),
+
+  [FunctionType.TeamCastNano]: (p) => ({
+    label: "Team cast",
+    value: p[PARAM.nano],
+    resolveItemName: true,
+    isNano: true,
+  }),
+
+  [FunctionType.AreaCastNano]: (p) => ({
+    label: "AOE",
+    value: p[PARAM.nano],
+    resolveItemName: true,
+    isNano: true,
+  }),
+
+  [FunctionType.SetFlag]: (p) => ({
+    label: getSetFlag(p[PARAM.stat]),
+    value: getZoneFlagValue(p[PARAM.value]),
+  }),
+
+  [FunctionType.HeadMesh]: () => null,
+  [FunctionType.AddSkill]: () => null,
+  [FunctionType.GfxEffect]: () => null,
+};
+
 export const formatMod = (action) => {
-  const ft = action.function_type;
   const p = action.params;
-  const targetId = p[32];
-  const target = Section506[targetId];
+  const format = MOD_FORMATTERS[action.function_type];
 
-  const criteria = p[26]?.length ? formatCriteriaGroup(p[26]) : [];
-
-  if (ft === FunctionType.ModifyStat || ft === FunctionType.ModifyNanoStat) {
-    const statId = p[0];
-    const value = p[39];
-    if (statId == null || value == null) return null;
-    const name = Section2003[statId];
-    const sign = value >= 0 ? "+" : "";
-    return {
-      label: name,
-      value: `${sign}${value}`,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  if (ft === FunctionType.Texture) {
-    const value = p[57];
-    const bodyPart = p[56];
-    return {
-      label: `${getTextureBodyPart(bodyPart)} Texture`,
-      value,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  if (ft === FunctionType.ChangeBodyMesh) {
-    const value = p[76]?.[0];
-    return { label: "Change body mesh", value, criteria, target, targetId };
-  }
-
-  if (ft === FunctionType.HeadMesh) {
-    //   const value = p[8];
-    //   return { label: `Head mesh`, value, criteria, target, targetId };
+  if (!format) {
+    reportUnmapped(action.function_type);
     return null;
   }
 
-  if (ft === FunctionType.UploadNano) {
-    const value = p[39];
-    return {
-      label: "Upload",
-      value,
-      resolveItemName: true,
-      isNano: true,
-      criteria,
-      target,
-      targetId,
-      noColor: true,
-    };
-  }
+  const line = format(p);
+  if (!line) return null;
 
-  if (ft === FunctionType.AddSkill || ft === FunctionType.GfxEffect) {
-    return null;
-  }
-
-  if (ft === FunctionType.SystemText) {
-    const value = p[65]?.[0];
-    return { label: "System text", value, criteria, target, targetId };
-  }
-
-  if (ft === FunctionType.LockSkill) {
-    const skill = Section2003[p[0]];
-    const suffix = `${p[39]}s`;
-    const value = "";
-    return {
-      label: `${skill} locked for`,
-      value,
-      suffix,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  if (ft === FunctionType.CastNano) {
-    const value = p[39];
-    return {
-      label: "Cast",
-      value,
-      resolveItemName: true,
-      isNano: true,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-  if (ft === FunctionType.CastChance) {
-    const value = p[88];
-    return {
-      label: `Cast chance (${p[39]}%)`,
-      value,
-      resolveItemName: true,
-      isNano: true,
-      criteria,
-      target,
-      targetId,
-      noColor: true,
-    };
-  }
-
-  if (ft === FunctionType.TeamCastNano) {
-    const value = p[88];
-    return {
-      label: "Team cast",
-      value,
-      resolveItemName: true,
-      isNano: true,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  if (ft === FunctionType.AreaCastNano) {
-    const value = p[88];
-    return {
-      label: "AOE",
-      value,
-      resolveItemName: true,
-      isNano: true,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  if (ft === FunctionType.SetFlag) {
-    const value = getZoneFlagValue(p[39]);
-    const flag = getSetFlag(p[0]);
-    return { label: flag, value, criteria, target, targetId };
-  }
-
-  if (ft === FunctionType.Hit) {
-    const from = p[2];
-    const to = p[37];
-    const hits = p[3];
-    const delay = p[4] / 100;
-
-    const suffix = [];
-    if (hits > 1) suffix.push(`${hits} hits`);
-    if (delay > 0) suffix.push(`${delay}s delay`);
-
-    let value;
-    if (to === 0) {
-      // Special case: "to" of 0 means the value is a percentage.
-      value = `${Math.abs(from)}%`;
-    } else if (from === to) {
-      value = `${Math.abs(from)}`;
-    } else {
-      value = `${Math.abs(from)} - ${Math.abs(to)}`;
-    }
-
-    return {
-      label: from > 0 ? "Healing" : "Damage",
-      value,
-      negative: from < 0,
-      suffix: suffix.join(", ") || undefined,
-      criteria,
-      target,
-      targetId,
-    };
-  }
-
-  reportUnmapped(ft);
-  return null;
+  const targetId = p[PARAM.target];
+  return {
+    ...line,
+    criteria: p[PARAM.criteria]?.length
+      ? formatCriteriaGroup(p[PARAM.criteria])
+      : [],
+    target: Section506[targetId],
+    targetId,
+  };
 };
 
 const unmapped = new Set();
 
 /**
  * A function type with no formatter renders nothing at all, which is silent
- * and easy to miss. Say so once per type, in development only — this used to
- * be a bare console.log on every modifier of every item hovered.
+ * and easy to miss. Say so once per type, in development only — this was a
+ * bare log on every modifier of every item hovered.
  */
 function reportUnmapped(ft) {
   if (!dev || unmapped.has(ft)) return;
@@ -617,167 +608,179 @@ export const formatMods = (rawMods, rawModCriteria, rawModText) => {
   return mods;
 };
 
+const COMBAT = "Combat";
+
+/** Attack and defence skill contributions, by the code the service uses. */
+const SKILL_CHECKS = [
+  { check: 0xc, label: "Attack skills" },
+  { check: 0xd, label: "Defence skills" },
+];
+
+/** A stat id rendered through Section2003, or the raw id if it has no name. */
+const statName = (id) => Section2003[id] ?? `Stat ${id}`;
+
+/** Durations arrive in hundredths of a second. */
+const asSeconds = (v) => (v / 100).toFixed(2) + "s";
+
+/** An item carrying both a strain and a school is a nano program. */
+const isNanoProgram = (sv) =>
+  sv(StatId.NanoStrain) != null && sv(StatId.School) != null;
+
+/** Render through `fn` only when the stat is there at all. */
+const present = (id, fn) => (sv) => (sv(id) == null ? null : fn(sv(id), sv));
+
+/**
+ * Every row a tooltip can show, in the order it shows them.
+ *
+ * Each row reads what it needs through `sv` and answers null when it does
+ * not apply, so this table is the whole of the layout: read it top to bottom
+ * and that is the tooltip. A row is dropped only for null or an empty
+ * string — never for a falsy number, because zero is a real value for a cap,
+ * a cost or a chance.
+ *
+ * Deliberately not shown: the raw flag and "can" bitfields (the flags are
+ * returned separately and the tooltip renders the interesting ones as
+ * badges), and the icon ids.
+ */
+const STAT_ROWS = [
+  {
+    label: (sv) => (isNanoProgram(sv) ? "NCU" : "QL"),
+    value: (sv) => sv(StatId.Level),
+  },
+  {
+    label: "Slot",
+    value: (sv) => getEquipSlot(sv(StatId.ItemClass), sv(StatId.Slot)),
+  },
+  { label: "Value", value: (sv) => sv(StatId.Value) },
+  { label: "Equip delay", value: present(StatId.EquipDelay, asSeconds) },
+  { label: "Nanocost", value: (sv) => sv(StatId.NanoPoints) },
+  {
+    label: "School",
+    value: (sv) =>
+      isNanoProgram(sv)
+        ? `${getNanoSchool(sv(StatId.School))}:  ${getNanoStrain(sv(StatId.NanoStrain))}`
+        : null,
+  },
+  { label: "Stacking order", value: (sv) => sv(StatId.StackingOrder) },
+
+  {
+    section: COMBAT,
+    label: "Damage",
+    value: present(
+      StatId.MinDamage,
+      (min, sv) =>
+        `${min}–${sv(StatId.MaxDamage)}(${sv(StatId.CriticalBonus)})`,
+    ),
+  },
+  {
+    section: COMBAT,
+    label: "Duration",
+    value: present(StatId.TimeExist, (v) => formatDuration(v)),
+  },
+  {
+    section: COMBAT,
+    label: "Attack",
+    value: present(StatId.AttackDelay, asSeconds),
+  },
+  {
+    section: COMBAT,
+    label: "Attack speed",
+    value: present(StatId.AttackSpeed, asSeconds),
+  },
+  {
+    section: COMBAT,
+    label: "Recharge",
+    value: present(StatId.RechargeDelay, asSeconds),
+  },
+  {
+    section: COMBAT,
+    label: "Range",
+    value: present(StatId.AttackRange, (v) => `${v}m`),
+  },
+  {
+    section: COMBAT,
+    label: "Specials",
+    value: (sv) => getSpecials(sv(StatId.Can) ?? 0).join(", "),
+  },
+  {
+    section: COMBAT,
+    label: "Initiative",
+    value: present(StatId.InitiativeType, statName),
+  },
+  {
+    // `??` binds looser than `!=`, so the old condition here read as
+    // `sv(AMSCap) ?? (sv(SISCap) != null)`, and a cap of exactly 0 — falsy —
+    // dropped the row entirely.
+    section: COMBAT,
+    label: "Max beneficial skill",
+    value: (sv) => sv(StatId.AMSCap) ?? sv(StatId.SISCap),
+  },
+  {
+    section: COMBAT,
+    label: "Attack skill",
+    value: present(StatId.ItemSkill, statName),
+  },
+  { section: COMBAT, label: "Dual wield", value: (sv) => sv(StatId.MultiMelee) },
+  {
+    section: COMBAT,
+    label: "Combined (MA)",
+    value: (sv) => sv(StatId.MartialArtist),
+  },
+  {
+    section: COMBAT,
+    label: "Damage type",
+    value: present(StatId.DamageType2, statName),
+  },
+  {
+    section: COMBAT,
+    label: "Chance of break on attack",
+    value: (sv) => sv(StatId.ChanceOfUse),
+  },
+  {
+    section: COMBAT,
+    label: "Chance of break on nano",
+    value: (sv) => sv(StatId.ChanceOfBreakOnSpellAttack),
+  },
+  {
+    section: COMBAT,
+    label: "Chance of break on debuff",
+    value: (sv) => sv(StatId.ChanceOfBreakOnDebuff),
+  },
+
+  ...SKILL_CHECKS.map(({ check, label }) => ({
+    section: COMBAT,
+    label,
+    value: (sv, checks) =>
+      checks
+        .filter((r) => r.skill_check === check)
+        .map((r) => `${statName(r.stat_id)} ${r.value}%`)
+        .join(" & "),
+  })),
+];
+
+/**
+ * The stat block of a tooltip: rows in display order, each optionally in a
+ * section, plus the item's flags for the badges.
+ *
+ * This was 160 lines of `if (sv(X) != null) stats.push({ … })`, so the order
+ * of a tooltip was something you reconstructed by reading all of it. The
+ * order is now STAT_ROWS, and this is only the driver.
+ */
 export const formatStats = (rawStats, rawSkillChecks = []) => {
   const sv = (id) => rawStats.find((s) => s.stat_id === id)?.value ?? null;
-  const ticks = (v) => (v / 100).toFixed(2) + "s";
 
   const stats = [];
+  for (const row of STAT_ROWS) {
+    const value = row.value(sv, rawSkillChecks);
+    if (value == null || value === "") continue;
 
-  // const ql       = sv(544); // or passed in directly
-  const equipSlot = getEquipSlot(sv(76), sv(298));
-  const flags = getFlags(sv(0) ?? 0);
-  // const cans      = getCans(sv(30) ?? 0);
-  const specials = getSpecials(sv(30) ?? 0);
-  const nanoStrain = sv(StatId.NanoStrain);
-  const nanoSchool = sv(StatId.School);
-
-  // if (ql != null)  stats.push({ label: nanoStrain != null? "NCU" : "QL",       value: ql });
-  // if (flags.length > 0)   stats.push({ label: "Flags",    value: flags.join(", ") });
-  // if (cans.length  > 0)   stats.push({ label: "Can",      value: cans.join(", ") });
-
-  if (sv(StatId.Level) != null)
-    stats.push({
-      label: nanoStrain != null && nanoSchool != null ? "NCU" : "QL",
-      value: sv(StatId.Level),
-    });
-  if (equipSlot) stats.push({ label: "Slot", value: equipSlot });
-
-  if (sv(StatId.Value) != null)
-    stats.push({ label: "Value", value: sv(StatId.Value) });
-
-  if (sv(StatId.EquipDelay) != null)
-    stats.push({ label: "Equip delay", value: ticks(sv(StatId.EquipDelay)) });
-  if (sv(StatId.NanoPoints) != null)
-    stats.push({ label: "Nanocost", value: sv(StatId.NanoPoints) });
-  if (nanoStrain != null && nanoSchool != null)
-    stats.push({
-      label: "School",
-      value: `${getNanoSchool(sv(StatId.School))}:  ${getNanoStrain(sv(StatId.NanoStrain))}`,
-    });
-  if (sv(StatId.StackingOrder) != null)
-    stats.push({ label: "Stacking order", value: sv(StatId.StackingOrder) });
-  // if (sv(StatId.Icon) != null) stats.push({                               label: "Icon",                              value: sv(StatId.Icon)});
-  // if (sv(StatId.EffectIcon) != null) stats.push({                         label: "NCU Icon",                          value: sv(StatId.EffectIcon)});
-
-  if (sv(StatId.MinDamage) != null)
-    stats.push({
-      label: "Damage",
-      value: `${sv(StatId.MinDamage)}–${sv(StatId.MaxDamage)}(${sv(StatId.CriticalBonus)})`,
-      section: "Combat",
-    });
-  if (sv(StatId.TimeExist) != null)
-    stats.push({
-      label: "Duration",
-      value: formatDuration(sv(StatId.TimeExist)),
-      section: "Combat",
-    });
-  if (sv(StatId.AttackDelay) != null)
-    stats.push({
-      label: "Attack",
-      value: ticks(sv(StatId.AttackDelay)),
-      section: "Combat",
-    });
-  if (sv(StatId.AttackSpeed) != null)
-    stats.push({
-      label: "Attack speed",
-      value: ticks(sv(StatId.AttackSpeed)),
-      section: "Combat",
-    });
-  if (sv(StatId.RechargeDelay) != null)
-    stats.push({
-      label: "Recharge",
-      value: ticks(sv(StatId.RechargeDelay)),
-      section: "Combat",
-    });
-  if (sv(StatId.AttackRange) != null)
-    stats.push({
-      label: "Range",
-      value: `${sv(StatId.AttackRange)}m`,
-      section: "Combat",
-    });
-  if (specials.length > 0)
-    stats.push({
-      label: "Specials",
-      value: specials.join(", "),
-      section: "Combat",
-    });
-
-  if (sv(StatId.InitiativeType) != null)
-    stats.push({
-      label: "Initiative",
-      value:
-        Section2003[sv(StatId.InitiativeType)] ??
-        `Stat ${sv(StatId.InitiativeType)}`,
-      section: "Combat",
-    });
-  // `??` binds looser than `!=`, so the old condition read as
-  // `sv(AMSCap) ?? (sv(SISCap) != null)` and a cap of exactly 0 — falsy —
-  // dropped the row entirely.
-  const beneficialCap = sv(StatId.AMSCap) ?? sv(StatId.SISCap);
-  if (beneficialCap != null)
-    stats.push({
-      label: "Max beneficial skill",
-      value: beneficialCap,
-      section: "Combat",
-    });
-  if (sv(StatId.ItemSkill) != null)
-    stats.push({
-      label: "Attack skill",
-      value:
-        Section2003[sv(StatId.ItemSkill)] ?? `Stat ${sv(StatId.ItemSkill)}`,
-      section: "Combat",
-    });
-  if (sv(StatId.MultiMelee) != null)
-    stats.push({
-      label: "Dual wield",
-      value: sv(StatId.MultiMelee),
-      section: "Combat",
-    });
-  if (sv(StatId.MartialArtist) != null)
-    stats.push({
-      label: "Combined (MA)",
-      value: sv(StatId.MartialArtist),
-      section: "Combat",
-    });
-  if (sv(StatId.DamageType2) != null)
-    stats.push({
-      label: "Damage type",
-      value:
-        Section2003[sv(StatId.DamageType2)] ?? `Stat ${sv(StatId.DamageType2)}`,
-      section: "Combat",
-    });
-  if (sv(StatId.ChanceOfUse) != null)
-    stats.push({
-      label: "Chance of break on attack",
-      value: sv(StatId.ChanceOfUse),
-      section: "Combat",
-    });
-  if (sv(StatId.ChanceOfBreakOnSpellAttack) != null)
-    stats.push({
-      label: "Chance of break on nano",
-      value: sv(StatId.ChanceOfBreakOnSpellAttack),
-      section: "Combat",
-    });
-  if (sv(StatId.ChanceOfBreakOnDebuff) != null)
-    stats.push({
-      label: "Chance of break on debuff",
-      value: sv(StatId.ChanceOfBreakOnDebuff),
-      section: "Combat",
-    });
-
-  for (const [check, label] of [
-    [0xc, "Attack skills"],
-    [0xd, "Defence skills"],
-  ]) {
-    const values = rawSkillChecks
-      .filter((r) => r.skill_check === check)
-      .map(
-        (r) => `${Section2003[r.stat_id] ?? `Stat ${r.stat_id}`} ${r.value}%`,
-      )
-      .join(" & ");
-    if (values) stats.push({ label, value: values, section: "Combat" });
+    const label = typeof row.label === "function" ? row.label(sv) : row.label;
+    stats.push(
+      row.section ? { label, value, section: row.section } : { label, value },
+    );
   }
-  return { stats, flags };
+
+  return { stats, flags: getFlags(sv(StatId.Flags) ?? 0) };
 };
 
 export const formatDuration = (ticks) => {
