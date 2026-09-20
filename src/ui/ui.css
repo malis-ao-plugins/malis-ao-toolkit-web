@@ -1111,9 +1111,8 @@
   border-color: var(--c-accent);
 }
 
-.ph-picker__note {
+.ph-picker__foot .ph-btn {
   flex: 0 0 auto;
-  color: var(--c-fg-mute);
 }
 
 /* ─── Caret ────────────────────────────────────────────────────────────────

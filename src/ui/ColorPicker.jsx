@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Button } from "./Button";
 import { PixelInput } from "./PixelInput";
-import { PixelText } from "./pixel";
 
 /**
  * A colour picker made of squares.
@@ -16,7 +16,14 @@ import { PixelText } from "./pixel";
  * Quantised rather than continuous on purpose. A gradient asks you to hunt
  * for a colour by eye and lands you on a different one each time; a grid is
  * repeatable, and 78 cells is more choice than any interface needs.
+ *
+ * There is also a screen sampler, which matters more here than it would
+ * anywhere else: this is an overlay, and the thing worth matching is usually
+ * the game behind it rather than anything in the picker.
  */
+
+/** Chromium ships this; anywhere it does not, the button is simply absent. */
+const canSample = () => typeof window !== "undefined" && "EyeDropper" in window;
 
 const HUES = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
 
@@ -70,12 +77,17 @@ const isHex = (value) => /^#[0-9a-f]{6}$/i.test(value);
 
 export function ColorPicker({ value, onChange, onClose, anchor }) {
   const rootRef = useRef(null);
+  const sampling = useRef(false);
   const [draft, setDraft] = useState(value);
 
   useEffect(() => setDraft(value), [value]);
 
   useEffect(() => {
     const away = (e) => {
+      // The sampler takes the whole screen, and dismissing it lands a click
+      // on the page underneath — which would otherwise close the picker out
+      // from under the colour just chosen.
+      if (sampling.current) return;
       if (!rootRef.current?.contains(e.target) && !anchor?.contains(e.target)) {
         onClose();
       }
@@ -145,9 +157,26 @@ export function ColorPicker({ value, onChange, onClose, anchor }) {
           value={draft}
           onChange={(e) => commitText(e.target.value)}
         />
-        <PixelText upper className="ph-picker__note">
-          Hex
-        </PixelText>
+        {canSample() && (
+          <Button
+            size="sm"
+            title="Sample a colour from anywhere on screen, including the game"
+            onClick={async () => {
+              sampling.current = true;
+              try {
+                const { sRGBHex } = await new window.EyeDropper().open();
+                onChange(String(sRGBHex).toLowerCase());
+                onClose();
+              } catch {
+                // Dismissed with Escape, which is an answer, not a fault.
+              } finally {
+                sampling.current = false;
+              }
+            }}
+          >
+            Screen
+          </Button>
+        )}
       </div>
     </div>,
     document.body,
