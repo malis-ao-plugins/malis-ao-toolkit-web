@@ -17,10 +17,10 @@ npm run mock       # stand-in backends, so the UI works with no game running
 npm start          # http://localhost:3000
 ```
 
-`npm run mock` serves the two things the UI talks to (see **Backends** below)
-with synthetic data. It is not a simulator — it produces the shapes the front
-end reads and nothing more — but it is enough to build and look at every
-panel without the game.
+`npm run mock` stands in for all three backends the UI talks to (see
+**Backends** below) with synthetic data. It is not a simulator — it produces
+the shapes the front end reads and nothing more — but it is enough to build
+and look at every panel without the game.
 
 For the desktop shell:
 
@@ -35,7 +35,16 @@ npm run electron:build   # production build, then electron-builder into dist/
 npm run test:ci    # the whole suite, once
 npm test           # watch mode
 npm run build      # production build; also runs ESLint
+npm run shot       # render the running app to tools/shot.png
 ```
+
+`npm run shot` drives the app in Electron and writes a PNG, so a visual
+change can be looked at instead of reasoned about. It reads
+`tools/screenshot.json`: which URL, what size, an optional setup script run
+in the page first (`screenshot-setup.js` places the windows,
+`screenshot-firstrun.js` wipes them to show a fresh install), keys to press,
+and an optional probe script whose return value is logged — which is how the
+inventory columns and the focus rings were checked.
 
 ESLint runs as part of the build (`eslintConfig: react-app` in
 `package.json`). `CI=true npm run build` treats warnings as errors, and is
@@ -79,6 +88,8 @@ discovers it, there is nothing to register.
 | `ws://localhost:7068/ws` | Item Assistant plugin | messages, both ways |
 | `http://localhost:7068` | Item Assistant plugin | inventory, over HTTP |
 | `http://localhost:7070` | AOItemQueryService | the shared item database |
+
+All four have a stand-in in `npm run mock`.
 
 A plugin that is not running is the normal case — the game is not always up —
 so a window waits rather than erroring, and the socket retries every 2s.
@@ -131,6 +142,12 @@ load and the roll list decrements for a mission that was never rolled.
 icons by id and coalesces requests in flight. Call `membersOf`, `namesOf` and
 `iconsOf` rather than the `lib/db.js` equivalents, or the same icon is
 fetched once per row.
+
+**A PixelText cannot be sized by `width`.** It carries an inline width from
+the mask it built, and an inline style beats a stylesheet rule, so
+`width: 10ch` in a class is ignored and `text-align` has no text to act on.
+Use `flex-basis` for the box and `mask-position` for the alignment — see
+[`packages/pixel-text/README.md`](src/packages/pixel-text/README.md).
 
 ---
 
