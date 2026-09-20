@@ -108,7 +108,7 @@ function initials(name) {
  * before it reaches the DOM. A radial layout is the easiest way to end up with
  * text on a half pixel, and it is the one thing this UI cannot have.
  */
-export function Launcher({ apps, connections, isShown, onToggle }) {
+export function Launcher({ apps, connections, isShown, onToggle, onOptions, optionsOpen }) {
   const [open, setOpen] = useState(false);
   const [hovered, setHovered] = useState(null);
 
@@ -302,6 +302,20 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
         <span className="lch__bar" />
         <span className="lch__bar" />
         <span className="lch__bar" />
+      </button>
+
+      {/* Sits under the puck rather than on the ring: the ring is the apps,
+          and this is the toolkit itself. Close enough to the puck to be
+          found, near enough to it that no tile can reach it — the nearest a
+          tile gets is 54px below the centre, and this ends at 36. */}
+      <button
+        type="button"
+        className={`lch__pill${optionsOpen ? " lch__pill--on" : ""}`}
+        title="Interface options"
+        aria-pressed={!!optionsOpen}
+        onClick={onOptions}
+      >
+        <PixelText upper>UI</PixelText>
       </button>
 
       {mounted && items.length > 0 && (

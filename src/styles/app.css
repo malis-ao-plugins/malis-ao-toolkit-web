@@ -7,7 +7,8 @@
 
 .app {
   background: var(--c-window);
-  border: 1px solid var(--c-line-hi);
+  /* A token, because the options window lets it be retuned. */
+  border: var(--win-border, 1px) solid var(--c-line-hi);
   box-shadow: var(--shadow);
   display: flex;
   flex-direction: column;

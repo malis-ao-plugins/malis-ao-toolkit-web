@@ -1,0 +1,13 @@
+/* The shell's own window. Only what the kit has no opinion about. */
+
+.set__spacer {
+  flex: 1 1 auto;
+}
+
+.set__row {
+  justify-content: space-between;
+}
+
+.set__label {
+  color: var(--c-fg-dim);
+}

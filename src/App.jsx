@@ -1,7 +1,10 @@
+import { useState } from "react";
 import { APP_CONFIGS } from "./apps.config";
 import { useAppSessions } from "./hooks/useAppSessions";
 import { useShownApps } from "./shell/useShownApps";
 import { Launcher } from "./shell/Launcher";
+import { SettingsWindow } from "./shell/SettingsWindow";
+import { useTheme } from "./shell/theme";
 import AppWindow from "./AppWindow";
 import { DEFAULT_FRAME } from "./hooks/useWindowFrame";
 
@@ -45,6 +48,8 @@ const firstPos = (index) => {
 export default function App() {
   const { connections, states, send, push } = useAppSessions(APP_CONFIGS);
   const { isShown, hide, toggle } = useShownApps();
+  const { theme, set: setTheme, reset: resetTheme } = useTheme();
+  const [options, setOptions] = useState(false);
 
   return (
     <>
@@ -53,7 +58,18 @@ export default function App() {
         connections={connections}
         isShown={isShown}
         onToggle={toggle}
+        optionsOpen={options}
+        onOptions={() => setOptions((v) => !v)}
       />
+
+      {options && (
+        <SettingsWindow
+          theme={theme}
+          onChange={setTheme}
+          onReset={resetTheme}
+          onClose={() => setOptions(false)}
+        />
+      )}
 
       {APP_CONFIGS.map((config, i) => {
         if (!connections[config.id] || !isShown(config.id)) return null;

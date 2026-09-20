@@ -944,6 +944,92 @@
   }
 }
 
+/* ─── Colour field ─────────────────────────────────────────────────────── */
+
+.ph-color {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  min-width: 0;
+}
+
+.ph-color__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--u2);
+  min-width: 0;
+}
+
+.ph-color__label {
+  color: var(--c-fg);
+  flex: 0 0 auto;
+}
+
+.ph-color__hint {
+  flex: 1 1 0;
+  min-width: 0;
+  color: var(--c-fg-mute);
+}
+
+.ph-color__row {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  flex-wrap: wrap;
+}
+
+.ph-color__swatch {
+  width: var(--u5);
+  height: var(--u5);
+  padding: 0;
+  flex: 0 0 auto;
+  border: 1px solid var(--c-line);
+  cursor: pointer;
+}
+
+.ph-color__swatch:hover {
+  border-color: var(--c-fg);
+}
+
+/* The chosen one is ringed rather than ticked: a tick would have to be drawn
+   in a colour that works over every swatch, and none does. */
+.ph-color__swatch--on {
+  box-shadow: 0 0 0 1px var(--c-bg-0) inset;
+  border-color: var(--c-fg-hi);
+}
+
+.ph-color__swatch:focus-visible {
+  outline: 1px solid var(--c-accent);
+  outline-offset: 1px;
+}
+
+/* The system picker, reduced to a swatch of its own: the input itself is
+   drawn by the operating system and cannot be styled, so it is made
+   invisible and sized over the chip that stands in for it. */
+.ph-color__custom {
+  position: relative;
+  width: var(--u5);
+  height: var(--u5);
+  flex: 0 0 auto;
+  cursor: pointer;
+}
+
+.ph-color__chip {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 1px dashed var(--c-fg-mute);
+}
+
+.ph-color__custom input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* ─── Caret ────────────────────────────────────────────────────────────────
    Drawn with borders rather than a glyph: the atlases are latin1 and a
    triangle is not in latin1. Borders are also exact on the pixel grid, which

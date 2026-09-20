@@ -12,6 +12,7 @@ export { cx } from "./cx";
 export { PixelText, pixelize } from "./pixel";
 export { PixelInput } from "./PixelInput";
 export { PixelSelect } from "./PixelSelect";
+export { ColorField } from "./ColorField";
 export { fontFor, measure, fitToWidth, lineHeight, wrapToWidth } from "./fonts";
 export { Panel } from "./Panel";
 export { Button } from "./Button";
