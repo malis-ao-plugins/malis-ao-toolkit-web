@@ -15,6 +15,11 @@
  *   setState(p) merge into state — persisted locally, never sent
  *   send(msg)  raw message to the plugin
  *
+ * `transient` names the state keys that must not outlive the session: a
+ * one-off event from the plugin, or a flag that mirrors something only the
+ * plugin knows. They are never written to storage and are reset to their
+ * declared default on load.
+ *
  * See apps/README.md for the walkthrough and apps/TEMPLATE.jsx to copy.
  */
 
@@ -28,6 +33,7 @@ export function defineApp(spec) {
     vendor = "Mali's",
     settings: defaultSettings = {},
     state: defaultState = {},
+    transient = [],
     messages = {},
     header: Header,
     derive,
@@ -63,6 +69,12 @@ export function defineApp(spec) {
     label: vendor ? `${vendor} ${name}` : name,
 
     initialState: () => ({ settings: defaultSettings, ...defaultState }),
+
+    // State the shell must not persist. A `missionHit` replayed from storage
+    // on the next load would decrement the roll list for a mission that was
+    // never rolled; a persisted `rolling: true` would show Stop for a roller
+    // that is not running.
+    transientKeys: transient,
 
     handleMessage: (data) => {
       const handler = messages[data?.type];
@@ -116,6 +128,12 @@ function validate(spec, panels, tabs) {
 
   if (!spec.port) console.error(`[${where}] no port — it cannot connect.`);
   if (!tabs.length) console.error(`[${where}] no tabs — nothing will render.`);
+
+  for (const key of spec.transient ?? []) {
+    if (key === "settings") {
+      console.error(`[${where}] "settings" cannot be transient.`);
+    }
+  }
 
   for (const [key, panel] of Object.entries(panels)) {
     if (!panel?.component) {

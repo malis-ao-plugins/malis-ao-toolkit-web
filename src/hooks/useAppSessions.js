@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const PREFIX = "appState_";
 
@@ -12,25 +12,49 @@ const PREFIX = "appState_";
  *
  * Reconnection is a flat 2s retry. The plugin comes and goes with the game
  * client, so a dropped socket is the normal case rather than an error.
+ *
+ * An app declares which of its state keys are transient, and those are kept
+ * out of storage in both directions — stripped on the way in as well as on
+ * the way out, so state written by an earlier version does not keep being
+ * replayed after the fix.
  */
 
-const load = (id) => {
+const without = (state, keys) => {
+  if (!keys?.size) return state;
+  return Object.fromEntries(
+    Object.entries(state ?? {}).filter(([key]) => !keys.has(key)),
+  );
+};
+
+const load = (id, transientKeys) => {
   try {
-    return JSON.parse(localStorage.getItem(PREFIX + id));
+    const saved = JSON.parse(localStorage.getItem(PREFIX + id));
+    return saved ? without(saved, transientKeys) : null;
   } catch {
     return null;
   }
 };
 
-const save = (id, state) => {
+const save = (id, state, transientKeys) => {
   try {
-    localStorage.setItem(PREFIX + id, JSON.stringify(state));
+    localStorage.setItem(
+      PREFIX + id,
+      JSON.stringify(without(state, transientKeys)),
+    );
   } catch {
     /* private mode */
   }
 };
 
 export function useAppSessions(configs) {
+  const transient = useMemo(
+    () =>
+      new Map(configs.map((c) => [c.id, new Set(c.transientKeys ?? [])])),
+    [configs],
+  );
+  const transientRef = useRef(transient);
+  transientRef.current = transient;
+
   const sockets = useRef({});
   const timers = useRef({});
   const started = useRef(new Set());
@@ -44,7 +68,7 @@ export function useAppSessions(configs) {
     Object.fromEntries(
       configs.map((c) => {
         const initial = c.initialState();
-        const saved = load(c.id);
+        const saved = load(c.id, new Set(c.transientKeys ?? []));
         return [c.id, saved ? { ...initial, ...saved } : initial];
       }),
     ),
@@ -53,7 +77,7 @@ export function useAppSessions(configs) {
   const patch = useCallback((id, partial) => {
     setStates((prev) => {
       const next = { ...prev[id], ...partial };
-      save(id, next);
+      save(id, next, transientRef.current.get(id));
       return { ...prev, [id]: next };
     });
   }, []);
@@ -114,11 +138,14 @@ export function useAppSessions(configs) {
       connect();
     }
 
+    const openSockets = sockets.current;
+    const pendingTimers = timers.current;
+
     return () => {
       alive.current = false;
-      for (const id of Object.keys(sockets.current)) {
-        clearTimeout(timers.current[id]);
-        sockets.current[id]?.close();
+      for (const id of Object.keys(openSockets)) {
+        clearTimeout(pendingTimers[id]);
+        openSockets[id]?.close();
       }
     };
     // Configs are discovered at module load and never change at runtime.

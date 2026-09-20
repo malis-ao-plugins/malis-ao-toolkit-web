@@ -27,6 +27,7 @@ export default defineApp({
 
   settings: { … },          // persisted AND mirrored to the plugin
   state: { … },             // persisted locally only
+  transient: ["rolling"],   // state that must NOT survive a reload
 
   messages: {               // incoming type -> partial state
     missionResults: (d) => ({ missions: d.missions }),
@@ -70,6 +71,17 @@ in `state`.
 **`settings` vs `state`:** if the plugin needs to know it, it is a setting. If
 it came *from* the plugin, or it only matters to the window, it is state. The
 roll list is a setting; the rolled missions are state.
+
+**`transient`:** state that would be wrong if it came back. A one-off event
+from the plugin, or a flag that mirrors something only the plugin knows.
+Transient keys are never written to storage and are reset to their declared
+default on load — in both directions, so a key that an older build persisted
+stops being replayed as soon as it is declared.
+
+The roller declares `rolling` and `lastHit`. Without it, `missionHit` was
+saved with the rest of the state and consumed again on every reload, so the
+roll list decremented for a mission that was never rolled; and a window
+reloaded mid-roll showed Stop for a roller that had stopped.
 
 ---
 
@@ -134,6 +146,7 @@ stats). A plugin's own HTTP endpoints belong in the app folder — see
 - [ ] Port matches the plugin
 - [ ] Every tab's panel keys exist in `panels`
 - [ ] `set` for anything the plugin needs; `setState` for the rest
+- [ ] `transient` for events and for anything mirroring plugin-only state
 - [ ] Drag controls commit on release, not on move
 - [ ] Readable at 320px
 - [ ] No raw strings in JSX — use `PixelText` or a kit component

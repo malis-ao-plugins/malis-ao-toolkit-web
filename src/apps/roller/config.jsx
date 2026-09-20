@@ -101,6 +101,10 @@ export default defineApp({
 
   state: { rolling: false },
 
+  // `rolling` mirrors the plugin, which we cannot know about after a reload;
+  // `lastHit` is a single event that the roll list consumes exactly once.
+  transient: ["rolling", "lastHit"],
+
   messages: {
     missionResults: (d) => ({ missions: d.missions }),
     missionHit: (d) => ({ lastHit: d.item }),
