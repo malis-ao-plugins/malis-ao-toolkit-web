@@ -140,8 +140,12 @@ function SurfacePreview() {
         <div className="set__surface-panel">
           <PixelText upper>Panel</PixelText>
         </div>
-        <div className="set__surface-panel">
+        {/* Overflowing on purpose: a scrollbar cannot be previewed without
+            something to scroll. */}
+        <div className="set__surface-scroll">
           <PixelText>A line between them</PixelText>
+          <PixelText>And something to scroll</PixelText>
+          <PixelText>So the bar has a reason to appear</PixelText>
         </div>
       </div>
     </div>

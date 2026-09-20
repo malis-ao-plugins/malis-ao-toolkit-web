@@ -58,3 +58,15 @@
   border: 1px solid var(--c-line);
   color: var(--c-fg-dim);
 }
+
+.set__surface-scroll {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  max-height: 34px;
+  overflow-y: auto;
+  padding: var(--u) var(--u2);
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+}

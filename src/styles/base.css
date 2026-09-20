@@ -83,11 +83,11 @@ select {
   background: var(--c-bg-0);
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--c-bg-4);
+  background: var(--c-scroll, var(--c-bg-4));
   border: 1px solid var(--c-line);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--c-line-hi);
+  background: var(--c-scroll-hi, var(--c-line-hi));
 }
 ::-webkit-scrollbar-corner {
   background: var(--c-bg-0);

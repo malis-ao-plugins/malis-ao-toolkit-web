@@ -130,6 +130,14 @@ export const THEME = [
     value: "#35465a",
   },
   {
+    key: "scroll",
+    group: "surface",
+    token: "--c-scroll",
+    label: "Scrollbar",
+    type: "color",
+    value: "#24303e",
+  },
+  {
     key: "border",
     group: "surface",
     token: "--win-border",
@@ -191,6 +199,9 @@ function derived(theme) {
     // separate choice to make.
     "--c-fg-mute": mix(theme.textDim, window, 0.62),
     "--c-fg-hi": mix(theme.text, "#ffffff", 0.45),
+    // The thumb under the pointer: the chosen colour, lifted towards the
+    // edge, so it brightens without becoming a second choice to make.
+    "--c-scroll-hi": mix(theme.scroll, theme.edge, 0.4),
   };
 }
 
