@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PixelText, wrapToWidth } from "../../ui";
+import { PixelText, useFontRefresh, wrapToWidth } from "../../ui";
 
 /** Matches .rl-note's box in roller.css: 264px less 8px of padding each side. */
 const NOTE_PX = 248;
@@ -20,6 +20,9 @@ const NOTE_PX = 248;
  */
 export function useHoverNote() {
   const [note, setNote] = useState(null);
+
+  // The lines are broken here, so a change of face has to re-break them.
+  useFontRefresh();
 
   const bind = (text) =>
     text

@@ -9,7 +9,7 @@
 import "./ui.css";
 
 export { cx } from "./cx";
-export { PixelText, pixelize } from "./pixel";
+export { PixelText, pixelize, useFontRefresh } from "./pixel";
 export { PixelInput } from "./PixelInput";
 export { PixelSelect } from "./PixelSelect";
 export { ColorField } from "./ColorField";

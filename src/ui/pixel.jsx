@@ -103,8 +103,8 @@ function wire() {
   onFamilyChange(refreshAll);
 }
 
-function useFontRefresh() {
-  const [, force] = useState(0);
+export function useFontRefresh() {
+  const [version, force] = useState(0);
 
   useEffect(() => {
     wire();
@@ -112,6 +112,13 @@ function useFontRefresh() {
     subscribers.add(bump);
     return () => subscribers.delete(bump);
   }, []);
+
+  // Returned, not just triggered. A re-render alone does not reach anything
+  // memoised on the text and the size: those are unchanged when the face
+  // changes, so the old mask was handed straight back and the string kept
+  // its previous glyphs until something happened to remount it. Anything
+  // that measures has to count this among its dependencies.
+  return version;
 }
 
 /**
@@ -141,7 +148,7 @@ export function PixelText({
   title,
   ...rest
 }) {
-  useFontRefresh();
+  const fontVersion = useFontRefresh();
 
   const hostRef = useRef(null);
   const [room, setRoom] = useState(null);
@@ -185,7 +192,8 @@ export function PixelText({
   const face = fontFor(size, weight);
   const mask = useMemo(
     () => (text ? maskFor(text, size, weight, step) : null),
-    [text, size, weight, step],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [text, size, weight, step, fontVersion],
   );
 
   if (!mask) {

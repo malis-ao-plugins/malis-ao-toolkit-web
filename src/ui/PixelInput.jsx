@@ -1,5 +1,5 @@
 import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from "react";
-import { PixelText } from "./pixel";
+import { PixelText, useFontRefresh } from "./pixel";
 import { fontFor, measure } from "./fonts";
 import "./pixel-input.css";
 
@@ -48,6 +48,10 @@ export const PixelInput = forwardRef(function PixelInput(
   },
   forwardedRef,
 ) {
+  // The field lays itself out in the atlas's own metrics, so a change of
+  // face has to reach this render and not only the painted layer inside it.
+  useFontRefresh();
+
   const face = fontFor(size, weight);
   const innerRef = useRef(null);
   const [offset, setOffset] = useState(0);

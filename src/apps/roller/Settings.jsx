@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
 import {
   Button,
   Collapse,
@@ -14,7 +14,7 @@ import {
   Stack,
   Toggle,
 } from "../../ui";
-import { knobWidthFor, measure } from "../../ui";
+import { knobWidthFor, measure, useFontRefresh } from "../../ui";
 import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
 
 /**
@@ -28,22 +28,36 @@ import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
 const BOUND = 9999;
 
 /**
- * One knob size for the whole stack, measured across every slider.
+ * The two widths the stack is built on, in the face currently in use.
  *
- * Easy/Hard only runs to 11, so left to itself it would carry a visibly
- * smaller handle than the rest - which go to -100 - sitting directly above
- * and below it.
+ * One knob size for every slider: Easy/Hard only runs to 11, so left to
+ * itself it would carry a visibly smaller handle than the rest - which go to
+ * -100 - sitting directly above and below it. One caption column for the
+ * same reason.
+ *
+ * Measured per render rather than once at load. They were constants, which
+ * meant a face chosen later left the knob and the captions sized for the
+ * previous one until the page was reloaded.
  */
-const KNOB_PX = Math.max(...SLIDERS.map((s) => knobWidthFor(s.min, s.max)));
+function useSliderMetrics() {
+  const fontVersion = useFontRefresh();
 
-const CAP_PX = Math.ceil(
-  Math.max(
-    ...SLIDERS.flatMap((s) => [
-      measure(s.left.toUpperCase()),
-      measure(s.right.toUpperCase()),
-    ]),
-  ),
-);
+  return useMemo(
+    () => ({
+      knobPx: Math.max(...SLIDERS.map((s) => knobWidthFor(s.min, s.max))),
+      capPx: Math.ceil(
+        Math.max(
+          ...SLIDERS.flatMap((s) => [
+            measure(s.left.toUpperCase()),
+            measure(s.right.toUpperCase()),
+          ]),
+        ),
+      ),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [fontVersion],
+  );
+}
 
 /** Mission kinds to accept. */
 export function TypesPanel({ settings, set }) {
@@ -89,10 +103,11 @@ export function BehaviourPanel({ settings, set }) {
  */
 export function SlidersPanel({ settings, set }) {
   const [drag, setDrag] = useState(null); // { key, value }
+  const { knobPx, capPx } = useSliderMetrics();
 
   return (
     <Defer placeholder={<Skeleton rows={SLIDERS.length} />}>
-      <Stack gap={1} style={{ "--ph-slider-cap": `${CAP_PX}px` }}>
+      <Stack gap={1} style={{ "--ph-slider-cap": `${capPx}px` }}>
         {SLIDERS.map((s) => (
           <Slider
             key={s.key}
@@ -100,7 +115,7 @@ export function SlidersPanel({ settings, set }) {
             right={s.right}
             min={s.min}
             max={s.max}
-            knobPx={KNOB_PX}
+            knobPx={knobPx}
             value={drag?.key === s.key ? drag.value : (settings[s.key] ?? s.min)}
             onChange={(v) => setDrag({ key: s.key, value: v })}
             onCommit={(v) => {

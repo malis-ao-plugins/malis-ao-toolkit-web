@@ -4,60 +4,58 @@ import {
   PixelInput,
   PixelText,
   Row,
-  Segmented,
   Stack,
   DEFAULT_FAMILY,
   addRasterizedFamily,
   customFamilies,
   families,
-  onFamilyChange,
   removeRasterizedFamily,
 } from "../ui";
 
 /**
- * Choose the face the whole UI draws with, and add one the machine has.
+ * Name the face the whole UI draws with.
  *
- * The shipped faces are atlases exported through GDI — the same machinery
- * the game itself rasterises with, which is why they match it exactly. There
- * are only three, because each one is a file somebody has to generate.
+ * A field rather than a list of the faces that happen to be bundled. Three
+ * of them are atlases exported through GDI — the same machinery the game
+ * rasterises with, which is why they match it exactly — but any other name
+ * is rasterised on the spot from what the machine has installed, so a list
+ * of three was offering the small part of the answer as if it were all of
+ * it. Typing "verdana" still gets the exported atlas; typing anything else
+ * gets a face built here.
  *
- * So anything else is rasterised here instead: the browser draws each glyph
- * once and the greys are thrown away, which needs nothing installed and no
- * build step. It is not as good — with Windows font smoothing on, the
- * outlines were never fitted to the pixel grid and thresholding them leaves
- * uneven stems at small sizes — so it is offered as a way to try a face
- * rather than a replacement for exporting one.
+ * Built here means the browser draws each glyph once and the greys are
+ * thrown away. That needs nothing installed and no build step, and it is
+ * not as good: with Windows font smoothing on the outlines were never
+ * fitted to the pixel grid, and thresholding them leaves uneven stems at
+ * small sizes. Good enough to try a face; a face worth keeping wants a real
+ * export.
  *
- * A name the system does not have is not an error anywhere: the browser
- * silently substitutes a default and every glyph comes back as that. Nothing
- * in the result says so, so the preview above is what tells you.
+ * A name the system does not have is not an error anywhere. The browser
+ * silently substitutes a default and every glyph comes back as that, and
+ * nothing in the result says so — the preview above is what tells you.
  */
-
-/** "Lucida Console" as shipped, "verdana" as exported. */
-const titleCase = (name) =>
-  String(name)
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
 export function FontField({ value, onChange }) {
-  const [list, setList] = useState(families);
-  const [made, setMade] = useState(customFamilies);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(value);
   const [busy, setBusy] = useState(false);
 
-  useEffect(
-    () =>
-      onFamilyChange(() => {
-        setList(families());
-        setMade(customFamilies());
-      }),
-    [],
-  );
+  // Follows the theme, so Reset and the preview agree with the field.
+  useEffect(() => setDraft(value), [value]);
 
-  const add = () => {
+  const apply = () => {
     const name = draft.trim();
     if (!name || busy) return;
+
+    // Already registered — bundled or rasterised earlier. Matched loosely and
+    // switched to under its own spelling, so "Verdana" reaches the exported
+    // atlas instead of quietly rebuilding it out of the browser.
+    const known = families().find(
+      (family) => family.toLowerCase() === name.toLowerCase(),
+    );
+    if (known) {
+      setDraft(known);
+      onChange(known);
+      return;
+    }
 
     setBusy(true);
     // Four atlases of latin1, each glyph drawn and read back: enough work to
@@ -66,10 +64,7 @@ export function FontField({ value, onChange }) {
     requestAnimationFrame(() => {
       try {
         const family = addRasterizedFamily(name);
-        if (family) {
-          setDraft("");
-          onChange(family);
-        }
+        if (family) onChange(family);
       } finally {
         setBusy(false);
       }
@@ -78,31 +73,23 @@ export function FontField({ value, onChange }) {
 
   return (
     <Stack gap={2}>
-      <Segmented
-        items={list.map((family) => ({
-          value: family,
-          label: titleCase(family),
-        }))}
-        value={value}
-        onChange={onChange}
-      />
-
       <Row gap={2}>
         <PixelInput
           value={draft}
           placeholder="Windows font name"
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
+          onKeyDown={(e) => e.key === "Enter" && apply()}
+          onBlur={apply}
         />
         <Button
           size="sm"
-          disabled={busy || !draft.trim()}
-          title="Rasterise this face from the system, at the sizes the kit uses"
-          onClick={add}
+          disabled={busy || !draft.trim() || draft.trim() === value}
+          title="Draw the UI in this face"
+          onClick={apply}
         >
-          {busy ? "..." : "Add"}
+          {busy ? "..." : "Use"}
         </Button>
-        {made.includes(value) && (
+        {customFamilies().includes(value) && (
           <Button
             size="sm"
             variant="danger"
@@ -118,8 +105,8 @@ export function FontField({ value, onChange }) {
       </Row>
 
       <PixelText fit className="set__hint">
-        Added faces are drawn by the browser, not exported — good enough to
-        try one.
+        Verdana, Tahoma and Lucida Console are exported; anything else is
+        drawn by the browser.
       </PixelText>
     </Stack>
   );
