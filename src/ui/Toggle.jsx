@@ -4,6 +4,10 @@ import { PixelText } from "./pixel";
 /**
  * On/off control. Deliberately a hard 8px box rather than a sliding switch —
  * a knob that animates across a track cannot land on whole pixels.
+ *
+ * Labels are uppercased, because most of them are the kit's own short
+ * captions. Pass `upper={false}` for anything that is a name rather than a
+ * caption — a playfield, a character — where capitals read as shouting.
  */
 export function Toggle({
   label,
@@ -12,6 +16,7 @@ export function Toggle({
   block = false,
   title,
   className,
+  upper = true,
 }) {
   return (
     <button
@@ -27,7 +32,7 @@ export function Toggle({
       onClick={() => onChange?.(!on)}
     >
       <span className="ph-toggle__box" />
-      <PixelText upper className="ph-toggle__text">
+      <PixelText upper={upper} className="ph-toggle__text">
         {label}
       </PixelText>
     </button>

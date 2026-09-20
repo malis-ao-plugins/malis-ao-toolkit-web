@@ -111,6 +111,7 @@ const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
       <ListRow on={zone.active}>
         <Toggle
           block
+          upper={false}
           label={zone.name}
           on={zone.active}
           onChange={(v) => patchZone(id, { active: v })}
