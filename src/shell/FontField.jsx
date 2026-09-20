@@ -75,6 +75,7 @@ export function FontField({ value, onChange }) {
     <Stack gap={2}>
       <Row gap={2}>
         <PixelInput
+          className="ph-input set__font"
           value={draft}
           placeholder="Windows font name"
           onChange={(e) => setDraft(e.target.value)}

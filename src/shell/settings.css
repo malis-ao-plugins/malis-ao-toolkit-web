@@ -70,3 +70,10 @@
   border: 1px solid var(--c-line);
   color: var(--c-fg-dim);
 }
+
+/* The face field takes whatever the row's buttons leave. A basis of 0 rather
+   than auto: .ph-input is width:100%, which against `auto` would resolve to
+   the whole row and push Use and Drop off the end. */
+.set__font {
+  flex: 1 1 0;
+}
