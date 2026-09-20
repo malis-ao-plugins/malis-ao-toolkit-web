@@ -1,4 +1,4 @@
-﻿import { Section1005 } from "./ctext";
+import { Section1005 } from "./ctext";
 
 export const StatId = {
   Flags : 0,

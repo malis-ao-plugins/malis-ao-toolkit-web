@@ -1,4 +1,4 @@
-﻿export const Section100 = {
+export const Section100 = {
   1: "You can't attack this target.",
   2: "Your bodily remains have been made available.",
   3: "No corpse in reclaim booth.",

@@ -120,6 +120,40 @@ describe("requirement trees", () => {
     expect(formatCriteriaGroup([{ stat: 0, operator: 4, value: 0 }])).toEqual([]);
     expect(formatReqs([])).toEqual({});
   });
+
+  it("keeps every requirement when the stream never combines them", () => {
+    jest.spyOn(console, "warn").mockImplementation(() => {});
+
+    // Two operands and no connector: the walker used to return the first
+    // group and drop the rest, so the tooltip showed one of two requirements.
+    const reqs = formatCriteriaGroup([
+      { stat: StatId.Agility, operator: 2, value: 100 },
+      { stat: StatId.Stamina, operator: 2, value: 50 },
+    ]);
+
+    expect(reqs).toEqual([
+      { label: "Agility", value: "from 101" },
+      { label: "Stamina", value: "from 51" },
+    ]);
+
+    console.warn.mockRestore();
+  });
+
+  it("negates the requirement a NOT applies to", () => {
+    const reqs = formatCriteriaGroup([
+      { stat: StatId.Agility, operator: 2, value: 100 },
+      { stat: 0, operator: 42, value: 0 },
+    ]);
+    expect(reqs[0].negated).toBe(true);
+  });
+
+  it("switches source when an operator says the rows describe the target", () => {
+    const reqs = formatReqs([
+      { stat: 0, operator: 18, value: 0, outer_action_type: 0 },
+      { stat: StatId.Agility, operator: 2, value: 100, outer_action_type: 0 },
+    ]);
+    expect(Object.keys(reqs.Any)).toEqual(["On Target"]);
+  });
 });
 
 describe("formatMods", () => {
@@ -162,6 +196,27 @@ describe("formatMods", () => {
 describe("formatStats", () => {
   it("returns empty sections for an item with no stats", () => {
     expect(formatStats([], [])).toEqual({ stats: [], flags: [] });
+  });
+
+  it("reports a beneficial-skill cap of zero, which is a real cap", () => {
+    // `??` binds looser than `!=`, so the old condition tested
+    // `sv(AMSCap) ?? (sv(SISCap) != null)` and a cap of 0 vanished.
+    expect(formatStats([{ stat_id: StatId.AMSCap, value: 0 }], []).stats).toEqual(
+      [{ label: "Max beneficial skill", value: 0, section: "Combat" }],
+    );
+  });
+
+  it("prefers AMSCap over SISCap when both are present", () => {
+    const { stats } = formatStats(
+      [
+        { stat_id: StatId.AMSCap, value: 5 },
+        { stat_id: StatId.SISCap, value: 7 },
+      ],
+      [],
+    );
+    expect(stats).toEqual([
+      { label: "Max beneficial skill", value: 5, section: "Combat" },
+    ]);
   });
 
   it("reports the beneficial-skill cap from either stat", () => {

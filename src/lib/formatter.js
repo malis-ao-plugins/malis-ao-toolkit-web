@@ -1,4 +1,4 @@
-﻿import {
+import {
   Section100,
   Section1005,
   Section110,
@@ -29,6 +29,8 @@ import {
   ItemFlags,
   NanoSchool,
 } from "./enums";
+
+const dev = process.env.NODE_ENV !== "production";
 
 export function getExpansionFlags(value) {
   return Object.values(ExpansionFlags)
@@ -121,6 +123,21 @@ const OPERATOR_HANDLERS = {
 };
 
 const RANGE_OPERATORS = new Set([31, 32, 33, 34, 35, 36]);
+
+/**
+ * The operators that are structure rather than data.
+ *
+ * Requirements arrive as a postfix stream: operands, then the operator that
+ * combines the two most recent ones. These three are that grammar.
+ */
+const OP_OR = 3;
+const OP_AND = 4;
+const OP_NOT = 42;
+
+/** Operators that switch whose requirement the following rows describe. */
+const SOURCE_OPS = new Set([16, 18, 19, 21, 26, 27, 28, 29, 30]);
+
+const DEFAULT_SOURCE = "On Self";
 
 // 2. Stat handlers — checked second
 const STAT_HANDLERS = {
@@ -246,81 +263,20 @@ const SOURCE_OP_LABELS = {
   30: "On Invalid User",
 };
 
-export const formatReqs = (rows) => {
-  const OP_AND = 4;
-  const OP_OR = 3;
-  const OP_NOT = 42;
-
-  const byAction = {};
-  for (const row of rows) {
-    const at = row.outer_action_type ?? 0;
-    if (!byAction[at]) byAction[at] = [];
-    byAction[at].push(row);
-  }
-
-  const result = {};
-
-  for (const [at, actionRows] of Object.entries(byAction)) {
-    // Split rows into source buckets, tracking context switches
-    const bySource = {};
-    let currentSource = "On Self";
-
-    for (const row of actionRows) {
-      const sourceLabel = SOURCE_OP_LABELS[row.operator];
-      if (sourceLabel !== undefined) {
-        currentSource = sourceLabel;
-        continue;
-      }
-      if (!bySource[currentSource]) bySource[currentSource] = [];
-      bySource[currentSource].push(row);
-    }
-
-    // Stack-process each source bucket independently
-    const bySourceResult = {};
-    for (const [source, sourceRows] of Object.entries(bySource)) {
-      const stack = [];
-
-      for (const row of sourceRows) {
-        if (row.operator === OP_AND || row.operator === OP_OR) {
-          if (stack.length < 2) continue;
-          const b = stack.pop();
-          const a = stack.pop();
-          stack.push([
-            ...a,
-            { connector: row.operator === OP_AND ? "and" : "or" },
-            ...b,
-          ]);
-        } else if (row.operator === OP_NOT) {
-          if (stack.length < 1) continue;
-          const a = stack.pop();
-          stack.push([{ ...a[0], negated: true }, ...a.slice(1)]);
-        } else {
-          const req = formatReq(row);
-          if (req) stack.push([req]);
-        }
-      }
-
-      const reqs = stack[0] ?? [];
-      if (reqs.length > 0) bySourceResult[source] = reqs;
-    }
-
-    if (Object.keys(bySourceResult).length === 0) continue;
-    result[ActionType[at] ?? `Action ${at}`] = bySourceResult;
-  }
-
-  return result;
-};
-
-export const formatCriteriaGroup = (criteriaRows) => {
-  const OP_AND = 4;
-  const OP_OR = 3;
-  const OP_NOT = 42;
-  const SOURCE_OPS = new Set([16, 18, 19, 21, 26, 27, 28, 29, 30]);
-
+/**
+ * Reduce a postfix requirement stream to a flat list of rows and connectors.
+ *
+ * A well-formed stream leaves exactly one group on the stack. A malformed one
+ * — a connector with nothing to connect, or operands that never get combined
+ * — used to have everything but the first group silently dropped, so a
+ * tooltip quietly showed fewer requirements than the item has. Whatever is
+ * left is now concatenated in order, and the imbalance is reported in
+ * development.
+ */
+function reduceRequirements(rows, where) {
   const stack = [];
-  for (const row of criteriaRows) {
-    if (SOURCE_OPS.has(row.operator)) continue;
 
+  for (const row of rows) {
     if (row.operator === OP_AND || row.operator === OP_OR) {
       if (stack.length < 2) continue;
       const b = stack.pop();
@@ -340,8 +296,60 @@ export const formatCriteriaGroup = (criteriaRows) => {
     }
   }
 
-  return stack[0] ?? [];
+  if (dev && stack.length > 1) {
+    console.warn(
+      `[formatter] ${where}: ${stack.length} requirement groups did not ` +
+        `combine into one; showing all of them in order.`,
+    );
+  }
+
+  return stack.flat();
+}
+
+export const formatReqs = (rows) => {
+  const byAction = {};
+  for (const row of rows) {
+    const at = row.outer_action_type ?? 0;
+    if (!byAction[at]) byAction[at] = [];
+    byAction[at].push(row);
+  }
+
+  const result = {};
+
+  for (const [at, actionRows] of Object.entries(byAction)) {
+    // Split rows into source buckets, tracking context switches
+    const bySource = {};
+    let currentSource = DEFAULT_SOURCE;
+
+    for (const row of actionRows) {
+      const sourceLabel = SOURCE_OP_LABELS[row.operator];
+      if (sourceLabel !== undefined) {
+        currentSource = sourceLabel;
+        continue;
+      }
+      if (!bySource[currentSource]) bySource[currentSource] = [];
+      bySource[currentSource].push(row);
+    }
+
+    // Each source bucket is its own expression.
+    const bySourceResult = {};
+    for (const [source, sourceRows] of Object.entries(bySource)) {
+      const reqs = reduceRequirements(sourceRows, `action ${at}, ${source}`);
+      if (reqs.length > 0) bySourceResult[source] = reqs;
+    }
+
+    if (Object.keys(bySourceResult).length === 0) continue;
+    result[ActionType[at] ?? `Action ${at}`] = bySourceResult;
+  }
+
+  return result;
 };
+
+export const formatCriteriaGroup = (criteriaRows) =>
+  reduceRequirements(
+    criteriaRows.filter((row) => !SOURCE_OPS.has(row.operator)),
+    "modifier criteria",
+  );
 
 export const formatMod = (action) => {
   const ft = action.function_type;
@@ -515,9 +523,22 @@ export const formatMod = (action) => {
     };
   }
 
-  console.log(`unmapped ${ft}`);
+  reportUnmapped(ft);
   return null;
 };
+
+const unmapped = new Set();
+
+/**
+ * A function type with no formatter renders nothing at all, which is silent
+ * and easy to miss. Say so once per type, in development only — this used to
+ * be a bare console.log on every modifier of every item hovered.
+ */
+function reportUnmapped(ft) {
+  if (!dev || unmapped.has(ft)) return;
+  unmapped.add(ft);
+  console.warn(`[formatter] no formatter for function type ${ft}`);
+}
 
 export const formatMods = (rawMods, rawModCriteria, rawModText) => {
   rawMods = rawMods ?? [];
@@ -689,10 +710,14 @@ export const formatStats = (rawStats, rawSkillChecks = []) => {
         `Stat ${sv(StatId.InitiativeType)}`,
       section: "Combat",
     });
-  if (sv(StatId.AMSCap) ?? sv(StatId.SISCap) != null)
+  // `??` binds looser than `!=`, so the old condition read as
+  // `sv(AMSCap) ?? (sv(SISCap) != null)` and a cap of exactly 0 — falsy —
+  // dropped the row entirely.
+  const beneficialCap = sv(StatId.AMSCap) ?? sv(StatId.SISCap);
+  if (beneficialCap != null)
     stats.push({
       label: "Max beneficial skill",
-      value: sv(StatId.AMSCap) ?? sv(StatId.SISCap),
+      value: beneficialCap,
       section: "Combat",
     });
   if (sv(StatId.ItemSkill) != null)
