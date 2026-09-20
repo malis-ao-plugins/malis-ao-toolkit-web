@@ -28,3 +28,7 @@ yarn-error.log*
 # python bytecode from tools/
 __pycache__/
 *.pyc
+
+# screenshot tool output
+/tools/*.png
+/tools/screenshot.log

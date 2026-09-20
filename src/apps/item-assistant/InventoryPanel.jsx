@@ -63,10 +63,12 @@ export function InventoryPanel({ settings, set, send }) {
               : "Nothing matches"}
         </Empty>
       ) : (
-        <>
-          {/* Mirrors ItemRow's flex layout: icon, name, the three
-              columns, then the QL + pull block. Any change to the row has
-              to be made here too — they are two halves of one table. */}
+        <List className="ia-list">
+          {/* The head is the list's first row, not a sibling above it, so it
+              shares the rows' content box — scrollbar included. It mirrors
+              ItemRow's layout: icon, name, the three columns, then the
+              QL + pull block. Any change to the row has to be made here
+              too — they are two halves of one table. */}
           <div className="ia-head">
             <div className="ia-head__icon" />
             <PixelText className="ia-head__name">Name</PixelText>
@@ -74,13 +76,12 @@ export function InventoryPanel({ settings, set, send }) {
             <PixelText className="ia-col ia-col--where">Location</PixelText>
             <PixelText className="ia-col ia-col--in">In</PixelText>
             <div className="ia-head__actions">
-              <PixelText>QL</PixelText>
-              <PixelText>Pull</PixelText>
+              <PixelText className="ia-head__ql">QL</PixelText>
+              <PixelText className="ia-head__pull">Pull</PixelText>
             </div>
           </div>
 
-          <List className="ia-list">
-            {results.map((item) => (
+          {results.map((item) => (
               <ItemRow
                 key={item.key}
                 item={item}
@@ -98,9 +99,8 @@ export function InventoryPanel({ settings, set, send }) {
                   {item.locationParent ?? ""}
                 </PixelText>
               </ItemRow>
-            ))}
-          </List>
-        </>
+          ))}
+        </List>
       )}
     </Stack>
   );

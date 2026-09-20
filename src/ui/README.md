@@ -159,8 +159,9 @@ interaction ends. Push local state from `onChange` and send to the socket from
 
 - A `Panel` body at default density costs 8px of padding each side, leaving
   **302px** of usable width — **50 characters** of Px12, or 37 of Px16.
-- Six `Slot`s at `--icon` (32px, the native size of an AO icon) plus 4px gaps
-  come to 212px.
+- AO icon art is 48x48, which is what `--icon` is. Only whole divisors of it
+  resample cleanly, so `--icon-sm` is 24px and `ItemIcon` offers 48/24/16.
+  Six small `Slot`s plus 4px gaps come to 164px.
 - `Toggle` and `Button` are 20px tall; two rows of controls plus a panel head
   is 60px.
 - Size boxes in `ch` where you can. With a monospaced face 1ch is exactly one

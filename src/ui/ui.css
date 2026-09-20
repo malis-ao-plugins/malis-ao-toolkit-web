@@ -276,23 +276,8 @@
   text-transform: uppercase;
 }
 
-.ph-dim {
-  color: var(--c-fg-dim);
-}
-
-.ph-mute {
-  color: var(--c-fg-mute);
-}
-
 .ph-num {
   color: var(--c-info);
-}
-
-.ph-truncate {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
 }
 
 /* ─── Stack / Row ──────────────────────────────────────────────────────── */
@@ -325,11 +310,6 @@
 }
 .ph-gap-3 {
   gap: var(--u3);
-}
-
-.ph-grow {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 /* ─── Panel ────────────────────────────────────────────────────────────── */

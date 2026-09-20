@@ -14,6 +14,42 @@ Colour comes from CSS — the element paints `currentColor` through a mask, so
 
 ---
 
+## Sizing one from CSS
+
+`PixelText` sets an inline `width` and `height` from the mask it builds,
+because that is the element's natural size. An inline style beats a
+stylesheet rule, so this does nothing at all:
+
+```css
+.my-column {
+  width: 10ch;      /* ignored — the inline width wins */
+  text-align: right; /* ignored — there is no text in the box to align */
+}
+```
+
+Both parts fail quietly, and a column declared 10ch simply sizes to its
+contents instead. To give one a fixed box, set a definite `flex-basis` —
+these are flex items, and a definite basis takes precedence over `width`:
+
+```css
+.my-column {
+  flex: 0 0 10ch;
+}
+```
+
+To move the glyphs inside that box, move the mask. The element paints
+`currentColor` through a mask pinned to its left edge, so alignment is
+`mask-position`, not `text-align`:
+
+```css
+.my-number {
+  flex: 0 0 4ch;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+```
+
+
 ## Why this exists
 
 Chromium on Windows decides whether to antialias text from the **system**

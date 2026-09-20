@@ -111,9 +111,20 @@
   flex: 0 0 auto;
 }
 
-.irow__ql {
-  width: 4ch;
-  text-align: right;
+/* ── Sizing a PixelText from CSS ───────────────────────────────────────────
+   PixelText sets an inline width and height from the mask it built, and an
+   inline style beats a stylesheet rule — so `width: 8ch` in a class here is
+   ignored outright. These are flex items, so a definite `flex-basis` is how
+   they get a fixed box.
+
+   Alignment works the same way. The mask is painted from the box's left
+   edge; `text-align` has nothing to act on, because there is no text in the
+   box, only a mask over a background. Moving the mask is the alignment. */
+
+.irow .irow__ql {
+  flex: 0 0 4ch;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
 }
 
 /* ─── Identity line ────────────────────────────────────────────────────── */
@@ -165,16 +176,16 @@
   color: var(--c-fg-dim);
 }
 
-.ivar__id {
-  width: 8ch;
-  text-align: right;
-  flex: 0 0 auto;
+.ivar .ivar__id {
+  flex: 0 0 8ch;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
 }
 
-.ivar__ql {
-  width: 4ch;
-  text-align: right;
-  flex: 0 0 auto;
+.ivar .ivar__ql {
+  flex: 0 0 4ch;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
 }
 
 /* ─── Tooltip ──────────────────────────────────────────────────────────── */

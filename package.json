@@ -22,7 +22,8 @@
     "eject": "react-scripts eject",
     "electron:dev": "concurrently \"cross-env BROWSER=none react-scripts start\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "react-scripts build && electron-builder",
-    "mock": "node tools/mock-backends.js"
+    "mock": "node tools/mock-backends.js",
+    "shot": "electron tools/screenshot.js"
   },
   "build": {
     "appId": "com.malis.aotoolkit",

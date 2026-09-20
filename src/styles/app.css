@@ -66,17 +66,6 @@
   user-select: none;
 }
 
-/* Still emitted by a few older components. */
-.empty-state {
-  font-size: var(--fs-12);
-  line-height: var(--lh-12);
-  color: var(--c-fg-mute);
-  text-transform: uppercase;
-  padding: var(--u3) var(--u2);
-  text-align: center;
-  user-select: none;
-}
-
 /* ─── Resize grips ─────────────────────────────────────────────────────────
    Invisible until hovered. 4px is enough to hit without stealing clicks from
    whatever sits against the window edge. */

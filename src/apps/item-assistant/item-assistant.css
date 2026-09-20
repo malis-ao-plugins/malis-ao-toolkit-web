@@ -17,15 +17,26 @@
   border-color: var(--c-accent);
 }
 
-/* Matches .item-row-main: same 12px gap, same icon width, so the heads sit
-   over the columns rather than near them. */
+/* The head is the other half of ItemRow's table, so every metric here is
+   taken from the row rather than chosen: .irow__main's 8px gap and 4px
+   padding, plus the 1px border .irow draws around it. Get one of them wrong
+   and the column headings sit beside their columns instead of over them,
+   which is what they did — 12px gap against the row's 8px, 8px padding
+   against its 4px, for a drift of 7px at the name and more at every column
+   after it. */
 .ia-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: var(--u3);
+  gap: var(--u2);
   height: var(--ctl-h);
-  padding: 0 var(--u2);
+  padding: 0 calc(var(--u) + 1px);
   border-bottom: 1px solid var(--c-line);
+  /* Opaque rather than --c-panel: rows scroll underneath it, and the
+     overlay skin makes that token translucent. */
+  background: var(--c-bg-2);
   color: var(--c-fg-mute);
   flex: 0 0 auto;
 }
@@ -39,42 +50,68 @@
   flex: 1 1 auto;
 }
 
-.ia-head__actions {
+/* The QL readout and the action button as one block of known width — four
+   cells for the number, four for the button's label, plus the button's 4px
+   of padding either side and its two 1px borders. Declaring it on both
+   halves is what stops them drifting: left to size themselves, the head's
+   two labels came to 40px and the row's field-and-button to 56px, and
+   everything to the left of them absorbed the difference. */
+.ia-head__actions,
+.ia-list .irow__actions {
   display: flex;
   align-items: center;
-  gap: var(--u2);
-  flex: 0 0 auto;
+  gap: var(--u);
+  flex: 0 0 calc(8ch + var(--u) + var(--u2) + 2px);
 }
 
 .ia-list {
   max-height: 420px;
 }
 
-/* Widths in ch, so a column is a whole number of glyph cells and its text
-   never lands mid-character. */
-/* The row renders these as ItemRow children, which sit in the same flex
-   line as the name — so the same widths here line them up. */
+/* The row renders these as ItemRow children, so they sit in the same flex
+   line as the name — the same basis here is what puts a heading over its
+   column rather than beside it.
+
+   Basis rather than width, and doubled selectors: PixelText carries an
+   inline width, which beats a stylesheet `width` outright. These columns
+   were declared 10/16/12ch and were in fact all sized to their contents, so
+   "Char" (4 cells) sat over a value of 5, "Location" over one of 16, and
+   every column after the first drifted further.
+
+   Widths are in ch so a column is a whole number of glyph cells. */
 .ia-col {
   flex: 0 0 auto;
   overflow: hidden;
+  min-width: 0;
   color: var(--c-fg-dim);
 }
 
-/* ItemRow's own gap is 12px; match it so the columns do not drift. */
-.ia-list .item-row-main {
-  gap: var(--u3);
+.ia-col.ia-col--char {
+  flex-basis: 10ch;
 }
 
-.ia-col--char {
-  width: 10ch;
+.ia-col.ia-col--where {
+  flex-basis: 16ch;
 }
 
-.ia-col--where {
-  width: 16ch;
+.ia-col.ia-col--in {
+  flex-basis: 12ch;
 }
 
-.ia-col--in {
-  width: 12ch;
+/* Over the row's QL readout and its button: four cells for the number, and
+   for the button its four cells of label plus 4px of padding either side
+   and its two 1px borders. The button centres its own label, so the heading
+   centres over it. */
+.ia-head .ia-head__ql {
+  flex: 0 0 4ch;
+  -webkit-mask-position: 100% 0;
+  mask-position: 100% 0;
+}
+
+.ia-head .ia-head__pull {
+  flex: 0 0 calc(4ch + var(--u2) + 2px);
+  -webkit-mask-position: 50% 0;
+  mask-position: 50% 0;
 }
 
 

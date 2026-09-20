@@ -1,7 +1,9 @@
 /* ============================================================================
-   Dev harness: stand-ins for the two backends the UI talks to.
+   Dev harness: stand-ins for the backends the UI talks to.
 
      ws://localhost:7069/ws   Mission Roller plugin
+     ws://localhost:7068/ws   Item Assistant plugin
+     http://localhost:7068    Item Assistant inventory
      http://localhost:7070    AOItemQueryService
 
    Run it with `npm run mock` when the game is not up. It exists so the UI can
@@ -43,9 +45,12 @@ function chunk(type, data) {
   return Buffer.concat([len, body, crc]);
 }
 
-/** 32x32 RGBA icon — a bordered block whose hue is derived from `seed`. */
+/** 48x48 RGBA icon — a bordered block whose hue is derived from `seed`.
+    48 is the real art size the service returns; the kit sizes every icon
+    cell from it, so a mock at 32 would be resampled in a way the real one
+    never is. */
 function makeIcon(seed) {
-  const S = 32;
+  const S = 48;
   const hue = (seed * 47) % 360;
   const rgb = (h, v) => {
     const f = (n) => {
@@ -99,12 +104,15 @@ const NOUNS = [
 const itemName = (id) =>
   `${ADJECTIVES[id % ADJECTIVES.length]} ${NOUNS[(id >> 3) % NOUNS.length]}`;
 
-/** Six QL steps per item family, ids allocated 100 apart so they never clash. */
+/** Six QL steps per item family, ids allocated 100 apart so they never clash.
+    Each template carries its own name, as the real service does — the item
+    row reads the name off whichever template the QL lands on. */
 const membersFor = (lowId) => {
   const base = Math.floor(lowId / 100) * 100;
   return [1, 50, 100, 150, 200, 300].map((ql, i) => ({
     id: base + i,
     ql,
+    name: itemName(base + i),
   }));
 };
 
@@ -177,8 +185,14 @@ const itemApi = http.createServer(async (req, res) => {
       // flag filter visibly narrows the list in the dev harness.
       const hasBits = (have, want) => !want || (have & want) === want;
 
+      // The Item Assistant looks items up by id pair rather than by name.
+      const wanted = body.idPairs?.length
+        ? new Set(body.idPairs.map((p) => p.lowId))
+        : null;
+
       const hits = CATALOGUE.filter(
         (i) =>
+          (!wanted || wanted.has(i.low_id)) &&
           i.name.toLowerCase().includes(needle) &&
           hasBits(i.canBits, body.canBits) &&
           hasBits(i.itemBits, body.itemBits),
@@ -218,6 +232,83 @@ const itemApi = http.createServer(async (req, res) => {
     default:
       return json(res, { error: "not found" }, 404);
   }
+});
+
+// ─── Item Assistant stand-in (7068) ───────────────────────────────────────
+
+const CHARACTERS = [
+  { id: 1, name: "Malisondre", last_seen: Date.now() },
+  { id: 2, name: "Bagmule", last_seen: Date.now() },
+  { id: 3, name: "Doctorwho", last_seen: Date.now() },
+];
+
+// parent_type 104 is Inventory and 105 is Bank; anything else is a container
+// the client has catalogued separately.
+const CONTAINERS = {
+  1: [
+    { type: 106, instance: 5001, name: "Large Backpack - Cold Front", parent_type: 104, parent_instance: 0, parent_slot: 1 },
+    { type: 106, instance: 5002, name: "Notum Satchel", parent_type: 105, parent_instance: 0, parent_slot: 2 },
+  ],
+  2: [
+    { type: 106, instance: 5003, name: "Quartermaster Crate", parent_type: 105, parent_instance: 0, parent_slot: 1 },
+    { type: 106, instance: 5004, name: "Spare Parts Bag", parent_type: 106, parent_instance: 5003, parent_slot: 3 },
+  ],
+  3: [],
+};
+
+const inventoryFor = (charid) => {
+  const homes = [
+    { parent_type: 104, parent_instance: 0 },
+    { parent_type: 105, parent_instance: 0 },
+    ...CONTAINERS[charid].map((c) => ({
+      parent_type: c.type,
+      parent_instance: c.instance,
+    })),
+  ];
+
+  return Array.from({ length: 6 + charid * 3 }, (_, i) => {
+    const item = CATALOGUE[(charid * 7 + i * 3) % CATALOGUE.length];
+    const home = homes[i % homes.length];
+    return {
+      slot: 10 + i,
+      item_id: item.low_id,
+      item_high_id: item.high_id,
+      ql: item.members[i % item.members.length].ql,
+      container_name: null,
+      ...home,
+    };
+  });
+};
+
+const inventoryHttp = http.createServer((req, res) => {
+  const url = new URL(req.url, "http://localhost");
+  const charid = Number(url.searchParams.get("characterId"));
+
+  switch (url.pathname) {
+    case "/characters":
+      return json(res, CHARACTERS);
+    case "/character/items":
+      return json(res, CHARACTERS.some((c) => c.id === charid) ? inventoryFor(charid) : []);
+    case "/character/containers":
+      return json(res, CONTAINERS[charid] ?? []);
+    default:
+      return json(res, { error: "not found" }, 404);
+  }
+});
+
+const inventoryWss = new WebSocket.Server({ server: inventoryHttp, path: "/ws" });
+
+inventoryWss.on("connection", (ws) => {
+  console.log("[7068] client connected");
+  ws.on("message", (raw) => {
+    try {
+      const msg = JSON.parse(raw);
+      console.log("[7068] <-", msg.type, msg.charid ?? "", msg.slot ?? "");
+    } catch {
+      /* ignore */
+    }
+  });
+  ws.on("close", () => console.log("[7068] client gone"));
 });
 
 // ─── Mission Roller stand-in (7069) ───────────────────────────────────────
@@ -306,3 +397,6 @@ wss.on("connection", (ws) => {
 
 itemApi.listen(7070, () => console.log("mock item api   http://localhost:7070"));
 rollerHttp.listen(7069, () => console.log("mock roller     ws://localhost:7069/ws"));
+inventoryHttp.listen(7068, () =>
+  console.log("mock inventory  ws://localhost:7068/ws + http://localhost:7068"),
+);

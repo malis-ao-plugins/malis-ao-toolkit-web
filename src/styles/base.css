@@ -7,22 +7,6 @@
    on screen.
    ========================================================================= */
 
-:root {
-  /* Legacy size names, all collapsed onto the 12px step.
-     A generated pixel face is only exact at the size it was built for, so the
-     old six-step ramp (10/11/12/13/14/17px) cannot survive — four of those
-     sizes have no strike at all. Hierarchy in the older components now comes
-     from weight and colour instead. --fs-lg is the one exception and carries
-     its own family override below.
-     Nothing new should use these; see src/ui/ui.css for the real scale. */
-  --fs-2xs: 12px;
-  --fs-xs: 12px;
-  --fs-sm: 12px;
-  --fs-md: 12px;
-  --fs-base: 12px;
-  --fs-lg: 16px;
-}
-
 *,
 *::before,
 *::after {

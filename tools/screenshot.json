@@ -1,0 +1,9 @@
+{
+  "url": "http://localhost:3000",
+  "out": "shot.png",
+  "width": 1280,
+  "height": 880,
+  "wait": 6000,
+  "script": "screenshot-setup.js",
+  "afterScript": 8000
+}

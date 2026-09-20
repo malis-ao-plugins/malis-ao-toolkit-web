@@ -29,8 +29,8 @@ const iconFor = (item) => {
  *
  * Three fixed rows — identity, rewards, actions — so a list of cards reads as
  * a column of aligned data rather than a stack of differently-shaped boxes.
- * Reward icons sit at their native 32px: AO icons are 32x32, and any other
- * size resamples them into mush.
+ * Reward icons use the kit's small slot, which is 24px — AO icon art is
+ * 48x48, so only its whole divisors resample cleanly.
  *
  * Text goes through PixelText rather than the font, because Chromium on
  * Windows antialiases every glyph it rasterises and offers no way to stop it.
