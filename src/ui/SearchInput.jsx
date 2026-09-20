@@ -23,9 +23,6 @@ export function SearchInput({
           placeholder={placeholder}
           onChange={(e) => onChange?.(e.target.value)}
         />
-        {count != null && !value && (
-          <PixelText className="ph-search__count">{String(count)}</PixelText>
-        )}
         {value && (
           <button
             type="button"
@@ -37,6 +34,14 @@ export function SearchInput({
           </button>
         )}
       </div>
+
+      {/* Outside the field, not laid over its right-hand end: a count that
+          sits inside the box crowds the text and has to hide itself as soon
+          as anything is typed — which is exactly when it becomes useful. */}
+      {count != null && (
+        <PixelText className="ph-search__count">{String(count)}</PixelText>
+      )}
+
       {right}
     </div>
   );

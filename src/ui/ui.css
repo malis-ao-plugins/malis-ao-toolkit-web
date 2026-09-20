@@ -611,14 +611,11 @@
   color: var(--c-bad);
 }
 
+/* Hard against the right of the row, with a clear gap from the field. */
 .ph-search__count {
-  font-family: var(--ff-12);
-  font-size: var(--fs-12);
-  line-height: var(--lh-12);
   color: var(--c-fg-mute);
-  padding-right: var(--u5);
-  position: absolute;
-  right: 0;
+  flex: 0 0 auto;
+  margin-left: var(--u);
   pointer-events: none;
 }
 
