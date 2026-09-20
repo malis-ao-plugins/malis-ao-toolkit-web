@@ -143,29 +143,55 @@
    rather than the viewport. */
 
 @container (max-width: 300px) {
-  /* Grid, not a flex wrap: wrapping puts the controls on a line of their own
-     below the icon, which leaves the icon with dead space beside it. The
-     icon spans both rows instead, so the row reads as one block with a
-     stacked column next to it — which is what a mission card does. */
+  /* Three lines beside the icon, which spans all of them:
+
+       [icon]  Pristine Kevlar Vest
+               ID 100201   QL 1-300
+               50                +6
+
+     `display: contents` on the two wrappers so the name, the tags, the QL
+     and the variant control are all items of this one grid and can be
+     placed on it. Grid rather than a flex wrap: wrapping puts the controls
+     on a line of their own below the icon, leaving the icon with dead space
+     beside it. */
   .irow__main {
     display: grid;
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto auto 1fr;
     column-gap: var(--u2);
     row-gap: var(--u);
     align-items: center;
   }
 
-  .irow__icon {
-    grid-row: 1 / span 2;
-  }
-
   .irow__id,
-  .irow__actions {
-    grid-column: 2;
+  .iids {
+    display: contents;
+  }
+
+  .irow__icon {
+    grid-row: 1 / span 3;
+    grid-column: 1;
+  }
+
+  .irow__name {
+    grid-row: 1;
+    grid-column: 2 / -1;
+  }
+
+  /* Auto-placed across the two content columns. */
+  .iids__tag {
+    grid-row: 2;
   }
 
   .irow__actions {
-    justify-content: flex-end;
+    grid-row: 3;
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .iids__more {
+    grid-row: 3;
+    grid-column: 3;
+    justify-self: end;
   }
 }
 
