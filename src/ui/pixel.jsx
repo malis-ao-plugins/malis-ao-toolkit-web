@@ -1,6 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { onDeviceScaleChange } from "../pixelfont/index.js";
-import { cssSizeFor, fitToWidth, fontFor, onFamilyChange } from "./fonts";
+import {
+  cssSizeFor,
+  fitToWidth,
+  fontFor,
+  metricsFamily,
+  onFamilyChange,
+} from "./fonts";
 import "./pixel.css";
 
 /**
@@ -190,6 +196,7 @@ export function PixelText({
 
   const step = Math.max(1, Math.round(scale));
   const face = fontFor(size, weight);
+  const metric = metricsFamily(size, weight);
   const mask = useMemo(
     () => (text ? maskFor(text, size, weight, step) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,12 +237,20 @@ export function PixelText({
       <span
         className="pxt__text"
         style={{
-          // Sized so the installed face advances at the atlas's rate rather
-          // than at its own — see cssSizeFor. Without it the invisible glyphs
-          // run wider than the drawn ones and a selection drifts further off
-          // them with every character.
-          fontFamily: `"${face.name}", sans-serif`,
-          fontSize: `${cssSizeFor(size, weight) * step}px`,
+          // Laid out in the atlas's own advances where the browser has
+          // taken the generated metrics font, and in the installed face
+          // scaled to match where it has not — see metricsFamily and
+          // cssSizeFor. Either way a selection covers what it looks like it
+          // covers; only the first is exact.
+          ...(metric
+            ? {
+                fontFamily: `"${metric}", monospace`,
+                fontSize: `${face.size * step}px`,
+              }
+            : {
+                fontFamily: `"${face.name}", sans-serif`,
+                fontSize: `${cssSizeFor(size, weight) * step}px`,
+              }),
           lineHeight: `${face.height * step}px`,
           fontWeight: face.atlas.bold ? 700 : 400,
         }}

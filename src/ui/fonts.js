@@ -3,6 +3,8 @@ import {
   registerFont,
   getFont,
   rasterizeFont,
+  installMetricsFont,
+  metricsFontFamily,
 } from "../pixelfont/index.js";
 
 import lucidaConsole16 from "../pixelfont/fonts/lucida-console-16.json";
@@ -252,6 +254,39 @@ export function fontFor(size = 13, weight = 400) {
    The two are the same typeface, so their advances are proportional and the
    ratio is all that is needed. It is measured once per face against a long
    sample, which averages out the per-glyph rounding in the atlas. */
+
+/**
+ * The face to lay the hidden text out in, once the browser has taken it.
+ *
+ * A font built from the atlas, carrying its advances and no outlines at all
+ * — see pixelfont/metrics-font.js. At `font-size: <the atlas size>px` every
+ * advance resolves to the whole pixel the atlas drew, so the caret and the
+ * selection cannot drift however long the string runs.
+ *
+ * Answers null until it is registered, and null for good if the browser's
+ * sanitiser refuses it; either way the caller falls back to cssSizeFor
+ * below, which was the whole of the answer before this and is still most of
+ * it. Registering is one small async step per face, and the family
+ * listeners are what tells the drawn text to lay itself out again.
+ */
+const metrics = new Map();
+
+export function metricsFamily(size = 13, weight = 400) {
+  const font = fontFor(size, weight);
+  const family = metricsFontFamily(font);
+
+  const state = metrics.get(family);
+  if (state !== undefined) return state ? family : null;
+
+  metrics.set(family, false);
+  installMetricsFont(font).then((installed) => {
+    if (!installed) return;
+    metrics.set(family, true);
+    notify();
+  });
+
+  return null;
+}
 
 const SAMPLE =
   "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-";

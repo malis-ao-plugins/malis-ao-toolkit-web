@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { PixelText, useFontRefresh } from "./pixel";
-import { cssSizeFor, fontFor, measure } from "./fonts";
+import { cssSizeFor, fontFor, measure, metricsFamily } from "./fonts";
 import "./pixel-input.css";
 
 /**
@@ -53,6 +53,7 @@ export const PixelInput = forwardRef(function PixelInput(
   useFontRefresh();
 
   const face = fontFor(size, weight);
+  const metric = metricsFamily(size, weight);
   const innerRef = useRef(null);
   const [offset, setOffset] = useState(0);
   const [box, setBox] = useState(0);
@@ -105,7 +106,7 @@ export const PixelInput = forwardRef(function PixelInput(
       className={`pxi ${className}`}
       style={{
         "--pxi-cell-h": `${face.height}px`,
-        "--pxi-size": `${cssSizeFor(size, weight)}px`,
+        "--pxi-size": `${metric ? face.size : cssSizeFor(size, weight)}px`,
         ...style,
       }}
     >
@@ -133,7 +134,9 @@ export const PixelInput = forwardRef(function PixelInput(
           onSelect={sync}
           onFocus={sync}
           style={{
-            fontFamily: `"${face.name}", sans-serif`,
+            fontFamily: metric
+              ? `"${metric}", monospace`
+              : `"${face.name}", sans-serif`,
             fontWeight: face.atlas.bold ? 700 : 400,
             textAlign: align,
           }}
