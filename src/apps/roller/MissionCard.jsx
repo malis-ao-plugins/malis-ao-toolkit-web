@@ -87,28 +87,30 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         </div>
       </Row>
 
-      <Row gap={1} className="rl-mission__rewards">
-        {Array.from({ length: REWARD_SLOTS }, (_, i) => {
-          const item = rewards[i];
-          return (
-            <Slot
-              key={item?.low_id ?? item?.id ?? `empty-${i}`}
-              src={iconFor(item)}
-              title={item?.name}
-              size="sm"
-            />
-          );
-        })}
-      </Row>
+      <div className="rl-mission__foot">
+        <Row gap={1} className="rl-mission__rewards">
+          {Array.from({ length: REWARD_SLOTS }, (_, i) => {
+            const item = rewards[i];
+            return (
+              <Slot
+                key={item?.low_id ?? item?.id ?? `empty-${i}`}
+                src={iconFor(item)}
+                title={item?.name}
+                size="sm"
+              />
+            );
+          })}
+        </Row>
 
-      <Row gap={1} className="rl-mission__go">
-        <Button variant="primary" block onClick={onAccept}>
-          <PixelText>ACCEPT</PixelText>
-        </Button>
-        <Button onClick={onPing} title="Ping this mission in the client">
-          <PixelText>PING</PixelText>
-        </Button>
-      </Row>
+        <Row gap={1} className="rl-mission__go">
+          <Button variant="primary" block onClick={onAccept}>
+            <PixelText>ACCEPT</PixelText>
+          </Button>
+          <Button onClick={onPing} title="Ping this mission in the client">
+            <PixelText>PING</PixelText>
+          </Button>
+        </Row>
+      </div>
     </div>
   );
 }

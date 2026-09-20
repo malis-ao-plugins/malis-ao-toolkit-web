@@ -78,12 +78,35 @@
   flex: 0 0 auto;
 }
 
-/* Accept fills the row, which is right at the 320px target and ridiculous in
-   a window three times that - a single button half a metre wide. The row
-   stops at the width the card was designed for; past that the card simply
-   has space to its right, like everything else on it. */
+/* The rewards and the two buttons, stacked at the target width and side by
+   side once there is room for both.
+
+   Accept fills its row, which is right at 320px and ridiculous at three
+   times that - a single button half a metre wide. Capping it alone only
+   moved the problem: the button stopped growing and the card was left with
+   dead space beside it. Above 520px the buttons move up next to the rewards
+   and take that space instead. */
+.rl-mission__foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  min-width: 0;
+}
+
 .rl-mission__go {
   max-width: 302px;
+}
+
+@container (min-width: 520px) {
+  .rl-mission__foot {
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .rl-mission__go {
+    flex: 0 1 auto;
+    margin-left: auto;
+  }
 }
 
 /* Six half-size slots plus 4px gaps come to 164px. Six at native 48px would
