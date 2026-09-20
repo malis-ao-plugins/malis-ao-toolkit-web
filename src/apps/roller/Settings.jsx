@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import {
   Button,
   Collapse,
@@ -80,7 +80,11 @@ export function SlidersPanel({ settings, set }) {
   );
 }
 
-function ZoneRow({ id, zone, patchZone }) {
+/**
+ * Memoised: there are 46 of these, and any change to one zone rebuilds the
+ * settings object that every other one is handed.
+ */
+const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
   const [open, setOpen] = useState(false);
   const bounded =
     zone.x1 !== 0 || zone.y1 !== 0 || zone.x2 !== 9999 || zone.y2 !== 9999;
@@ -152,7 +156,7 @@ function ZoneRow({ id, zone, patchZone }) {
       </Collapse>
     </div>
   );
-}
+});
 
 /** Playfields the roller is allowed to roll in, with optional bounds. */
 export function ZonesPanel({ settings, set, state }) {
@@ -167,13 +171,21 @@ export function ZonesPanel({ settings, set, state }) {
 
   const activeCount = entries.filter(([, z]) => z.active).length;
 
-  const patchZone = (id, changes) =>
-    set({
+  // Read through a ref so the callback itself never changes: it is handed to
+  // 46 memoised rows, and a new function each render would re-render all of
+  // them every time one zone is toggled.
+  const latest = useRef({ settings, set });
+  latest.current = { settings, set };
+
+  const patchZone = useCallback((id, changes) => {
+    const { settings: now, set: push } = latest.current;
+    push({
       locations: {
-        ...settings.locations,
-        [id]: { ...settings.locations[id], ...changes },
+        ...now.locations,
+        [id]: { ...now.locations[id], ...changes },
       },
     });
+  }, []);
 
   const setAll = (active) =>
     set({

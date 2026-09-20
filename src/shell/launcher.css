@@ -45,10 +45,6 @@
   border-color: var(--c-accent);
 }
 
-.lch__puck--pinned {
-  background: var(--c-accent-lo);
-}
-
 .lch__bar {
   width: 16px;
   height: 2px;
@@ -82,8 +78,17 @@
   border-radius: 50%;
 }
 
+/* Where a tile sits, and where it comes from: the ring's origin is the
+   centre of the puck, so a tile starts centred on it and travels out.
+
+   The step function is the whole point. These tiles carry text, and text on
+   a fractional offset is blurred — so the travel is four discrete jumps
+   rather than a smooth slide, which is also how the rest of the kit
+   animates. Each tile leaves slightly after the one before it. */
 .lch__tile {
   position: absolute;
+  left: var(--lch-x);
+  top: var(--lch-y);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -94,6 +99,25 @@
   border: 1px solid var(--c-line);
   color: var(--c-fg-dim);
   cursor: pointer;
+  /* `backwards`, not `both`: the fill is only needed during the stagger
+     delay, and resting on the animation's end state instead of the rule
+     below would leave every tile stacked on the puck anywhere the animation
+     does not run. */
+  animation: lch-fan 140ms steps(4, end) backwards;
+  animation-delay: calc(var(--lch-i) * 25ms);
+}
+
+@keyframes lch-fan {
+  from {
+    left: -22px;
+    top: -22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lch__tile {
+    animation: none;
+  }
 }
 
 .lch__tile:hover:not(:disabled) {
@@ -141,6 +165,7 @@
 /* ─── Readout ──────────────────────────────────────────────────────────── */
 
 .lch__readout {
+  animation: lch-readout 100ms steps(2, end) backwards;
   position: absolute;
   left: -84px;
   top: 104px;
@@ -153,4 +178,16 @@
   color: var(--c-fg);
   pointer-events: none;
   white-space: nowrap;
+}
+
+@keyframes lch-readout {
+  from {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lch__readout {
+    animation: none;
+  }
 }

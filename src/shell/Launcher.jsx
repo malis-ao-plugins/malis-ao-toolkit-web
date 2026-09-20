@@ -5,8 +5,11 @@ import "./launcher.css";
 const PUCK = 32;
 const TILE = 44;
 const RADIUS = 76;
-const OPEN_DELAY = 120;
-const CLOSE_DELAY = 220;
+
+/** How much room a tile needs beyond the puck's centre. */
+const CLEARANCE = RADIUS + TILE / 2;
+const OPEN_DELAY = 60;
+const CLOSE_DELAY = 260;
 const DRAG_SLOP = 3;
 
 const POS_KEY = "launcherPos";
@@ -17,6 +20,47 @@ function loadPos() {
   } catch {
     return { x: 24, y: 24 };
   }
+}
+
+/**
+ * The arc the ring opens into, given where the puck is sitting.
+ *
+ * A full circle only works with room on every side. The puck starts in a
+ * corner and is usually dragged to one, and a tile that opens past the edge
+ * of the screen cannot be clicked — which is most of what made this thing
+ * awkward. So the fan turns away from whichever edges are close: half a
+ * circle against one edge, a quarter into a corner.
+ */
+function arcFor({ x, y }, count) {
+  const cx = x + PUCK / 2;
+  const cy = y + PUCK / 2;
+
+  const blocked = {
+    left: cx < CLEARANCE,
+    right: window.innerWidth - cx < CLEARANCE,
+    up: cy < CLEARANCE,
+    down: window.innerHeight - cy < CLEARANCE,
+  };
+
+  const away = {
+    x: (blocked.left ? 1 : 0) - (blocked.right ? 1 : 0),
+    y: (blocked.up ? 1 : 0) - (blocked.down ? 1 : 0),
+  };
+
+  // Nothing in the way: the whole circle, starting at the top.
+  if (!away.x && !away.y) {
+    const step = (Math.PI * 2) / count;
+    return (i) => i * step - Math.PI / 2;
+  }
+
+  const centre = Math.atan2(away.y, away.x);
+  const sweep = away.x && away.y ? Math.PI / 2 : Math.PI;
+
+  if (count === 1) return () => centre;
+
+  const start = centre - sweep / 2;
+  const step = sweep / (count - 1);
+  return (i) => start + i * step;
 }
 
 /** "Mission Roller" -> "MR". Enough to tell four apps apart on a 44px tile. */
@@ -44,7 +88,6 @@ function initials(name) {
  */
 export function Launcher({ apps, connections, isShown, onToggle }) {
   const [open, setOpen] = useState(false);
-  const [pinned, setPinned] = useState(false);
   const [hovered, setHovered] = useState(null);
   const [pos, setPos] = useState(loadPos);
 
@@ -69,12 +112,7 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        setOpen(false);
-        setPinned(false);
-      }
-    };
+    const onKey = (e) => e.key === "Escape" && setOpen(false);
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
@@ -86,14 +124,15 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
 
   const leave = useCallback(() => {
     clearTimers();
-    if (pinned) return;
     closeTimer.current = setTimeout(() => {
       setOpen(false);
       setHovered(null);
     }, CLOSE_DELAY);
-  }, [pinned]);
+  }, []);
 
-  // Dragging the puck moves the launcher; a click without travel pins it open.
+  // Dragging the puck moves the launcher. A click does nothing on purpose:
+  // hovering is the whole interaction, and a click used to pin the ring open
+  // so that it then had to be clicked again to get rid of it.
   const onPointerDown = (e) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = {
@@ -125,14 +164,11 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
     dragRef.current = null;
     if (!d) return;
     e.currentTarget.releasePointerCapture?.(e.pointerId);
-    if (!d.moved) {
-      setPinned((p) => !p);
-      setOpen(true);
-    }
+    if (!d.moved) setOpen(true);
   };
 
   const items = apps ?? [];
-  const centre = PUCK / 2;
+  const angleFor = arcFor(pos, Math.max(1, items.length));
 
   return (
     <div
@@ -143,8 +179,8 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
     >
       <button
         type="button"
-        className={`lch__puck${open ? " lch__puck--open" : ""}${pinned ? " lch__puck--pinned" : ""}`}
-        title="Apps — drag to move"
+        className={`lch__puck${open ? " lch__puck--open" : ""}`}
+        title="Apps - hover to open, drag to move"
         aria-expanded={open}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -158,11 +194,17 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
       {open && items.length > 0 && (
         <div className="lch__ring" role="menu">
           {items.map((app, i) => {
-            // Start at the top and go clockwise. Rounded here, once, so the
-            // tile lands on whole pixels and the label inside stays sharp.
-            const angle = (i / items.length) * Math.PI * 2 - Math.PI / 2;
-            const left = Math.round(centre + Math.cos(angle) * RADIUS - TILE / 2);
-            const top = Math.round(centre + Math.sin(angle) * RADIUS - TILE / 2);
+            // Measured from the ring's own origin, which CSS has already put
+            // at the centre of the puck. Adding the centre again here shifted
+            // every tile 16px down and right — off-centre, and far enough out
+            // that the bottom-right ones fell outside the ring's hover area,
+            // so the menu closed as you reached for them.
+            //
+            // Rounded once, here, so the tile lands on whole pixels and the
+            // label inside it stays sharp.
+            const angle = angleFor(i);
+            const left = Math.round(Math.cos(angle) * RADIUS - TILE / 2);
+            const top = Math.round(Math.sin(angle) * RADIUS - TILE / 2);
 
             const connected = !!connections?.[app.id];
             const visible = isShown(app.id);
@@ -178,7 +220,13 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
                   (visible && connected ? " lch__tile--on" : "") +
                   (connected ? "" : " lch__tile--off")
                 }
-                style={{ left, top, width: TILE, height: TILE }}
+                style={{
+                  "--lch-x": `${left}px`,
+                  "--lch-y": `${top}px`,
+                  "--lch-i": i,
+                  width: TILE,
+                  height: TILE,
+                }}
                 title={
                   connected
                     ? `${app.label} — ${visible ? "hide" : "show"}`
@@ -189,7 +237,7 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
                 onClick={() => {
                   if (!connected) return;
                   onToggle(app.id);
-                  if (!pinned) setOpen(false);
+                  setOpen(false);
                 }}
               >
                 <PixelText size={16} className="lch__tile-key">

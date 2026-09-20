@@ -90,11 +90,23 @@ export function ListRow({ on = false, className, children, ...rest }) {
   );
 }
 
-/** Height-only reveal — content is never scaled, so glyphs stay sharp. */
+/**
+ * Height-only reveal — content is never scaled, so glyphs stay sharp.
+ *
+ * Closed content is not rendered. A grid-rows reveal does not need it to be:
+ * the row animates from 0fr whether or not anything is in it, and the
+ * content appears as it opens.
+ *
+ * That matters more than it sounds. The roller's Config tab has 46 zones,
+ * each with four bounds fields behind a collapse, and every one of them was
+ * being built on every visit to the tab — 184 number inputs nobody could
+ * see, which is most of what made switching to that tab take a fifth of a
+ * second. Every item row mounts a variant table the same way.
+ */
 export function Collapse({ open, className, children }) {
   return (
     <div className={cx("ph-collapse", open && "ph-collapse--open", className)}>
-      <div className="ph-collapse__inner">{children}</div>
+      <div className="ph-collapse__inner">{open ? children : null}</div>
     </div>
   );
 }

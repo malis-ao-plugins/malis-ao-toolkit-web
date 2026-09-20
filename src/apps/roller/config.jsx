@@ -20,6 +20,27 @@ const ZONE_NAME = Object.fromEntries(
   PLAYFIELDS.map((p) => [p.id, p.name || `PF ${p.id}`]),
 );
 
+let zonesCache = { locations: null, zones: null };
+
+function deriveZones(state) {
+  const locations = state.settings?.locations;
+  if (!locations) return { zones: null };
+
+  if (zonesCache.locations !== locations) {
+    zonesCache = {
+      locations,
+      zones: Object.fromEntries(
+        Object.entries(locations).map(([id, zone]) => [
+          id,
+          { ...zone, name: ZONE_NAME[Number(id)] ?? `PF ${id}` },
+        ]),
+      ),
+    };
+  }
+
+  return { zones: zonesCache.zones };
+}
+
 /** Start/stop lives in the title bar — it is the one control always needed. */
 function RollerControls({ state, setState, send }) {
   const rolling = !!state.rolling;
@@ -111,16 +132,12 @@ export default defineApp({
   },
 
   // Zone ids carry no names over the wire; the panel wants them by name.
-  derive: (state) => ({
-    zones: state.settings?.locations
-      ? Object.fromEntries(
-          Object.entries(state.settings.locations).map(([id, z]) => [
-            id,
-            { ...z, name: ZONE_NAME[Number(id)] ?? `PF ${id}` },
-          ]),
-        )
-      : null,
-  }),
+  //
+  // Cached on the identity of `locations`, because derive runs on every
+  // render of the window and there are 46 zones: rebuilding them each time
+  // hands ZoneRow a new object every render, which defeats its memo and
+  // re-renders all 46 whenever one is toggled.
+  derive: deriveZones,
 
   panels: {
     missions: {
