@@ -32,6 +32,10 @@ const iconFor = (item) => {
  * The identity block is itself three lines: what it is, where it is, and
  * what it pays. The pay used to share a line with the zone, which left both
  * of them fighting for a 320px row.
+ *
+ * The name and the zone truncate to the column they are in rather than to a
+ * width measured once at the 320px target — the window is resizable, and a
+ * fixed budget is either short of the room or past the edge of it.
  * Reward icons use the kit's small slot, which is 24px — AO icon art is
  * 48x48, so only its whole divisors resample cleanly.
  *
@@ -64,14 +68,14 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         <div className="rl-mission__id">
           <PixelText
             size={16}
-            maxPx={NAME_PX}
+            fit="parent"
             className="rl-mission__name"
             title={mission.name}
           >
             {mission.name}
           </PixelText>
 
-          <PixelText maxPx={ZONE_PX} className="rl-mission__zone" title={zone}>
+          <PixelText fit="parent" className="rl-mission__zone" title={zone}>
             {zone}
           </PixelText>
 

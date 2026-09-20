@@ -103,7 +103,11 @@ function useDeviceScale() {
  *   scale   integer upscale, default 1
  *   upper   uppercase the string (a mask cannot be text-transformed)
  *   maxPx   truncate to this pixel width, with an ellipsis
- *   fit     truncate to whatever room the parent has, measured
+ *   fit     truncate to the room actually available, measured.
+ *           `true` measures this element, which needs it to be sized
+ *           independently of its content — a flex item with a basis of 0.
+ *           `"parent"` measures the parent instead, for the common case of
+ *           a lone child of a column that has no room of its own to report.
  *   as      element type, default "span"
  */
 export function PixelText({
@@ -126,20 +130,23 @@ export function PixelText({
   const [room, setRoom] = useState(null);
 
   /**
-   * How much room this element has actually been given.
+   * How much room there actually is.
    *
-   * Its own box, not its parent's: the parent is the whole control, and a
-   * toggle's label does not get the toggle's width — there is a box, a gap
-   * and padding in the way, so measuring the parent hands back a budget
-   * wider than the space and the text still overruns.
+   * Which box to measure depends on where this sits. A toggle's label is a
+   * flex item with a basis of 0, so its own box is exactly the room left
+   * over — and its parent is the whole control, box and padding included,
+   * which would hand back a budget wider than the space.
    *
-   * This only works where the element is sized independently of what is in
-   * it — a flex item with a basis of 0. Anywhere it sizes to its content,
-   * the measurement would chase itself.
+   * A line in a column has the opposite problem: it carries an inline width
+   * from its own mask, so it can never stretch to report the column's width,
+   * and the column is the thing that knows. Either way the box being
+   * measured has to be sized independently of this text, or the measurement
+   * chases itself.
    */
   useLayoutEffect(() => {
     if (!fit) return undefined;
-    const el = hostRef.current;
+    const self = hostRef.current;
+    const el = fit === "parent" ? self?.parentElement : self;
     if (!el) return undefined;
 
     const read = () => setRoom(Math.floor(el.getBoundingClientRect().width));
