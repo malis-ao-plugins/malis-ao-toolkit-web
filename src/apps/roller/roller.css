@@ -82,14 +82,14 @@
 /* ─── Hover note ───────────────────────────────────────────────────────── */
 
 .rl-note {
+  /* Wrapped into drawn lines by HoverNote, which measures against this. */
   max-width: 264px;
+  display: flex;
+  flex-direction: column;
   padding: var(--u2);
   background: var(--c-bg-0);
   border: 1px solid var(--c-line-hi);
   color: var(--c-fg);
-  font-size: var(--fs-12);
-  line-height: var(--lh-12);
-  white-space: pre-wrap;
   pointer-events: none;
   z-index: 10000;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);

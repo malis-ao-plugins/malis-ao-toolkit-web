@@ -79,6 +79,38 @@ export function lineHeight(size, weight) {
 }
 
 /**
+ * Break text into lines that each fit a pixel width.
+ *
+ * PixelText draws one mask per string and cannot wrap — a mask has no line
+ * boxes for the browser to break. So anything that runs to more than a line
+ * has to be broken up here and drawn a line at a time.
+ *
+ * A word longer than the width is left to overrun rather than being cut in
+ * half; there are none in the game's own text, and a hyphen in the wrong
+ * place reads worse than a wide line.
+ */
+export function wrapToWidth(text, px, size, weight) {
+  const font = fontFor(size, weight);
+  const words = String(text ?? "").split(/\s+/).filter(Boolean);
+
+  const lines = [];
+  let line = "";
+
+  for (const word of words) {
+    const candidate = line ? `${line} ${word}` : word;
+    if (line && font.measure(candidate) > px) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = candidate;
+    }
+  }
+
+  if (line) lines.push(line);
+  return lines;
+}
+
+/**
  * Truncate to a pixel width, spending the tail on an ellipsis.
  *
  * The old kit could count characters, because every glyph was the same

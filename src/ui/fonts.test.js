@@ -1,4 +1,4 @@
-import { fitToWidth, fontFor, lineHeight, measure } from "./fonts";
+import { fitToWidth, fontFor, lineHeight, measure, wrapToWidth } from "./fonts";
 
 /**
  * These run against the real atlases in src/pixelfont, which is a junction to
@@ -105,5 +105,39 @@ describe("fitToWidth", () => {
 
   it("copes with an empty string", () => {
     expect(fitToWidth("", 40, 13)).toBe("");
+  });
+});
+
+describe("wrapToWidth", () => {
+  const text = "Omni-Pol wants this one quiet. No witnesses, no report.";
+
+  it("keeps a short line whole", () => {
+    expect(wrapToWidth("Two words", 400, 13)).toEqual(["Two words"]);
+  });
+
+  it("splits on whitespace, not on the letter s", () => {
+    // A regex that lost its backslash would split "this one" into fragments.
+    expect(wrapToWidth("this is so", 400, 13)).toEqual(["this is so"]);
+  });
+
+  it("breaks into lines that each fit", () => {
+    const lines = wrapToWidth(text, 120, 13);
+    expect(lines.length).toBeGreaterThan(1);
+    for (const line of lines) expect(measure(line, 13)).toBeLessThanOrEqual(120);
+  });
+
+  it("loses no words", () => {
+    expect(wrapToWidth(text, 120, 13).join(" ")).toBe(text);
+  });
+
+  it("is empty for empty text", () => {
+    expect(wrapToWidth("", 120, 13)).toEqual([]);
+    expect(wrapToWidth(null, 120, 13)).toEqual([]);
+  });
+
+  it("lets a single over-long word overrun rather than cutting it", () => {
+    expect(wrapToWidth("supercalifragilistic", 20, 13)).toEqual([
+      "supercalifragilistic",
+    ]);
   });
 });

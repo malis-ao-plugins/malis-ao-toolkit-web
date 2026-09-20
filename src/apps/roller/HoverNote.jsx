@@ -1,4 +1,8 @@
 import { useState } from "react";
+import { PixelText, wrapToWidth } from "../../ui";
+
+/** Matches .rl-note's box in roller.css: 264px less 8px of padding each side. */
+const NOTE_PX = 248;
 
 /**
  * Cursor-following note for mission descriptions.
@@ -9,6 +13,10 @@ import { useState } from "react";
  *
  * Coordinates are rounded to whole pixels so the panel never lands on a half
  * pixel and blurs the glyphs inside it.
+ *
+ * The text was the last raw string left in the app, rendering in the
+ * fallback font while everything around it came from the atlas. A mask
+ * cannot wrap, so it is broken into lines here and drawn a line at a time.
  */
 export function useHoverNote() {
   const [note, setNote] = useState(null);
@@ -35,7 +43,9 @@ export function useHoverNote() {
         top: Math.min(note.y + 12, window.innerHeight - 120),
       }}
     >
-      {note.text}
+      {wrapToWidth(note.text, NOTE_PX).map((line, i) => (
+        <PixelText key={i}>{line}</PixelText>
+      ))}
     </div>
   ) : null;
 
