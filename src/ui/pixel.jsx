@@ -126,22 +126,27 @@ export function PixelText({
   const [room, setRoom] = useState(null);
 
   /**
-   * How much room the parent is giving us.
+   * How much room this element has actually been given.
    *
-   * Only for `fit`, and only worth doing where the parent's width does not
-   * depend on ours — a flex item with a basis of 0, say. Measuring a box
-   * that sizes to its content would just chase itself.
+   * Its own box, not its parent's: the parent is the whole control, and a
+   * toggle's label does not get the toggle's width — there is a box, a gap
+   * and padding in the way, so measuring the parent hands back a budget
+   * wider than the space and the text still overruns.
+   *
+   * This only works where the element is sized independently of what is in
+   * it — a flex item with a basis of 0. Anywhere it sizes to its content,
+   * the measurement would chase itself.
    */
   useLayoutEffect(() => {
     if (!fit) return undefined;
-    const parent = hostRef.current?.parentElement;
-    if (!parent) return undefined;
+    const el = hostRef.current;
+    if (!el) return undefined;
 
-    const read = () => setRoom(Math.floor(parent.getBoundingClientRect().width));
+    const read = () => setRoom(Math.floor(el.getBoundingClientRect().width));
     read();
 
     const observer = new ResizeObserver(read);
-    observer.observe(parent);
+    observer.observe(el);
     return () => observer.disconnect();
   }, [fit]);
 

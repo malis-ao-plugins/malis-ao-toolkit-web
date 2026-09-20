@@ -973,8 +973,12 @@
   min-width: 0;
 }
 
+/* Basis 0, so the row's fields keep their width and the name gives way.
+   With `auto` it took its basis from .ph-toggle--block's width: 100% and
+   demanded the whole row, pushing the Max field off the edge. */
 .flt-row__toggle {
-  flex: 1 1 auto;
+  flex: 1 1 0;
+  min-width: 0;
   border: 0;
   background: transparent;
 }
