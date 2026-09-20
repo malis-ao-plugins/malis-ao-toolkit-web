@@ -1,4 +1,15 @@
-import { fitToWidth, fontFor, lineHeight, measure, wrapToWidth } from "./fonts";
+import {
+  DEFAULT_FAMILY,
+  FAMILIES,
+  currentFamily,
+  fitToWidth,
+  fontFor,
+  lineHeight,
+  measure,
+  onFamilyChange,
+  setFamily,
+  wrapToWidth,
+} from "./fonts";
 
 /**
  * These run against the real atlases in src/pixelfont, which is a junction to
@@ -139,5 +150,62 @@ describe("wrapToWidth", () => {
     expect(wrapToWidth("supercalifragilistic", 20, 13)).toEqual([
       "supercalifragilistic",
     ]);
+  });
+});
+
+describe("families", () => {
+  it("offers every family the shared folder has exported", () => {
+    expect(FAMILIES).toEqual(
+      expect.arrayContaining(["verdana", "tahoma", "Lucida Console"]),
+    );
+  });
+
+  it("starts on the one with a range of sizes", () => {
+    expect(DEFAULT_FAMILY).toBe("verdana");
+    expect(currentFamily()).toBe("verdana");
+  });
+
+  it("draws with the chosen family", () => {
+    setFamily("Lucida Console");
+    expect(fontFor(13).atlas.face).toBe("Lucida Console");
+    setFamily("verdana");
+    expect(fontFor(13).atlas.face).toBe("verdana");
+  });
+
+  it("falls back to the nearest size a family actually has", () => {
+    setFamily("tahoma");
+    // Tahoma is exported at 14 only, so every step resolves to it.
+    expect(fontFor(13).size).toBe(14);
+    expect(fontFor(20).size).toBe(14);
+    setFamily("verdana");
+  });
+
+  it("ignores a family that does not exist", () => {
+    setFamily("comic sans");
+    expect(currentFamily()).toBe("verdana");
+  });
+
+  it("tells subscribers when the family changes", () => {
+    const seen = [];
+    const stop = onFamilyChange(() => seen.push(currentFamily()));
+
+    setFamily("tahoma");
+    setFamily("tahoma"); // no change, no call
+    setFamily("verdana");
+    stop();
+    setFamily("tahoma");
+    setFamily("verdana");
+
+    expect(seen).toEqual(["tahoma", "verdana"]);
+  });
+
+  it("measures differently once the family changes", () => {
+    const verdana = measure("Hello", 13);
+    setFamily("Lucida Console");
+    const lucida = measure("Hello", 13);
+    setFamily("verdana");
+
+    expect(lucida).not.toBe(verdana);
+    expect(measure("Hello", 13)).toBe(verdana);
   });
 });

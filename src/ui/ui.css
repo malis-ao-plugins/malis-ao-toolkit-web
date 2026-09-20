@@ -129,7 +129,10 @@
   /* Window/panel backdrop. Overlay mode swaps these for translucency. */
   --c-window: var(--c-bg-1);
   --c-panel: var(--c-bg-2);
-  --shadow: 0 0 0 1px var(--c-line), 0 4px 16px rgba(0, 0, 0, 0.55);
+  /* Depth only. The outline is the window's own border, which is a setting
+     — a 1px ring drawn here as well meant an edge width of 0 still showed
+     one, because it was never the border you were looking at. */
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.55);
 
 }
 
@@ -138,7 +141,7 @@
 [data-skin="overlay"] {
   --c-window: rgba(6, 8, 11, 0.88);
   --c-panel: rgba(18, 24, 33, 0.82);
-  --shadow: 0 0 0 1px var(--c-line-hi);
+  --shadow: 0 2px 10px rgba(0, 0, 0, 0.6);
 }
 
 /* Roomier skin for a full-size window. Only spacing and control heights

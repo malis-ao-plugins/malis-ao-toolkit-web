@@ -28,6 +28,21 @@ const PREVIEW_TABS = [
   { id: "b", label: "Browse" },
 ];
 
+/**
+ * The three steps the kit asks for, so a family's range — or lack of one —
+ * is visible before it is chosen. A family with a single exported size
+ * draws all three the same.
+ */
+function TypePreview() {
+  return (
+    <Stack gap={1}>
+      <PixelText size={20}>Retrieve the data cube</PixelText>
+      <PixelText size={16}>Pristine Kevlar Vest</PixelText>
+      <PixelText>ID 100201 &middot; QL 1-300 &middot; 842.5k credits</PixelText>
+    </Stack>
+  );
+}
+
 function AccentPreview() {
   const [on, setOn] = useState(true);
   const [tab, setTab] = useState("a");
@@ -134,6 +149,7 @@ function SurfacePreview() {
 }
 
 const PREVIEWS = {
+  type: TypePreview,
   accent: AccentPreview,
   data: DataPreview,
   text: TextPreview,

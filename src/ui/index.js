@@ -14,7 +14,18 @@ export { PixelInput } from "./PixelInput";
 export { PixelSelect } from "./PixelSelect";
 export { ColorField } from "./ColorField";
 export { ColorPicker } from "./ColorPicker";
-export { fontFor, measure, fitToWidth, lineHeight, wrapToWidth } from "./fonts";
+export {
+  fontFor,
+  measure,
+  fitToWidth,
+  lineHeight,
+  wrapToWidth,
+  FAMILIES,
+  DEFAULT_FAMILY,
+  setFamily,
+  currentFamily,
+  onFamilyChange,
+} from "./fonts";
 export { Panel } from "./Panel";
 export { Button } from "./Button";
 export { Toggle } from "./Toggle";

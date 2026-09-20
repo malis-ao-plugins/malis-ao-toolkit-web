@@ -1,8 +1,10 @@
 import { PixelFont, registerFont, getFont } from "../pixelfont/index.js";
 
+import lucidaConsole16 from "../pixelfont/fonts/lucida-console-16.json";
+import tahoma14 from "../pixelfont/fonts/tahoma-14.json";
 import verdana13 from "../pixelfont/fonts/verdana-13.json";
-import verdanaBold13 from "../pixelfont/fonts/verdana-bold-13.json";
 import verdana16 from "../pixelfont/fonts/verdana-16.json";
+import verdanaBold13 from "../pixelfont/fonts/verdana-bold-13.json";
 import verdanaBold20 from "../pixelfont/fonts/verdana-bold-20.json";
 
 /**
@@ -13,37 +15,78 @@ import verdanaBold20 from "../pixelfont/fonts/verdana-bold-20.json";
  * machinery, which is what makes them match the game exactly. Nothing in
  * that folder may be edited from here; a new atlas has to be asked for.
  *
- * The atlases are imported rather than fetched, so the bundler carries them
- * and there is no load order to get wrong: a face is ready before the first
- * render, and no component has to cope with text arriving later.
+ * Every atlas is listed below and registered at load. They are bundled
+ * rather than fetched, so there is no load order to get wrong: a face is
+ * ready before the first render, and no component has to cope with text
+ * arriving late.
  *
- * ── The scale is no longer monospaced ─────────────────────────────────────
+ * Listed by hand rather than discovered: require.context would find them,
+ * but it is a bundler feature and does not exist under the test runner, and
+ * a face the tests cannot load is not worth the line it saves. Everything
+ * else about a face — its family, size and weight — is read from the atlas
+ * itself, so a new one is one import and one entry.
+ *
+ * ── The scale is not monospaced ─────────────────────────────────
  *
  * The kit's old faces were generated monospaced, which is why so much of it
  * measured in characters — `width: 4ch`, `maxCh`, "50 characters at 320px".
- * Verdana is proportional, so a string's width is the sum of its advances
- * and nothing else. Anything that needs a fixed box measures the string; see
- * `measure` below.
+ * These are proportional, so a string's width is the sum of its advances and
+ * nothing else. Anything needing a fixed box measures the string; see
+ * `measure` and `fitToWidth` below.
  *
- * ── Sizes ────────────────────────────────────────────────────────────────
+ * ── Sizes ────────────────────────────────────────────────
  *
- * The kit asks for 12, 16 and 24; the atlases that exist are 13, 16 and 20.
- * A size is a cell height in pixels, and an atlas is exact only at its own
- * height, so each request resolves to the nearest one rather than scaling
- * something to fit. Exact coverage would want verdana-bold-16 and a
- * verdana-24 pair, which have to be exported on the machine that owns the
- * shared folder.
+ * An atlas is exact only at the pixel height it was exported at, so a
+ * request resolves to the nearest one in the chosen family rather than
+ * scaling something to fit. A family with a single size renders everything
+ * at that size — it works, but the hierarchy flattens. Verdana is the only
+ * family with a range so far; Tahoma and Lucida Console would each want a
+ * second and third size exported to read properly.
  */
 
-const FACES = [
-  { name: "ui-13", atlas: verdana13, size: 13, bold: false },
-  { name: "ui-13-bold", atlas: verdanaBold13, size: 13, bold: true },
-  { name: "ui-16", atlas: verdana16, size: 16, bold: false },
-  { name: "ui-20-bold", atlas: verdanaBold20, size: 20, bold: true },
-];
+const ATLASES = {
+  "lucida-console-16": lucidaConsole16,
+  "tahoma-14": tahoma14,
+  "verdana-13": verdana13,
+  "verdana-16": verdana16,
+  "verdana-bold-13": verdanaBold13,
+  "verdana-bold-20": verdanaBold20,
+};
 
-for (const face of FACES) {
-  registerFont(face.name, PixelFont.fromJSON(face.atlas));
+const FACES = Object.entries(ATLASES).map(([name, atlas]) => {
+  registerFont(name, PixelFont.fromJSON(atlas));
+  return { name, family: atlas.face, size: atlas.size, bold: !!atlas.bold };
+});
+
+/** Families, in the order they are offered. */
+export const FAMILIES = [...new Set(FACES.map((f) => f.family))].sort((a, b) =>
+  a.localeCompare(b),
+);
+
+export const DEFAULT_FAMILY = FAMILIES.includes("verdana")
+  ? "verdana"
+  : FAMILIES[0];
+
+/* ── The chosen family ────────────────────────────────────────
+   Module state rather than a context: the face is a property of the whole
+   app, every component wants it, and a provider would only be one more
+   thing every app had to remember to mount. */
+
+let family = DEFAULT_FAMILY;
+const listeners = new Set();
+
+export const currentFamily = () => family;
+
+export function setFamily(next) {
+  if (!next || next === family || !FAMILIES.includes(next)) return;
+  family = next;
+  for (const listener of listeners) listener();
+}
+
+/** Called when the family changes, so drawn text can be rebuilt. */
+export function onFamilyChange(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
 }
 
 /** Anything at or above this is drawn bold. */
@@ -52,14 +95,18 @@ const BOLD_AT = 600;
 /**
  * The registered face closest to a requested size and weight.
  *
- * Weight is matched first and size second: a bold request that has to shift
- * a step in size still reads as bold, where the reverse would quietly drop
- * the emphasis.
+ * Family first, then weight, then size: a bold request that has to shift a
+ * step in size still reads as bold, where the reverse would quietly drop the
+ * emphasis.
  */
 export function fontFor(size = 13, weight = 400) {
   const wantBold = weight >= BOLD_AT;
-  const pool = FACES.filter((f) => f.bold === wantBold);
-  const candidates = pool.length ? pool : FACES;
+
+  const inFamily = FACES.filter((f) => f.family === family);
+  const pool = inFamily.length ? inFamily : FACES;
+
+  const weighted = pool.filter((f) => f.bold === wantBold);
+  const candidates = weighted.length ? weighted : pool;
 
   const best = candidates.reduce((a, b) =>
     Math.abs(b.size - size) < Math.abs(a.size - size) ? b : a,

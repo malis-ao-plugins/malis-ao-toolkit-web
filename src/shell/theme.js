@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { DEFAULT_FAMILY, setFamily } from "../ui";
 
 /**
  * What the user is allowed to retune, and how it reaches the UI.
@@ -16,6 +17,11 @@ import { useCallback, useEffect, useState } from "react";
  */
 
 export const GROUPS = [
+  {
+    id: "type",
+    title: "Type",
+    hint: "The face everything is drawn in",
+  },
   {
     id: "accent",
     title: "Accent",
@@ -44,6 +50,13 @@ export const GROUPS = [
 ];
 
 export const THEME = [
+  {
+    key: "font",
+    group: "type",
+    label: "Face",
+    type: "font",
+    value: DEFAULT_FAMILY,
+  },
   {
     key: "accent",
     group: "accent",
@@ -216,6 +229,11 @@ export function applyTheme(theme) {
   for (const [token, value] of Object.entries(derived(theme))) {
     root.style.setProperty(token, value);
   }
+
+  // Not a custom property: the face decides what every mask is built from,
+  // so the kit has to rebuild them rather than the browser re-resolving a
+  // variable.
+  setFamily(theme.font);
 }
 
 export function useTheme() {

@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { onDeviceScaleChange } from "../pixelfont/index.js";
-import { fitToWidth, fontFor } from "./fonts";
+import { fitToWidth, fontFor, onFamilyChange } from "./fonts";
 import "./pixel.css";
 
 /**
@@ -39,7 +39,17 @@ const MAX_CACHE = 2000;
 
 function maskFor(text, size, weight, scale) {
   const font = fontFor(size, weight);
-  const key = `${font.name}|${font.size}|${scale}|${window.devicePixelRatio}|${text}`;
+  // Weight belongs in the key: a face reports its family as its name, so
+  // regular and bold at the same size answered to the same one and whichever
+  // drew first was handed to both.
+  const key = [
+    font.name,
+    font.size,
+    font.atlas.bold ? "b" : "r",
+    scale,
+    window.devicePixelRatio,
+    text,
+  ].join("|");
 
   const hit = cache.get(key);
   if (hit) return hit;
@@ -64,34 +74,40 @@ function maskFor(text, size, weight, scale) {
 }
 
 /**
- * Re-render everything when the device pixel ratio changes.
+ * Re-render every drawn string when what it should look like changes.
  *
- * Browser zoom changes what size every mask should be. Without this a label
- * keeps whatever it was given at the old ratio and only corrects itself the
- * next time something happens to re-render it, which reads as text resizing
- * when you click near it.
+ * Two things do that. Browser zoom changes the device pixel ratio and so the
+ * size every mask should be — without this a label keeps whatever it was
+ * given at the old ratio and only corrects itself the next time something
+ * happens to re-render it, which reads as text resizing when you click near
+ * it. And choosing a different face changes all of them outright.
+ *
+ * One subscription per mounted PixelText, one listener between them.
  */
-let dprTick = 0;
-const dprSubscribers = new Set();
+let tick = 0;
+const subscribers = new Set();
 
-function useDeviceScale() {
+function refreshAll() {
+  cache.clear();
+  tick += 1;
+  for (const fn of subscribers) fn();
+}
+
+function useFontRefresh() {
   const [, force] = useState(0);
 
   useEffect(() => {
-    const bump = () => force(++dprTick);
-    dprSubscribers.add(bump);
+    const bump = () => force(tick);
+    subscribers.add(bump);
 
     const stop =
-      dprSubscribers.size === 1
-        ? onDeviceScaleChange(() => {
-            cache.clear();
-            for (const fn of dprSubscribers) fn();
-          })
+      subscribers.size === 1
+        ? [onDeviceScaleChange(refreshAll), onFamilyChange(refreshAll)]
         : null;
 
     return () => {
-      dprSubscribers.delete(bump);
-      stop?.();
+      subscribers.delete(bump);
+      if (stop) for (const off of stop) off?.();
     };
   }, []);
 }
@@ -123,7 +139,7 @@ export function PixelText({
   title,
   ...rest
 }) {
-  useDeviceScale();
+  useFontRefresh();
 
   const hostRef = useRef(null);
   const [room, setRoom] = useState(null);
