@@ -12,7 +12,24 @@ import {
   Stack,
   Toggle,
 } from "../../ui";
+import { measure } from "../../ui";
 import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
+
+/**
+ * The widest caption any of the sliders carries.
+ *
+ * Every row reserves this much for both of its captions, so the rails all
+ * start and end in the same place instead of each one being as long as its
+ * own labels happen to allow.
+ */
+const CAP_PX = Math.ceil(
+  Math.max(
+    ...SLIDERS.flatMap((s) => [
+      measure(s.left.toUpperCase()),
+      measure(s.right.toUpperCase()),
+    ]),
+  ),
+);
 
 /** Mission kinds to accept. */
 export function TypesPanel({ settings, set }) {
@@ -60,7 +77,7 @@ export function SlidersPanel({ settings, set }) {
   const [drag, setDrag] = useState(null); // { key, value }
 
   return (
-    <Stack gap={1}>
+    <Stack gap={1} style={{ "--ph-slider-cap": `${CAP_PX}px` }}>
       {SLIDERS.map((s) => (
         <Slider
           key={s.key}

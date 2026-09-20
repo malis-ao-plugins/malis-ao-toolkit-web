@@ -674,9 +674,16 @@
   min-width: 0;
 }
 
+/* The captions are a column, not a label that happens to sit there: a fixed
+   basis is what makes every rail in a stack of sliders start and end in the
+   same place. The host sets --ph-slider-cap from the widest caption it has;
+   without one they size to their contents, as before. */
 .ph-slider__cap {
+  display: flex;
+  align-items: center;
+  flex: 0 0 var(--ph-slider-cap, auto);
   color: var(--c-fg-mute);
-  flex: 0 0 auto;
+  overflow: hidden;
 }
 
 .ph-slider__cap--r {
@@ -716,10 +723,14 @@
   /* Positioned by an integer `left` in JS — never by transform. */
 }
 
-.ph-slider__val {
-  color: var(--c-info);
-  flex: 0 0 auto;
-  margin-left: auto;
+/* Carrying a number: tall enough to hold it, and wide enough for the widest
+   one this slider can reach, so it is a fixed size whatever the value. */
+.ph-slider__knob--value {
+  height: var(--ctl-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-bg-0);
 }
 
 /* ─── Rows / list ──────────────────────────────────────────────────────── */

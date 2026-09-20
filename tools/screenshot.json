@@ -1,9 +1,10 @@
 {
   "url": "http://localhost:3000",
-  "out": "shot.png",
-  "width": 1280,
-  "height": 880,
-  "wait": 6000,
-  "script": "screenshot-setup.js",
-  "afterScript": 8000
+  "out": "shot-sliders.png",
+  "width": 420,
+  "height": 760,
+  "wait": 5000,
+  "script": "screenshot-config.js",
+  "afterScript": 7000,
+  "probe": "screenshot-probe-config.js"
 }
