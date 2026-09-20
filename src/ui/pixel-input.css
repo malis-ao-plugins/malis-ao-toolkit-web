@@ -53,8 +53,13 @@
  * `color: transparent` hides its own glyphs — the ones the browser would
  * antialias — while `caret-color` keeps the cursor visible. The font must
  * stay set: the caret and the selection rectangle are positioned from these
- * metrics, and the generated face shares the atlas' cell, so both land on
- * glyph boundaries.
+ * metrics and nothing else.
+ *
+ * --pxi-size is not the atlas' size. It is the CSS size at which the
+ * installed face advances at the atlas' rate, measured in fonts.js — see
+ * cssSizeFor. An atlas size is a cell height; a CSS size is an em, and using
+ * one for the other walked the caret off the text a little further with
+ * every character typed.
  */
 .pxi__field {
   position: absolute;

@@ -235,6 +235,62 @@ export function fontFor(size = 13, weight = 400) {
   return getFont(best.name);
 }
 
+/* ── Lining the real text up with the drawn text ───────────────────────────
+
+   Every drawn string has an invisible real one behind it, so that selecting
+   drags over text and the clipboard gets text. For the selection to cover
+   what it looks like it covers, that real text has to advance at the same
+   rate as the atlas.
+
+   It was laid out at `font-size: <the atlas's size>px`, which is wrong by a
+   whole unit: an atlas size is a cell height, the number CreateFontA takes,
+   while CSS font-size is an em size. Verdana's cell at 13px CSS is around 16,
+   so the real glyphs ran wider than the drawn ones and the gap grew with
+   every character — by the end of a long value the caret sat a dozen pixels
+   past the text.
+
+   The two are the same typeface, so their advances are proportional and the
+   ratio is all that is needed. It is measured once per face against a long
+   sample, which averages out the per-glyph rounding in the atlas. */
+
+const SAMPLE =
+  "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,-";
+
+const cssSizes = new Map();
+
+/**
+ * The CSS font-size at which the installed face advances like the atlas.
+ *
+ * Falls back to the atlas size where there is no canvas to measure with —
+ * under the test runner, and anywhere a context is refused.
+ */
+export function cssSizeFor(size = 13, weight = 400) {
+  const font = fontFor(size, weight);
+  const key = `${font.name}|${font.size}|${font.atlas.bold ? "b" : "r"}`;
+
+  const hit = cssSizes.get(key);
+  if (hit !== undefined) return hit;
+
+  let px = font.size;
+
+  try {
+    const ctx = document.createElement("canvas").getContext("2d");
+    // Probed large and scaled down: at a plausible size the browser's own
+    // rounding is a meaningful share of the answer.
+    const probe = 400;
+    ctx.font = `${font.atlas.bold ? 700 : 400} ${probe}px "${font.name}", sans-serif`;
+
+    const real = ctx.measureText(SAMPLE).width;
+    const drawn = font.measure(SAMPLE);
+    if (real > 0 && drawn > 0) px = Math.round((drawn / real) * probe * 100) / 100;
+  } catch {
+    // No canvas. The atlas size is the best guess left.
+  }
+
+  cssSizes.set(key, px);
+  return px;
+}
+
 /** Width in CSS pixels of a string, as the kit would draw it. */
 export function measure(text, size, weight) {
   return fontFor(size, weight).measure(String(text ?? ""));

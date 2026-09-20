@@ -1,6 +1,6 @@
 import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from "react";
 import { PixelText, useFontRefresh } from "./pixel";
-import { fontFor, measure } from "./fonts";
+import { cssSizeFor, fontFor, measure } from "./fonts";
 import "./pixel-input.css";
 
 /**
@@ -105,7 +105,7 @@ export const PixelInput = forwardRef(function PixelInput(
       className={`pxi ${className}`}
       style={{
         "--pxi-cell-h": `${face.height}px`,
-        "--pxi-size": `${face.size}px`,
+        "--pxi-size": `${cssSizeFor(size, weight)}px`,
         ...style,
       }}
     >

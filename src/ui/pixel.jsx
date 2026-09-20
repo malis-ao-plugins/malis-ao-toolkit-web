@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { onDeviceScaleChange } from "../pixelfont/index.js";
-import { fitToWidth, fontFor, onFamilyChange } from "./fonts";
+import { cssSizeFor, fitToWidth, fontFor, onFamilyChange } from "./fonts";
 import "./pixel.css";
 
 /**
@@ -230,12 +230,12 @@ export function PixelText({
       <span
         className="pxt__text"
         style={{
-          // The atlas was exported from this face at this pixel height, and
-          // Verdana is a system font, so the invisible glyph boxes land close
-          // to the drawn pixels and a selection covers what it looks like it
-          // covers.
+          // Sized so the installed face advances at the atlas's rate rather
+          // than at its own — see cssSizeFor. Without it the invisible glyphs
+          // run wider than the drawn ones and a selection drifts further off
+          // them with every character.
           fontFamily: `"${face.name}", sans-serif`,
-          fontSize: `${face.size * step}px`,
+          fontSize: `${cssSizeFor(size, weight) * step}px`,
           lineHeight: `${face.height * step}px`,
           fontWeight: face.atlas.bold ? 700 : 400,
         }}
