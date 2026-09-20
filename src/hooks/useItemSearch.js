@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getItemIcons, searchItems } from "../lib/db";
+import { searchItems } from "../lib/db";
+import { iconsOf } from "../lib/itemCache";
 import { CanFlags, ItemFlags } from "../lib/enums";
 
 /**
@@ -62,7 +63,7 @@ export function useItemSearch({
       const ids = new Set(
         items.flatMap((i) => [i.low_id, ...i.members.map((m) => m.id)]),
       );
-      const icons = await getItemIcons([...ids]);
+      const icons = await iconsOf([...ids]);
 
       if (gen !== generation.current) return;
 

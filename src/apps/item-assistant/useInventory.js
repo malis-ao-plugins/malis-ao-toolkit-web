@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getItemIcons, searchItems } from "../../lib/db";
+import { searchItems } from "../../lib/db";
+import { iconsOf } from "../../lib/itemCache";
 import {
   getCharacterContainers,
   getCharacterItems,
@@ -172,7 +173,7 @@ export function useInventory({ characterId, query }) {
         const ids = new Set(
           items.flatMap((i) => [i.low_id, ...i.members.map((m) => m.id)]),
         );
-        const icons = await getItemIcons([...ids]);
+        const icons = await iconsOf([...ids]);
         if (!alive) return;
 
         // One row per physical copy: the same item in three places is three

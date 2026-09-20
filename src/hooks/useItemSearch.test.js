@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { DEBOUNCE_MS, useItemSearch } from "./useItemSearch";
 import { getItemIcons, searchItems } from "../lib/db";
+import { clearItemCache } from "../lib/itemCache";
 
 jest.mock("../lib/db", () => ({
   searchItems: jest.fn(),
@@ -48,6 +49,7 @@ const afterDebounce = () =>
   act(() => new Promise((r) => setTimeout(r, WAIT)));
 
 beforeEach(() => {
+  clearItemCache();
   searchItems.mockReset();
   getItemIcons.mockReset();
   getItemIcons.mockResolvedValue({});
