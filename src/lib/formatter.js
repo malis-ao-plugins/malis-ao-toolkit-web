@@ -29,6 +29,7 @@ import {
   ItemFlags,
   NanoSchool,
 } from "./enums";
+import { statName } from "./stats";
 
 const dev = process.env.NODE_ENV !== "production";
 
@@ -615,9 +616,6 @@ const SKILL_CHECKS = [
   { check: 0xc, label: "Attack skills" },
   { check: 0xd, label: "Defence skills" },
 ];
-
-/** A stat id rendered through Section2003, or the raw id if it has no name. */
-const statName = (id) => Section2003[id] ?? `Stat ${id}`;
 
 /** Durations arrive in hundredths of a second. */
 const asSeconds = (v) => (v / 100).toFixed(2) + "s";

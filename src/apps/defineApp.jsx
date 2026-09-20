@@ -91,10 +91,13 @@ export function defineApp(spec) {
     })),
     defaultActiveTab: tabs[0]?.id,
 
+    // Only the app's own state reaches the header. Spreading the shell's
+    // props in as well put `connected` and `activeState` inside what a
+    // header component reads as `state`.
     HeaderControls: Header
-      ? function BoundHeader(props) {
-          const bound = bind({ ...props.activeState, ...props });
-          return <Header {...bound} connected={props.connected} />;
+      ? function BoundHeader({ connected, activeState, send, pushConfig }) {
+          const bound = bind({ ...activeState, send, pushConfig });
+          return <Header {...bound} connected={connected} />;
         }
       : undefined,
 

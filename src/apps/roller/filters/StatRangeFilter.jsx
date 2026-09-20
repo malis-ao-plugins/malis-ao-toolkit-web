@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import { Empty, FilterRow, RangeField, Stack, TypeAhead } from "../../../ui";
-import { Section2003 } from "../../../lib/ctext";
-
-const ALL_STATS = Object.entries(Section2003).map(([id, name]) => ({
-  id: Number(id),
-  name,
-}));
+import { ALL_STATS, statName } from "../../../lib/stats";
 
 /**
  * Filter items by a stat being within a range — used for both requirements
@@ -65,7 +60,7 @@ export default function StatRangeFilter({ value, onChange, placeholder }) {
         rows.map((row) => (
           <FilterRow
             key={row.statId}
-            name={Section2003[row.statId] ?? `Stat ${row.statId}`}
+            name={statName(row.statId)}
             active={row.enabled ?? true}
             onToggle={() =>
               edit(row.statId, "enabled", !(row.enabled ?? true), true)

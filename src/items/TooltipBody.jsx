@@ -46,7 +46,7 @@ export function Row({ label, value, suffix, valueColor, style }) {
   );
 }
 
-export function TooltipBody({ data, selectedQl, setQl }) {
+export function TooltipBody({ data }) {
   const generalStats = data.stats?.filter((s) => !s.section) ?? [];
   const combatStats = data.stats?.filter((s) => s.section === "Combat") ?? [];
 

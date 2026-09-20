@@ -28,7 +28,8 @@
     "productName": "Mali's AO Toolkit",
     "files": [
       "build/**/*",
-      "electron.js"
+      "electron.js",
+      "preload.js"
     ],
     "extraMetadata": {
       "main": "electron.js"

@@ -1,12 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { Empty, FilterRow, RangeField, Stack, TypeAhead } from "../../../ui";
-import { Section2003 } from "../../../lib/ctext";
+import { ALL_STATS, statName } from "../../../lib/stats";
 import { MOD_FILTER_TYPES, MOD_TYPE_BY_ID } from "../../../lib/modFilterTypes";
-
-const ALL_STATS = Object.entries(Section2003).map(([id, name]) => ({
-  id: Number(id),
-  name,
-}));
 
 let counter = 0;
 const uid = () => `mod-${++counter}`;
@@ -14,7 +9,7 @@ const uid = () => `mod-${++counter}`;
 function rowLabel(row) {
   switch (row.modType) {
     case "stat":
-      return Section2003[row.statId];
+      return statName(row.statId);
     case "hit":
       return "Damage / Healing";
     case "cast":
@@ -22,7 +17,7 @@ function rowLabel(row) {
     case "upload":
       return "Uploads nano";
     case "lock":
-      return `Lock: ${Section2003[row.statId]}`;
+      return `Lock: ${statName(row.statId)}`;
     default:
       return row.modType;
   }

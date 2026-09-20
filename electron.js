@@ -40,12 +40,8 @@ function createWindow(appId = null, width = 720, height = 634) {
     },
   });
 
-  if (process.env.NODE_ENV === "development") {
-    win.loadURL(getAppUrl(appId));
-  } else {
-    // file:// + query string requires loadURL, not loadFile
-    win.loadURL(getAppUrl(appId));
-  }
+  // loadURL in both cases: file:// with a query string is not loadFile's job.
+  win.loadURL(getAppUrl(appId));
 
   return win;
 }

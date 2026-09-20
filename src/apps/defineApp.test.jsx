@@ -178,6 +178,61 @@ describe("tabs and panels", () => {
   });
 });
 
+describe("header controls", () => {
+  it("is absent unless the app declares one", () => {
+    expect(defineApp(spec()).HeaderControls).toBeUndefined();
+  });
+
+  it("gives the header the app's own state and nothing of the shell's", () => {
+    let captured;
+    const HeaderControls = (props) => {
+      captured = props;
+      return null;
+    };
+
+    const app = defineApp(spec({ header: HeaderControls }));
+    render(
+      <app.HeaderControls
+        connected
+        activeState={{ settings: { volume: 2 }, hits: 5 }}
+        send={jest.fn()}
+        pushConfig={jest.fn()}
+      />,
+    );
+
+    expect(captured.settings).toEqual({ volume: 2 });
+    expect(captured.state).toEqual({ hits: 5 });
+    expect(captured.connected).toBe(true);
+
+    // The shell's own props used to be spread in alongside the state, so a
+    // header reading `state` found `connected` and `activeState` in it.
+    expect(captured.state).not.toHaveProperty("connected");
+    expect(captured.state).not.toHaveProperty("activeState");
+  });
+
+  it("lets the header change settings the same way a panel does", () => {
+    const pushConfig = jest.fn();
+    let captured;
+    const HeaderControls = (props) => {
+      captured = props;
+      return null;
+    };
+
+    const app = defineApp(spec({ header: HeaderControls }));
+    render(
+      <app.HeaderControls
+        connected
+        activeState={{ settings: { volume: 2 } }}
+        send={jest.fn()}
+        pushConfig={pushConfig}
+      />,
+    );
+
+    captured.setState({ rolling: true });
+    expect(pushConfig).toHaveBeenCalledWith({ rolling: true });
+  });
+});
+
 describe("development validation", () => {
   beforeEach(() => {
     jest.spyOn(console, "error").mockImplementation(() => {});
