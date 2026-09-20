@@ -13,6 +13,7 @@ export { PixelText, pixelize } from "./pixel";
 export { PixelInput } from "./PixelInput";
 export { PixelSelect } from "./PixelSelect";
 export { ColorField } from "./ColorField";
+export { ColorPicker } from "./ColorPicker";
 export { fontFor, measure, fitToWidth, lineHeight, wrapToWidth } from "./fonts";
 export { Panel } from "./Panel";
 export { Button } from "./Button";
