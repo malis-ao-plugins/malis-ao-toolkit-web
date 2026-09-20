@@ -1,0 +1,75 @@
+/* Drop-down with atlas-drawn text. Sized and coloured by the host through
+   .pxs; only the internals live here. */
+.pxs {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+.pxs__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--u, 4px);
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 var(--u, 4px);
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pxs__trigger:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pxs__value {
+  margin-right: auto;
+  overflow: hidden;
+}
+
+.pxs__value--empty {
+  color: var(--c-fg-mute, #4d5a6a);
+}
+
+.pxs__caret {
+  color: var(--c-fg-mute, #4d5a6a);
+  flex: 0 0 auto;
+}
+
+/* Sits above the field it belongs to. Fixed max height so a long character
+   list scrolls rather than running off the window. */
+.pxs__list {
+  position: absolute;
+  top: 100%;
+  left: -1px;
+  right: -1px;
+  z-index: 1000;
+  max-height: 200px;
+  overflow-y: auto;
+  background: var(--c-bg-2, #121821);
+  border: 1px solid var(--c-line-hi, #35465a);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.pxs__option {
+  display: flex;
+  align-items: center;
+  min-height: var(--ctl-h, 20px);
+  padding: 0 var(--u, 4px);
+  cursor: pointer;
+  color: var(--c-fg, #ccd6e0);
+}
+
+/* Highlight follows the pointer and the arrow keys alike, so there is one
+   visible notion of "where am I" however you are driving it. */
+.pxs__option--active {
+  background: var(--c-bg-4, #24303e);
+}
+
+.pxs__option--on {
+  color: var(--c-accent, #ffb454);
+}

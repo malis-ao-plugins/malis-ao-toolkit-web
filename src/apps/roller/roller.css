@@ -1,0 +1,143 @@
+/* ============================================================================
+   Mission Roller — app-specific layout.
+
+   Only things the kit has no opinion about live here: the mission card, the
+   zone bounds drawer and the scroll heights. Anything reusable belongs in
+   src/ui instead.
+   ========================================================================= */
+
+/* ─── Mission card ─────────────────────────────────────────────────────── */
+
+.rl-missions {
+  min-width: 0;
+}
+
+.rl-mission {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  padding: var(--u);
+  background: var(--c-bg-1);
+  border: 1px solid var(--c-line);
+  border-left: 2px solid var(--c-line-hi);
+  min-width: 0;
+}
+
+.rl-mission:hover {
+  border-left-color: var(--c-accent);
+}
+
+.rl-mission__head {
+  align-items: flex-start;
+}
+
+/* Native 48px: the art is 48x48 and any other size resamples it. */
+.rl-mission__icon {
+  width: var(--icon);
+  height: var(--icon);
+  cursor: help;
+}
+
+.rl-mission__id {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* The card's one step up. PixelText sizes itself, so the only job left here is
+   the colour — the element paints currentColor through its mask. Truncation is
+   done by character count in the component, not by text-overflow. */
+.rl-mission__name {
+  color: var(--c-fg-hi);
+}
+
+.rl-mission__meta {
+  color: var(--c-fg-dim);
+  min-width: 0;
+  height: var(--lh-12);
+}
+
+.rl-mission__zone {
+  flex: 1 1 auto;
+}
+
+.rl-mission__meta .ph-num {
+  flex: 0 0 auto;
+}
+
+/* Six half-size slots plus 4px gaps come to 164px. Six at native 48px would
+   need 308px inside a 302px body, so the rewards are the one place the art is
+   scaled — by exactly one half, which nearest-neighbour handles cleanly. */
+.rl-mission__rewards {
+  flex-wrap: nowrap;
+}
+
+/* ─── Hover note ───────────────────────────────────────────────────────── */
+
+.rl-note {
+  max-width: 264px;
+  padding: var(--u2);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line-hi);
+  color: var(--c-fg);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  white-space: pre-wrap;
+  pointer-events: none;
+  z-index: 10000;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Scroll regions ───────────────────────────────────────────────────── */
+
+/* Explicit heights: the window is resizable, but a list that grows without
+   bound pushes the controls below it off the bottom of a 320px overlay. */
+.rl-scroll {
+  max-height: 320px;
+}
+
+.rl-scroll--short {
+  max-height: 200px;
+}
+
+.rl-filters {
+  padding-top: var(--u);
+}
+
+/* ─── Zones ────────────────────────────────────────────────────────────── */
+
+.rl-zone {
+  border-bottom: 1px solid var(--c-line);
+}
+
+.rl-zone .ph-listrow {
+  border-bottom: 0;
+  padding: 0 var(--u) 0 0;
+  gap: var(--u);
+}
+
+/* The toggle is the row: full width, so the whole line is the hit target. */
+.rl-zone .ph-toggle {
+  border: 0;
+  background: transparent;
+  height: var(--ctl-h);
+}
+
+.rl-zone .ph-toggle--on {
+  background: transparent;
+}
+
+.rl-zone__bounds {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  padding: var(--u) var(--u) var(--u2) var(--u3);
+  background: var(--c-bg-1);
+}
+
+.rl-zone__cap {
+  width: var(--u5);
+  flex: 0 0 auto;
+}

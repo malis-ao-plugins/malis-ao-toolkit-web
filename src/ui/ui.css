@@ -1,0 +1,1070 @@
+/* ============================================================================
+   PHOSPHOR — a compact, pixel-grid UI kit for AO Toolkit apps.
+
+   Everything here is built for one constraint first: a 320px-wide overlay
+   sitting on top of the game. Wider is a bonus, never a requirement.
+
+   ── Why the type scale looks the way it does ──────────────────────────────
+
+   The fonts are generated, not downloaded. `tools/build-pixel-font.py` reads
+   the monochrome bitmap strikes out of TerminusTTF and re-emits each one as a
+   font whose glyphs are literal rectangles, with unitsPerEm set to an exact
+   multiple of that strike's pixel size.
+
+   This is not decoration. Shipping TerminusTTF directly does not work in a
+   browser on Windows:
+
+     * `-webkit-font-smoothing: none` is a macOS-only property in Blink. On
+       Windows it is parsed and ignored, so it cannot switch ClearType off.
+     * Chromium rasterises through DirectWrite, which ignores monochrome
+       embedded bitmaps — so it draws Terminus' outlines instead.
+     * Those outlines are not grid-aligned. unitsPerEm is 1000 against strikes
+       at 12/14/16/…px, and the coordinate GCD is 1, so at every size except
+       20px a glyph edge lands mid-pixel. ClearType then spreads that edge
+       across the RGB subpixels, which is the blue/orange fringing.
+
+   Rebuilt as rectangles on an exact grid there is nothing left to antialias:
+   each device pixel is either fully inside a rectangle or fully outside, so
+   greyscale coverage comes out 0 or 1 and the glyph is hard-edged.
+
+   That handles the geometry but not the rasteriser. Chromium on Windows
+   antialiases from the system font-smoothing setting, and nothing in CSS or
+   in the font can override it — -webkit-font-smoothing is macOS-only,
+   --disable-lcd-text removes only the colour, and Skia ignores the font's
+   gasp table. Genuine one-bit output additionally needs Windows font
+   smoothing turned off, which is the user's choice to make. See
+   src/ui/README.md for the measurements.
+
+   The catch, and the reason the scale is so short: a generated face is only
+   correct at the size it was built for, and at whole multiples of it. There
+   are three — 12, 16 and 24 — and a size always travels with its family.
+   Reach for `--fs-*` and `--ff-*` as a pair, or use the .t12/.t16/.t24
+   helpers, and never set a size the kit does not define.
+
+   ── The other two rules ──────────────────────────────────────────────────
+
+   Every length is a whole multiple of --u (4px); and nothing that carries
+   text may be transformed, scaled or given a fractional offset, because a
+   glyph drawn at x=10.5 is blurred no matter how exact the font is.
+
+   Consumers import from "src/ui", which pulls this file in once.
+   ========================================================================= */
+
+/* ─── Fonts ────────────────────────────────────────────────────────────── */
+
+@font-face {
+  font-family: "TerminusPx12";
+  src: url("./fonts/TerminusPx12-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "TerminusPx12";
+  src: url("./fonts/TerminusPx12-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "TerminusPx16";
+  src: url("./fonts/TerminusPx16-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "TerminusPx16";
+  src: url("./fonts/TerminusPx16-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+@font-face {
+  font-family: "TerminusPx24";
+  src: url("./fonts/TerminusPx24-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: block;
+}
+@font-face {
+  font-family: "TerminusPx24";
+  src: url("./fonts/TerminusPx24-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: block;
+}
+
+/* ─── Tokens ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* Grid. Every other length is a multiple of this. */
+  --u: 4px;
+  --u2: 8px;
+  --u3: 12px;
+  --u4: 16px;
+  --u5: 20px;
+  --u6: 24px;
+  --u8: 32px;
+
+  /* Type. Size and family are one unit — never mix them across steps.
+     Line heights keep the 4px grid and leave integer half-leading:
+       12/16 -> (16-12)/2 = 2px
+       16/20 -> (20-16)/2 = 2px
+       24/28 -> (28-24)/2 = 2px
+     so the baseline itself also lands on a whole pixel. */
+  --ff-12: "TerminusPx12", "Consolas", monospace;
+  --ff-16: "TerminusPx16", "Consolas", monospace;
+  --ff-24: "TerminusPx24", "Consolas", monospace;
+
+  --fs-12: 12px;
+  --lh-12: 16px;
+  --fs-16: 16px;
+  --lh-16: 20px;
+  --fs-24: 24px;
+  --lh-24: 28px;
+
+  /* Cell widths, for sizing things in characters: Px12 is 6x12, Px16 is 8x16,
+     Px24 is 12x24. At the 320px target a panel body fits 50 characters of
+     Px12 or 37 of Px16. */
+  --cell-12: 6px;
+  --cell-16: 8px;
+  --cell-24: 12px;
+
+  /* Control metrics. Compact is the default; --density flips them. */
+  --ctl-h: 20px;
+  --ctl-h-sm: 16px;
+  --ctl-h-lg: 24px;
+  /* AO icon art is 48x48. Only whole divisors survive — 48, 24, 16, 12 —
+     so these are the two the kit offers. 32 was wrong and resampled every
+     icon it touched. */
+  --icon: 48px;
+  --icon-sm: 24px;
+
+  /* Surfaces — near-black through to raised. */
+  --c-bg-0: #06080b;
+  --c-bg-1: #0c1016;
+  --c-bg-2: #121821;
+  --c-bg-3: #1a222d;
+  --c-bg-4: #24303e;
+
+  --c-line: #223040;
+  --c-line-hi: #35465a;
+
+  /* Text */
+  --c-fg: #ccd6e0;
+  --c-fg-hi: #ffffff;
+  --c-fg-dim: #7c8b9c;
+  --c-fg-mute: #4d5a6a;
+
+  /* Accents. Amber drives interaction, cyan marks data, magenta marks a hit. */
+  --c-accent: #ffb454;
+  --c-accent-lo: #4a3720;
+  --c-info: #56d4e8;
+  --c-info-lo: #17383f;
+  --c-good: #8ce99a;
+  --c-warn: #ffd43b;
+  --c-bad: #ff6b6b;
+  --c-hot: #ff79c6;
+
+  /* Window/panel backdrop. Overlay mode swaps these for translucency. */
+  --c-window: var(--c-bg-1);
+  --c-panel: var(--c-bg-2);
+  --shadow: 0 0 0 1px var(--c-line), 0 4px 16px rgba(0, 0, 0, 0.55);
+
+  /* Focus ring. 1px, never blurred. */
+  --ring: 0 0 0 1px var(--c-accent);
+}
+
+/* Overlay skin: translucent surfaces so the game reads through.
+   Opt in with data-skin="overlay" on the window root. */
+[data-skin="overlay"] {
+  --c-window: rgba(6, 8, 11, 0.88);
+  --c-panel: rgba(18, 24, 33, 0.82);
+  --shadow: 0 0 0 1px var(--c-line-hi);
+}
+
+/* Roomier skin for a full-size window. Only spacing and control heights
+   change — the type scale cannot grow without leaving the pixel grid. */
+[data-density="comfortable"] {
+  --ctl-h: 24px;
+  --ctl-h-sm: 20px;
+  --ctl-h-lg: 28px;
+}
+
+/* ─── Type helpers ─────────────────────────────────────────────────────── */
+
+.t12 {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+}
+
+.t16 {
+  font-family: var(--ff-16);
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+}
+
+.t24 {
+  font-family: var(--ff-24);
+  font-size: var(--fs-24);
+  line-height: var(--lh-24);
+}
+
+/* ─── Root ─────────────────────────────────────────────────────────────── */
+
+.ph {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--c-fg);
+  letter-spacing: 0;
+}
+
+.ph,
+.ph * {
+  /* Kept for macOS, where Blink does honour it. On Windows it is inert —
+     crispness there comes from the geometry, not from this. */
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  text-rendering: auto;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  -webkit-text-stroke: 0;
+  box-sizing: border-box;
+}
+
+.ph img,
+.ph canvas {
+  image-rendering: pixelated;
+}
+
+/* ─── Scrollbars ───────────────────────────────────────────────────────── */
+
+.ph ::-webkit-scrollbar {
+  width: var(--u2);
+  height: var(--u2);
+}
+
+.ph ::-webkit-scrollbar-track {
+  background: var(--c-bg-0);
+}
+
+.ph ::-webkit-scrollbar-thumb {
+  background: var(--c-bg-4);
+  border: 1px solid var(--c-line);
+}
+
+.ph ::-webkit-scrollbar-thumb:hover {
+  background: var(--c-line-hi);
+}
+
+.ph ::-webkit-scrollbar-corner {
+  background: var(--c-bg-0);
+}
+
+/* ─── Text helpers ─────────────────────────────────────────────────────── */
+
+.ph-label {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--c-fg-dim);
+  text-transform: uppercase;
+}
+
+.ph-dim {
+  color: var(--c-fg-dim);
+}
+
+.ph-mute {
+  color: var(--c-fg-mute);
+}
+
+.ph-num {
+  color: var(--c-info);
+}
+
+.ph-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ─── Stack / Row ──────────────────────────────────────────────────────── */
+
+.ph-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ph-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.ph-row--between {
+  justify-content: space-between;
+}
+
+.ph-row--wrap {
+  flex-wrap: wrap;
+}
+
+.ph-gap-1 {
+  gap: var(--u);
+}
+.ph-gap-2 {
+  gap: var(--u2);
+}
+.ph-gap-3 {
+  gap: var(--u3);
+}
+
+.ph-grow {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ─── Panel ────────────────────────────────────────────────────────────── */
+
+.ph-panel {
+  background: var(--c-panel);
+  border: 1px solid var(--c-line);
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ph-panel__head {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  height: var(--ctl-h);
+  padding: 0 var(--u2);
+  background: var(--c-bg-3);
+  border-bottom: 1px solid var(--c-line);
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  text-transform: uppercase;
+  color: var(--c-fg-dim);
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.ph-panel__head--clickable {
+  cursor: pointer;
+}
+
+.ph-panel__head--clickable:hover {
+  background: var(--c-bg-4);
+  color: var(--c-fg);
+}
+
+.ph-panel__title {
+  /* PixelText is intrinsically sized; auto margin pushes any trailing
+     controls to the end of the head instead. */
+  margin-right: auto;
+  overflow: hidden;
+}
+
+.ph-panel__caret {
+  color: var(--c-fg-mute);
+  width: var(--u3);
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.ph-panel__body {
+  padding: var(--u2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--u2);
+  min-width: 0;
+}
+
+.ph-panel__body--flush {
+  padding: 0;
+  gap: 0;
+}
+
+/* ─── Button ───────────────────────────────────────────────────────────── */
+
+.ph-btn {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  height: var(--ctl-h);
+  padding: 0 var(--u2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--u);
+  background: var(--c-bg-3);
+  color: var(--c-fg);
+  border: 1px solid var(--c-line);
+  cursor: pointer;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.ph-btn:hover:not(:disabled) {
+  background: var(--c-bg-4);
+  border-color: var(--c-line-hi);
+  color: var(--c-fg-hi);
+}
+
+.ph-btn:active:not(:disabled) {
+  background: var(--c-bg-2);
+}
+
+.ph-btn:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+.ph-btn:disabled {
+  color: var(--c-fg-mute);
+  cursor: default;
+}
+
+.ph-btn--sm {
+  height: var(--ctl-h-sm);
+  padding: 0 var(--u);
+}
+
+.ph-btn--lg {
+  height: var(--ctl-h-lg);
+  padding: 0 var(--u3);
+  font-family: var(--ff-16);
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+}
+
+.ph-btn--block {
+  width: 100%;
+  flex: 1 1 auto;
+}
+
+.ph-btn--primary {
+  background: var(--c-accent-lo);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+}
+
+.ph-btn--primary:hover:not(:disabled) {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+  color: var(--c-bg-0);
+}
+
+.ph-btn--danger {
+  border-color: var(--c-line);
+  color: var(--c-bad);
+}
+
+.ph-btn--danger:hover:not(:disabled) {
+  background: var(--c-bad);
+  border-color: var(--c-bad);
+  color: var(--c-bg-0);
+}
+
+.ph-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--c-fg-dim);
+}
+
+.ph-btn--ghost:hover:not(:disabled) {
+  background: var(--c-bg-3);
+  border-color: var(--c-line);
+}
+
+/* ─── Toggle ───────────────────────────────────────────────────────────── */
+
+.ph-toggle {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  height: var(--ctl-h);
+  padding: 0 var(--u2) 0 var(--u);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--u);
+  background: var(--c-bg-3);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+  cursor: pointer;
+  text-transform: uppercase;
+  white-space: nowrap;
+  user-select: none;
+  text-align: left;
+}
+
+.ph-toggle:hover {
+  border-color: var(--c-line-hi);
+  color: var(--c-fg);
+}
+
+.ph-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--ring);
+}
+
+/* The 8px box is the whole affordance — no sliding knob, nothing to blur. */
+.ph-toggle__box {
+  width: var(--u2);
+  height: var(--u2);
+  flex: 0 0 auto;
+  border: 1px solid var(--c-line-hi);
+  background: transparent;
+}
+
+.ph-toggle__text {
+  overflow: hidden;
+}
+
+.ph-toggle--on {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+  background: var(--c-accent-lo);
+}
+
+.ph-toggle--on .ph-toggle__box {
+  background: var(--c-accent);
+  border-color: var(--c-accent);
+}
+
+.ph-toggle--block {
+  width: 100%;
+}
+
+/* ─── Segmented ────────────────────────────────────────────────────────── */
+
+.ph-seg {
+  display: flex;
+  border: 1px solid var(--c-line);
+  background: var(--c-bg-2);
+  min-width: 0;
+}
+
+.ph-seg__item {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  height: var(--ctl-h);
+  padding: 0 var(--u2);
+  flex: 1 1 0;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+  cursor: pointer;
+  text-transform: uppercase;
+  user-select: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ph-seg__item:last-child {
+  border-right: 0;
+}
+
+.ph-seg__item:hover {
+  background: var(--c-bg-3);
+  color: var(--c-fg);
+}
+
+.ph-seg__item--on {
+  background: var(--c-bg-4);
+  color: var(--c-accent);
+}
+
+/* ─── Input ────────────────────────────────────────────────────────────── */
+
+.ph-input {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  height: var(--ctl-h);
+  padding: 0 var(--u);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg);
+  min-width: 0;
+  width: 100%;
+}
+
+.ph-input::placeholder {
+  color: var(--c-fg-mute);
+}
+
+.ph-input:focus-within {
+  outline: none;
+  border-color: var(--c-accent);
+}
+
+.ph-search {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  min-width: 0;
+}
+
+.ph-search__wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+
+.ph-search__clear {
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: var(--ctl-h);
+  width: var(--ctl-h);
+  background: transparent;
+  border: 0;
+  color: var(--c-fg-mute);
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  cursor: pointer;
+}
+
+.ph-search__clear:hover {
+  color: var(--c-bad);
+}
+
+.ph-search__count {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--c-fg-mute);
+  padding-right: var(--u5);
+  position: absolute;
+  right: 0;
+  pointer-events: none;
+}
+
+/* ─── Number ───────────────────────────────────────────────────────────── */
+
+.ph-num-input {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--c-line);
+  background: var(--c-bg-0);
+  height: var(--ctl-h);
+  flex: 0 0 auto;
+}
+
+.ph-num-input__btn {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  /* +/- are drawn by the font here, not the atlas: they are single glyphs
+     inside a 16px box and the fallback costs nothing visually. */
+  width: var(--u4);
+  background: var(--c-bg-3);
+  border: 0;
+  color: var(--c-fg-dim);
+  cursor: pointer;
+  user-select: none;
+  padding: 0;
+}
+
+.ph-num-input__btn:hover {
+  background: var(--c-bg-4);
+  color: var(--c-accent);
+}
+
+/* Widths are in characters so the box lands on the glyph cell exactly. */
+.ph-num-input__field {
+  width: 4ch;
+  height: 100%;
+  background: transparent;
+  color: var(--c-fg);
+  /* Drag left/right over the field to scrub the value. */
+  cursor: ew-resize;
+}
+
+.ph-num-input__field:focus-within {
+  color: var(--c-accent);
+  cursor: text;
+}
+
+.ph-num-input--wide .ph-num-input__field {
+  width: 7ch;
+}
+
+/* ─── Slider ───────────────────────────────────────────────────────────── */
+
+.ph-slider {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  height: var(--ctl-h);
+  min-width: 0;
+}
+
+.ph-slider__cap {
+  color: var(--c-fg-mute);
+  flex: 0 0 auto;
+}
+
+.ph-slider__cap--r {
+  justify-content: flex-end;
+}
+
+.ph-slider__track {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: var(--ctl-h);
+  cursor: ew-resize;
+  display: flex;
+  align-items: center;
+}
+
+/* The rail is 2 solid pixels — no gradient, no rounding. */
+.ph-slider__rail {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--c-bg-4);
+}
+
+.ph-slider__fill {
+  position: absolute;
+  height: 2px;
+  background: var(--c-info);
+}
+
+.ph-slider__knob {
+  position: absolute;
+  width: var(--u);
+  height: var(--u3);
+  background: var(--c-accent);
+  /* Positioned by an integer `left` in JS — never by transform. */
+}
+
+.ph-slider__val {
+  color: var(--c-info);
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* ─── Rows / list ──────────────────────────────────────────────────────── */
+
+.ph-list {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+}
+
+.ph-listrow {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  min-height: var(--ctl-h);
+  padding: 0 var(--u2);
+  border-bottom: 1px solid var(--c-line);
+  min-width: 0;
+}
+
+.ph-listrow:hover {
+  background: var(--c-bg-3);
+}
+
+.ph-listrow--on {
+  background: var(--c-bg-3);
+}
+
+.ph-listrow__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+/* ─── Stat ─────────────────────────────────────────────────────────────── */
+
+.ph-stat {
+  display: flex;
+  align-items: baseline;
+  gap: var(--u);
+  min-width: 0;
+}
+
+.ph-stat__k {
+  color: var(--c-fg-mute);
+  flex: 0 0 auto;
+}
+
+.ph-stat__v {
+  color: var(--c-fg);
+  overflow: hidden;
+}
+
+.ph-stat__v--num {
+  color: var(--c-info);
+}
+
+/* ─── Badge ────────────────────────────────────────────────────────────── */
+
+.ph-badge {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  height: var(--u4);
+  padding: 0 var(--u);
+  display: inline-flex;
+  align-items: center;
+  background: var(--c-bg-4);
+  color: var(--c-fg-dim);
+  border: 1px solid var(--c-line);
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.ph-badge--accent {
+  color: var(--c-accent);
+  border-color: var(--c-accent);
+  background: var(--c-accent-lo);
+}
+
+.ph-badge--info {
+  color: var(--c-info);
+  border-color: var(--c-info);
+  background: var(--c-info-lo);
+}
+
+/* ─── Slot (icon cell) ─────────────────────────────────────────────────── */
+
+/* AO icons are 48x48. The slot is that size so they draw 1:1; the small
+   variant is exactly half, which nearest-neighbour handles cleanly. */
+.ph-slot {
+  width: var(--icon);
+  height: var(--icon);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+}
+
+.ph-slot--empty {
+  border-style: dashed;
+  border-color: var(--c-bg-4);
+}
+
+.ph-slot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.ph-slot--sm {
+  width: var(--icon-sm);
+  height: var(--icon-sm);
+}
+
+/* ─── Empty / status ───────────────────────────────────────────────────── */
+
+.ph-empty {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--c-fg-mute);
+  text-transform: uppercase;
+  padding: var(--u3) var(--u2);
+  text-align: center;
+}
+
+/* ─── Collapse ─────────────────────────────────────────────────────────── */
+
+/* Height only — the content is never scaled, so glyphs stay sharp. */
+.ph-collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 120ms steps(4, end);
+  min-width: 0;
+}
+
+.ph-collapse--open {
+  grid-template-rows: 1fr;
+}
+
+.ph-collapse__inner {
+  overflow: hidden;
+  min-height: 0;
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ph-collapse {
+    transition: none;
+  }
+}
+
+/* ─── Divider ──────────────────────────────────────────────────────────── */
+
+.ph-hr {
+  height: 1px;
+  background: var(--c-line);
+  flex: 0 0 auto;
+}
+
+/* ─── Type-ahead ───────────────────────────────────────────────────────── */
+
+.ta {
+  min-width: 0;
+}
+
+/* Portalled to the body so it escapes the panel's overflow, and carries .ph
+   so it gets the kit's font even though it sits outside the app root. */
+.ta__list {
+  z-index: 10000;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line-hi);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6);
+}
+
+.ta__item {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  min-height: var(--ctl-h);
+  padding: 0 var(--u2);
+  cursor: pointer;
+  color: var(--c-fg);
+}
+
+/* One highlight, driven by both the pointer and the arrow keys, so there is a
+   single notion of "where am I" however you are driving it. */
+.ta__item--on {
+  background: var(--c-bg-4);
+  color: var(--c-accent);
+}
+
+.ta__label {
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.ta__hint {
+  color: var(--c-fg-mute);
+  flex: 0 0 auto;
+}
+
+.ta__empty {
+  padding: var(--u2);
+  color: var(--c-fg-mute);
+  text-align: center;
+}
+
+/* ─── Filter rows ──────────────────────────────────────────────────────── */
+
+.flt-row {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  min-height: var(--ctl-h);
+  padding: 0 var(--u) 0 0;
+  border-bottom: 1px solid var(--c-line);
+  min-width: 0;
+}
+
+.flt-row__toggle {
+  flex: 1 1 auto;
+  border: 0;
+  background: transparent;
+}
+
+.flt-row--off .flt-row__toggle {
+  color: var(--c-fg-mute);
+}
+
+.flt-row__fields {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  flex: 0 0 auto;
+}
+
+.flt-range {
+  width: 8ch;
+  height: var(--ctl-h);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+}
+
+.flt-range:focus-within {
+  border-color: var(--c-accent);
+}
+
+/* ─── Tag field ────────────────────────────────────────────────────────── */
+
+.flt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--u);
+  padding: var(--u);
+  min-height: var(--ctl-h);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+  cursor: text;
+  min-width: 0;
+}
+
+.flt-tags:focus-within {
+  border-color: var(--c-accent);
+}
+
+.flt-tag {
+  display: flex;
+  align-items: center;
+  height: var(--u4);
+  padding: 0 var(--u);
+  background: var(--c-accent-lo);
+  border: 1px solid var(--c-accent);
+  color: var(--c-accent);
+  cursor: pointer;
+}
+
+.flt-tag:hover {
+  background: var(--c-bad);
+  border-color: var(--c-bad);
+  color: var(--c-bg-0);
+}
+
+/* The field shares the box with the tags, so it has no chrome of its own. */
+.flt-tags .pxi {
+  flex: 1 1 60px;
+  min-width: 60px;
+  height: var(--ctl-h-sm);
+}

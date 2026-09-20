@@ -1,0 +1,292 @@
+/* ============================================================================
+   Item presentation.
+
+   The one rule that governs the sizes here: AO icon art is 48x48, so the only
+   sizes that do not resample are 48, 24, 16 and 12. Everything else in this
+   file is ordinary layout.
+   ========================================================================= */
+
+/* ─── Icon ─────────────────────────────────────────────────────────────── */
+
+.iicon {
+  display: block;
+  flex: 0 0 auto;
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+  overflow: hidden;
+}
+
+.iicon img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+}
+
+.iicon--full {
+  width: 48px;
+  height: 48px;
+}
+
+.iicon--half {
+  width: 24px;
+  height: 24px;
+}
+
+.iicon--tiny {
+  width: 16px;
+  height: 16px;
+}
+
+.iicon--empty {
+  border-style: dashed;
+  border-color: var(--c-bg-4);
+}
+
+/* Something to hover is something to inspect. */
+.irow__icon {
+  cursor: help;
+  border-color: var(--c-info);
+  background: var(--c-info-lo);
+}
+
+/* ─── Row ──────────────────────────────────────────────────────────────── */
+
+.irow {
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line);
+  flex: 0 0 auto;
+  min-width: 0;
+  /* Hundreds of these exist; keep each row's layout to itself. */
+  contain: layout;
+}
+
+.irow + .irow {
+  margin-top: var(--u);
+}
+
+.irow__main {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  padding: var(--u);
+  min-width: 0;
+}
+
+/* Confirmation that a click registered. A border colour change, not a glow —
+   nothing moves, so nothing blurs. */
+@keyframes irow-hit {
+  0%,
+  60% {
+    background: var(--c-accent-lo);
+  }
+  100% {
+    background: transparent;
+  }
+}
+
+.irow__main--hit {
+  animation: irow-hit 600ms steps(6, end) forwards;
+}
+
+.irow__id {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.irow__name {
+  color: var(--c-fg);
+  overflow: hidden;
+}
+
+.irow__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--u);
+  flex: 0 0 auto;
+}
+
+.irow__ql {
+  width: 4ch;
+  text-align: right;
+}
+
+/* ─── Identity line ────────────────────────────────────────────────────── */
+
+.iids {
+  min-width: 0;
+}
+
+.iids__tag {
+  color: var(--c-fg-mute);
+}
+
+.iids__more {
+  height: var(--ctl-h-sm);
+}
+
+/* ─── Variant shelf ────────────────────────────────────────────────────── */
+
+.ivar {
+  border-top: 1px solid var(--c-line);
+  background: var(--c-bg-1);
+}
+
+.ivar__head,
+.ivar__row {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  padding: 0 var(--u2);
+  min-height: var(--ctl-h);
+  min-width: 0;
+}
+
+.ivar__head {
+  color: var(--c-fg-mute);
+  border-bottom: 1px solid var(--c-line);
+  /* Line the heading up with the rows, which start with a 16px icon. */
+  padding-left: calc(var(--u2) + 16px + var(--u2));
+}
+
+.ivar__row:hover {
+  background: var(--c-bg-3);
+  cursor: help;
+}
+
+.ivar__name {
+  flex: 1 1 auto;
+  overflow: hidden;
+  color: var(--c-fg-dim);
+}
+
+.ivar__id {
+  width: 8ch;
+  text-align: right;
+  flex: 0 0 auto;
+}
+
+.ivar__ql {
+  width: 4ch;
+  text-align: right;
+  flex: 0 0 auto;
+}
+
+/* ─── Tooltip ──────────────────────────────────────────────────────────── */
+
+.itt {
+  position: fixed;
+  z-index: 10000;
+  min-width: 240px;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line-hi);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7);
+}
+
+.itt__head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--u2);
+  padding: var(--u2);
+  border-bottom: 1px solid var(--c-line);
+  flex: 0 0 auto;
+}
+
+.itt__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+}
+
+.itt__name {
+  color: var(--c-accent);
+}
+
+.itt__body {
+  padding: var(--u2);
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.itt__loading {
+  color: var(--c-fg-mute);
+}
+
+/* ─── Tooltip contents ─────────────────────────────────────────────────── */
+
+.tt-section + .tt-section {
+  margin-top: var(--u2);
+}
+
+.tt-section-title {
+  color: var(--c-fg-mute);
+  border-bottom: 1px solid var(--c-line);
+  display: block;
+  margin-bottom: var(--u);
+}
+
+.tt-row,
+.tt-mod-criteria-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--u2);
+  min-width: 0;
+}
+
+.tt-label {
+  color: var(--c-fg-dim);
+}
+
+.tt-value {
+  color: var(--c-fg);
+}
+
+.tt-value-mod {
+  color: var(--c-info);
+}
+
+.tt-sub-title {
+  color: var(--c-accent);
+  display: block;
+  margin-top: var(--u);
+}
+
+.tt-target-bubble {
+  padding-left: var(--u2);
+  border-left: 1px solid var(--c-line);
+  margin: var(--u) 0;
+}
+
+.tt-target-title {
+  color: var(--c-fg-dim);
+  display: block;
+}
+
+.tt-mod-bubble {
+  margin: var(--u) 0;
+}
+
+.tt-mod-divider {
+  height: 1px;
+  background: var(--c-line);
+  margin: var(--u) 0;
+}
+
+.tt-description {
+  display: block;
+  margin-top: var(--u2);
+  padding-top: var(--u2);
+  border-top: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+}

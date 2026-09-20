@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Pixel font check</title>
+    <style>
+      @font-face {
+        font-family: "TerminusPx12";
+        src: url("/fonts/TerminusPx12-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "TerminusPx12";
+        src: url("/fonts/TerminusPx12-Bold.ttf") format("truetype");
+        font-weight: 700;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "TerminusPx16";
+        src: url("/fonts/TerminusPx16-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+      @font-face {
+        font-family: "TerminusPx24";
+        src: url("/fonts/TerminusPx24-Regular.ttf") format("truetype");
+        font-weight: 400;
+        font-display: block;
+      }
+
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: #06080b;
+        color: #ccd6e0;
+        font-family: "TerminusPx12", monospace;
+        font-size: 12px;
+        line-height: 16px;
+        padding: 16px;
+      }
+
+      h2 {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 400;
+        color: #ffb454;
+        text-transform: uppercase;
+        margin: 16px 0 4px;
+      }
+
+      table { border-collapse: collapse; }
+      td { padding: 0 12px 0 0; vertical-align: top; white-space: pre; }
+
+      .ok { color: #8ce99a; }
+      .bad { color: #ff6b6b; }
+      .dim { color: #7c8b9c; }
+
+      .t12 { font-family: "TerminusPx12"; font-size: 12px; line-height: 16px; }
+      .t16 { font-family: "TerminusPx16"; font-size: 16px; line-height: 20px; }
+      .t24 { font-family: "TerminusPx24"; font-size: 24px; line-height: 28px; }
+      .fallback { font-family: Consolas, monospace; font-size: 12px; line-height: 16px; }
+
+      /* White on black makes any colour fringe obvious. */
+      .swatch { background: #000; color: #fff; padding: 4px; margin: 4px 0; }
+      .swatch--inv { background: #fff; color: #000; }
+
+      /* ── Half-pixel probes ── */
+      .amber { color: #ffb454; }
+
+      .probe { display: flex; align-items: center; gap: 8px; margin: 2px 0; }
+      .probe__label { width: 150px; color: #7c8b9c; flex: 0 0 auto; }
+      .probe__box { background: #000; padding: 4px 8px; display: block; }
+
+      /* The offender: a glyph run starting on a half pixel. */
+      .half { position: relative; left: 0.5px; }
+
+      /* Candidate cures. Each makes the layer ineligible for LCD (subpixel)
+         text, which should turn the colour fringe into plain grey. */
+      .fx-filter { filter: opacity(0.999); }
+      .fx-willchange { will-change: opacity; }
+      .fx-opacity { opacity: 0.999; }
+      .fx-layer { transform: translateZ(0); backface-visibility: hidden; }
+
+      .btn {
+        background: #4a3720;
+        border: 1px solid #ffb454;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-transform: uppercase;
+      }
+
+      /* -- Sprite text (what @pixel-text does) -- */
+      .pxrow { display: flex; align-items: center; gap: 12px; margin: 3px 0; }
+      .pxrow__tag { width: 128px; color: #7c8b9c; flex: 0 0 auto; }
+      .pxrow__cell { background: #000; padding: 6px 10px; display: flex; align-items: center; }
+
+      .px {
+        display: inline-block;
+        background-color: currentColor;
+        -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+        -webkit-mask-position: 0 0;     mask-position: 0 0;
+      }
+
+      canvas.mag { image-rendering: pixelated; border: 1px solid #223040; display: block; }
+
+      /* An 8px checker: if the glyph grid and this grid disagree, the text is
+         not landing on whole pixels. */
+      .grid {
+        background-image:
+          linear-gradient(90deg, rgba(86, 212, 232, 0.18) 1px, transparent 1px);
+        background-size: 6px 100%;
+        padding: 4px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Environment</h2>
+    <table id="env"></table>
+
+    <h2>Font loading</h2>
+    <table id="fonts"></table>
+
+    <h2>Advance width — must be exactly 6.000 / 8.000 / 12.000</h2>
+    <table id="metrics"></table>
+
+    <h2>Samples — look for colour on the stems</h2>
+    <div class="swatch t12">ITEM MISSION ROLLER Illlm1 0O 12345 ####</div>
+    <div class="swatch t16">ITEM MISSION ROLLER Illlm1 0O 12345 ####</div>
+    <div class="swatch t24">ITEM Illlm1 0O 12345</div>
+    <div class="swatch swatch--inv t12">ITEM MISSION ROLLER Illlm1 0O 12345 ####</div>
+
+    <h2 class="dim">Consolas at 12px, for comparison</h2>
+    <div class="swatch fallback">ITEM MISSION ROLLER Illlm1 0O 12345 ####</div>
+
+    <h2>Grid alignment — each stem should sit between the cyan rules</h2>
+    <div class="grid t12">IIIIIIIIIIIIIIIIIIIIIIIIIIIIII</div>
+
+    <h2>Half-pixel test — which of these kills the colour?</h2>
+    <p class="dim" style="margin-bottom: 8px">
+      Every row below is shifted half a pixel except the control. Tell me which
+      of rows 3-6 look like row 1.
+    </p>
+
+    <div class="probe"><span class="probe__label">1 aligned (control)</span>
+      <span class="probe__box"><span class="amber">ADD ACCEPT ITEM</span></span></div>
+    <div class="probe"><span class="probe__label">2 shifted 0.5px</span>
+      <span class="probe__box"><span class="amber half">ADD ACCEPT ITEM</span></span></div>
+    <div class="probe"><span class="probe__label">3 + filter</span>
+      <span class="probe__box fx-filter"><span class="amber half">ADD ACCEPT ITEM</span></span></div>
+    <div class="probe"><span class="probe__label">4 + will-change</span>
+      <span class="probe__box fx-willchange"><span class="amber half">ADD ACCEPT ITEM</span></span></div>
+    <div class="probe"><span class="probe__label">5 + opacity .999</span>
+      <span class="probe__box fx-opacity"><span class="amber half">ADD ACCEPT ITEM</span></span></div>
+    <div class="probe"><span class="probe__label">6 + translateZ</span>
+      <span class="probe__box fx-layer"><span class="amber half">ADD ACCEPT ITEM</span></span></div>
+
+    <h2>The real case — a centred label in an odd-width box</h2>
+    <p class="dim" style="margin-bottom: 8px">
+      Same label in both. The odd-width box centres it onto a half pixel, which
+      is exactly what a stretched button in the app does.
+    </p>
+    <div style="display: flex; gap: 8px; align-items: flex-start">
+      <span class="btn amber" style="width: 148px">ACCEPT</span>
+      <span class="btn amber" style="width: 149px">ACCEPT</span>
+    </div>
+    <div class="dim" style="margin-top: 4px">even 148&nbsp;&nbsp;&nbsp;&nbsp;odd 149</div>
+
+    <h2>DOM text — the one the app actually uses</h2>
+    <p class="dim" style="margin-bottom: 8px">
+      The canvas above cannot receive -webkit-font-smoothing, but DOM text can,
+      and in Blink that maps onto Skia's edging mode. Row B asks for aliased
+      output. Which of these three is hard on/off?
+    </p>
+    <div class="swatch t24" style="-webkit-font-smoothing: auto">A auto &nbsp;ITEM ADD 0Oil</div>
+    <div class="swatch t24" style="-webkit-font-smoothing: none">B none &nbsp;ITEM ADD 0Oil</div>
+    <div class="swatch t24" style="-webkit-font-smoothing: antialiased">C grey &nbsp;ITEM ADD 0Oil</div>
+
+    <div class="swatch t12" style="-webkit-font-smoothing: auto">A auto &nbsp;ITEM ADD 0Oil MISSION ROLLER</div>
+    <div class="swatch t12" style="-webkit-font-smoothing: none">B none &nbsp;ITEM ADD 0Oil MISSION ROLLER</div>
+    <div class="swatch t12" style="-webkit-font-smoothing: antialiased">C grey &nbsp;ITEM ADD 0Oil MISSION ROLLER</div>
+
+    <h2 id="sprite">SPRITE TEXT vs FONT TEXT — THE ACTUAL FIX</h2>
+    <p class="dim" style="margin-bottom: 8px">
+      The first row of each pair is drawn from a bitmap atlas through a CSS
+      mask, the way @pixel-text does it. The second is the same string as
+      ordinary text in the same face. ClearType is untouched here — no
+      flags, no system settings.
+    </p>
+    <div id="sprite-demo"></div>
+
+    <h2>Both, magnified 8x</h2>
+    <canvas id="mag" class="mag" width="980" height="260"></canvas>
+
+    <h2>Colour count — 2 means pixel on / pixel off</h2>
+    <table id="spritecount"></table>
+
+    <h2>Coverage measurement — is it actually on/off?</h2>
+    <p class="dim" style="margin-bottom: 8px">
+      The same glyphs drawn to a canvas and read back pixel by pixel. BINARY
+      means every pixel is fully on or fully off. Anything else lists the
+      in-between values, which is what a fractional origin produces.
+    </p>
+    <table id="coverage"></table>
+
+    <h2>Magnified 8x, nearest-neighbour — no magnifier tool needed</h2>
+    <canvas id="zoom" width="960" height="576"
+            style="image-rendering: pixelated; border: 1px solid #223040"></canvas>
+
+    <script>
+      const row = (table, k, v, cls) => {
+        const tr = document.createElement("tr");
+        const a = document.createElement("td");
+        a.className = "dim";
+        a.textContent = k;
+        const b = document.createElement("td");
+        if (cls) b.className = cls;
+        b.textContent = v;
+        tr.append(a, b);
+        document.getElementById(table).append(tr);
+      };
+
+      const dpr = window.devicePixelRatio;
+      row("env", "devicePixelRatio", dpr.toFixed(4),
+          dpr === 1 ? "ok" : "bad");
+      row("env", "", dpr === 1
+        ? "1.0000 — no scaling, correct"
+        : "NOT 1 — browser zoom or display scaling is on. Ctrl+0 resets zoom.",
+        dpr === 1 ? "ok" : "bad");
+      row("env", "screen", `${screen.width}x${screen.height}`);
+      row("env", "colorDepth", String(screen.colorDepth));
+
+      document.fonts.ready.then(() => {
+        const faces = [
+          ["TerminusPx12", 12, 6],
+          ["TerminusPx16", 16, 8],
+          ["TerminusPx24", 24, 12],
+        ];
+
+        const ctx = document.createElement("canvas").getContext("2d");
+
+        for (const [name, size, cell] of faces) {
+          const loaded = document.fonts.check(`${size}px "${name}"`);
+          row("fonts", name, loaded ? "loaded" : "NOT LOADED — falling back",
+              loaded ? "ok" : "bad");
+
+          ctx.font = `${size}px "${name}", monospace`;
+          const w = ctx.measureText("M".repeat(100)).width / 100;
+          const exact = Math.abs(w - cell) < 0.0001;
+          row("metrics", `${name} @ ${size}px`,
+              `${w.toFixed(3)}px per glyph  (want ${cell}.000)` +
+              (exact ? "" : "  <-- WRONG FACE OR SCALED"),
+              exact ? "ok" : "bad");
+        }
+
+        // Any face the page actually resolved, for the record.
+        const seen = [];
+        document.fonts.forEach((f) => seen.push(`${f.family} ${f.weight} ${f.status}`));
+        row("fonts", "registry", seen.join("\n") || "(empty)");
+
+        measureCoverage();
+        drawZoom();
+        spriteDemo();
+      });
+
+      // -- Sprite text demo ---------------------------------------------------
+      //
+      // A vanilla stand-in for @pixel-text: load the atlas, compose the string
+      // onto a canvas, then use it as a CSS mask so colour comes from `color`.
+
+      async function loadAtlas(size, weight) {
+        const stem = "/atlas/terminus-" + size + "-" + weight;
+        const meta = await (await fetch(stem + ".json")).json();
+        const image = await new Promise(function (res, rej) {
+          const i = new Image();
+          i.onload = function () { res(i); };
+          i.onerror = rej;
+          i.src = stem + ".png";
+        });
+        const index = new Map();
+        Array.from(meta.chars).forEach(function (ch, i) { index.set(ch, i); });
+        return { meta: meta, image: image, index: index };
+      }
+
+      function maskCanvas(text, atlas, scale) {
+        const cellW = atlas.meta.cellW, cellH = atlas.meta.cellH, cols = atlas.meta.cols;
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, text.length * cellW * scale);
+        c.height = cellH * scale;
+        const g = c.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        for (let i = 0; i < text.length; i++) {
+          const cell = atlas.index.get(text[i]);
+          if (cell === undefined) continue;
+          g.drawImage(
+            atlas.image,
+            (cell % cols) * cellW, Math.floor(cell / cols) * cellH, cellW, cellH,
+            i * cellW * scale, 0, cellW * scale, cellH * scale
+          );
+        }
+        return c;
+      }
+
+      function spriteSpan(text, atlas, color, scale) {
+        const c = maskCanvas(text, atlas, scale);
+        const url = c.toDataURL("image/png");
+        const el = document.createElement("span");
+        el.className = "px";
+        el.style.width = c.width + "px";
+        el.style.height = c.height + "px";
+        el.style.color = color;
+        el.style.webkitMaskImage = "url(" + url + ")";
+        el.style.maskImage = "url(" + url + ")";
+        return el;
+      }
+
+      function fontSpan(text, size, weight, color) {
+        const lh = size === 12 ? 16 : size === 16 ? 20 : 28;
+        const el = document.createElement("span");
+        el.style.fontFamily = '"TerminusPx' + size + '", monospace';
+        el.style.fontSize = size + "px";
+        el.style.lineHeight = lh + "px";
+        el.style.fontWeight = String(weight);
+        el.style.color = color;
+        el.textContent = text;
+        return el;
+      }
+
+      function demoRow(tag, node) {
+        const r = document.createElement("div");
+        r.className = "pxrow";
+        const t = document.createElement("span");
+        t.className = "pxrow__tag";
+        t.textContent = tag;
+        const c = document.createElement("span");
+        c.className = "pxrow__cell";
+        c.appendChild(node);
+        r.append(t, c);
+        return r;
+      }
+
+      async function spriteDemo() {
+        const host = document.getElementById("sprite-demo");
+        const SAMPLE = "ITEM ADD ACCEPT 0Oil 12345";
+        const sets = [[12, 400], [16, 400], [24, 400], [12, 700]];
+        let first = null;
+
+        for (const pair of sets) {
+          const size = pair[0], weight = pair[1];
+          const atlas = await loadAtlas(size, weight);
+          if (!first) first = atlas;
+          host.appendChild(demoRow(size + "px " + weight + " sprite",
+                                   spriteSpan(SAMPLE, atlas, "#ffb454", 1)));
+          host.appendChild(demoRow(size + "px " + weight + " font",
+                                   fontSpan(SAMPLE, size, weight, "#ffb454")));
+        }
+
+        magnify(first, SAMPLE);
+        countColours(first, SAMPLE);
+      }
+
+      // Tint the mask by writing pixels directly. globalCompositeOperation
+      // was used here first and produced a solid block; reading the alpha and
+      // writing the colour is deterministic and needs no compositing mode.
+      function tinted(text, atlas, color) {
+        const m = maskCanvas(text, atlas, 1);
+        const mg = m.getContext("2d", { willReadFrequently: true });
+        const src = mg.getImageData(0, 0, m.width, m.height);
+
+        const rgb = color.match(/^#(\w\w)(\w\w)(\w\w)$/);
+        const cr = parseInt(rgb[1], 16), cg = parseInt(rgb[2], 16), cb = parseInt(rgb[3], 16);
+
+        const out = document.createElement("canvas");
+        out.width = m.width; out.height = m.height;
+        const og = out.getContext("2d", { willReadFrequently: true });
+        const dst = og.createImageData(m.width, m.height);
+
+        for (let i = 0; i < src.data.length; i += 4) {
+          const on = src.data[i + 3] > 127;       // mask alpha
+          dst.data[i]     = on ? cr : 0;
+          dst.data[i + 1] = on ? cg : 0;
+          dst.data[i + 2] = on ? cb : 0;
+          dst.data[i + 3] = 255;                  // opaque black background
+        }
+        og.putImageData(dst, 0, 0);
+        return out;
+      }
+
+      function rasterised(text, w, h, color) {
+        const f = document.createElement("canvas");
+        f.width = w; f.height = h;
+        const g = f.getContext("2d", { willReadFrequently: true });
+        g.fillStyle = "#000"; g.fillRect(0, 0, w, h);
+        g.fillStyle = color;
+        g.font = '12px "TerminusPx12", monospace';
+        g.textBaseline = "alphabetic";
+        g.fillText(text, 0, 10);
+        return f;
+      }
+
+      function magnify(atlas, text) {
+        const out = document.getElementById("mag");
+        const g = out.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        g.fillStyle = "#06080b";
+        g.fillRect(0, 0, out.width, out.height);
+
+        const sprite = tinted(text, atlas, "#ffb454");
+        const font = rasterised(text, sprite.width, sprite.height, "#ffb454");
+
+        g.drawImage(sprite, 0, 0, 120, 12, 0, 0, 960, 96);
+        g.drawImage(font, 0, 0, 120, 12, 0, 128, 960, 96);
+
+        g.fillStyle = "#7c8b9c";
+        g.font = '12px "TerminusPx12", monospace';
+        g.fillText("sprite  (mask)", 0, 114);
+        g.fillText("font  (rasterised)", 0, 242);
+      }
+
+      function distinctColours(canvas) {
+        const g = canvas.getContext("2d", { willReadFrequently: true });
+        const d = g.getImageData(0, 0, canvas.width, canvas.height).data;
+        const set = new Set();
+        for (let i = 0; i < d.length; i += 4) {
+          set.add(d[i] + "," + d[i + 1] + "," + d[i + 2]);
+        }
+        return set.size;
+      }
+
+      function countColours(atlas, text) {
+        const sprite = tinted(text, atlas, "#ffb454");
+        const font = rasterised(text, sprite.width, sprite.height, "#ffb454");
+        const a = distinctColours(sprite);
+        const b = distinctColours(font);
+        row("spritecount", "sprite (mask)", a + " distinct colours", a <= 2 ? "ok" : "bad");
+        row("spritecount", "font (rasterised)", b + " distinct colours", b <= 2 ? "ok" : "bad");
+      }
+
+      // ── Coverage ───────────────────────────────────────────────────────────
+      //
+      // Draw white text on black and read the pixels back. With grid-aligned
+      // rectangle glyphs and no subpixel text, every pixel should be 0 or 255.
+      // Any other value means the glyph run did not start on a whole pixel.
+
+      function renderToData(font, size, text, offsetX, offsetY) {
+        const c = document.createElement("canvas");
+        c.width = 320;
+        c.height = 32;
+        const g = c.getContext("2d", { willReadFrequently: true });
+        g.fillStyle = "#000";
+        g.fillRect(0, 0, c.width, c.height);
+        g.fillStyle = "#fff";
+        g.textBaseline = "alphabetic";
+        g.font = `${size}px "${font}", monospace`;
+        g.fillText(text, offsetX, 20 + offsetY);
+        return { canvas: c, data: g.getImageData(0, 0, c.width, c.height).data };
+      }
+
+      function measureCoverage() {
+        const cases = [
+          ["TerminusPx12", 12, 0, 0],
+          ["TerminusPx12", 12, 0.5, 0],
+          ["TerminusPx12", 12, 0, 0.5],
+          ["TerminusPx16", 16, 0, 0],
+          ["TerminusPx24", 24, 0, 0],
+        ];
+
+        for (const [font, size, ox, oy] of cases) {
+          const { data } = renderToData(font, size, "ITEM ADD 0Oil", ox, oy);
+          const hist = new Map();
+          for (let i = 0; i < data.length; i += 4) {
+            const v = data[i]; // white on black, so red == coverage
+            hist.set(v, (hist.get(v) || 0) + 1);
+          }
+          const mids = [...hist.keys()].filter((v) => v !== 0 && v !== 255);
+          mids.sort((a, b) => a - b);
+
+          const label = `${font} @${size}px` +
+            (ox ? ` +${ox}px x` : "") + (oy ? ` +${oy}px y` : "");
+          const on = hist.get(255) || 0;
+
+          if (mids.length === 0) {
+            row("coverage", label, `BINARY — ${on} pixels on, 0 partial`, "ok");
+          } else {
+            const partial = mids.reduce((n, v) => n + hist.get(v), 0);
+            row("coverage", label,
+                `ANTIALIASED — ${partial} partial pixels, ` +
+                `${mids.length} distinct levels (${mids.slice(0, 8).join(", ")}${mids.length > 8 ? ", …" : ""})`,
+                "bad");
+          }
+        }
+      }
+
+      // ── Magnifier ──────────────────────────────────────────────────────────
+
+      function drawZoom() {
+        const out = document.getElementById("zoom");
+        const g = out.getContext("2d");
+        g.imageSmoothingEnabled = false;
+        g.fillStyle = "#06080b";
+        g.fillRect(0, 0, out.width, out.height);
+
+        const rows = [
+          ["TerminusPx12", 12, 0, 0],
+          ["TerminusPx12", 12, 0.5, 0],
+          ["TerminusPx16", 16, 0, 0],
+        ];
+
+        // 8x nearest-neighbour: 120x24 of source becomes 960x192 on screen,
+        // so one source pixel is one 8x8 block and nothing is resampled.
+        rows.forEach(([font, size, ox, oy], i) => {
+          const { canvas } = renderToData(font, size, "ITEM ADD", ox, oy);
+          g.drawImage(canvas, 0, 4, 120, 24, 0, i * 192, 960, 192);
+        });
+      }
+    </script>
+  </body>
+</html>

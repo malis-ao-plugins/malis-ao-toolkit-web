@@ -1,0 +1,120 @@
+/* ============================================================================
+   Window chrome.
+
+   Sized for the overlay case first: 320px wide, one column, fixed layout.
+   Nothing here drags except the window itself.
+   ========================================================================= */
+
+.app {
+  background: var(--c-window);
+  border: 1px solid var(--c-line-hi);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  /* Panels query this, not the viewport — several windows of different widths
+     share the screen. */
+  container-type: inline-size;
+  min-width: 240px;
+  overflow: hidden;
+}
+
+/* ─── Title bar ────────────────────────────────────────────────────────────
+   The whole bar is the move handle; its buttons stop the gesture themselves.
+   touch-action keeps the browser from claiming the drag as a scroll. */
+
+.window-drag-handle {
+  flex: 0 0 auto;
+  cursor: grab;
+  touch-action: none;
+}
+
+.window-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ─── Body ─────────────────────────────────────────────────────────────── */
+
+.body {
+  padding: var(--u);
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  flex: 1 1 0;
+  background: var(--c-bg-1);
+}
+
+.body > * {
+  min-width: 0;
+}
+
+.shell-section {
+  flex: 0 0 auto;
+}
+
+.disconnected-message {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 auto;
+  padding: var(--u6) var(--u2);
+  color: var(--c-fg-mute);
+  font-size: var(--fs-12);
+  text-transform: uppercase;
+  user-select: none;
+}
+
+/* Still emitted by a few older components. */
+.empty-state {
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  color: var(--c-fg-mute);
+  text-transform: uppercase;
+  padding: var(--u3) var(--u2);
+  text-align: center;
+  user-select: none;
+}
+
+/* ─── Resize grips ─────────────────────────────────────────────────────────
+   Invisible until hovered. 4px is enough to hit without stealing clicks from
+   whatever sits against the window edge. */
+
+.resize-e,
+.resize-s,
+.resize-se {
+  position: absolute;
+  touch-action: none;
+  z-index: 5;
+}
+
+.resize-e {
+  top: 0;
+  right: 0;
+  width: var(--u);
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.resize-s {
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: var(--u);
+  cursor: ns-resize;
+}
+
+.resize-se {
+  right: 0;
+  bottom: 0;
+  width: var(--u2);
+  height: var(--u2);
+  cursor: nwse-resize;
+}
+
+.resize-e:hover,
+.resize-s:hover,
+.resize-se:hover {
+  background: var(--c-accent);
+}

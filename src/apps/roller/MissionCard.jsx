@@ -1,0 +1,114 @@
+import { useEffect, useState } from "react";
+import { Button, Row, Slot } from "../../ui";
+import { PixelText } from "../../packages/pixel-text";
+import { useResolvedItems } from "../../hooks/useResolvedItems";
+import { getIcon } from "../../lib/db";
+import { PLAYFIELDS } from "../../lib/data";
+import { compact, exact } from "./rollerData";
+
+const REWARD_SLOTS = 6;
+const NO_REWARDS = [];
+
+// Card width at the 320px target leaves ~254px beside the icon; at the 16px
+// step that is 31 cells, so the name truncates at 30 plus an ellipsis.
+const NAME_CH = 30;
+const ZONE_CH = 18;
+
+const playfieldName = (id) =>
+  PLAYFIELDS.find((p) => p.id === Number(id))?.name || `PF ${id}`;
+
+/** Pick the template matching the entry's QL — members[0] is the lowest one. */
+const iconFor = (item) => {
+  if (!item?.members?.length) return item?.iconSrc ?? null;
+  const m = item.members.find((x) => x.ql === item.ql) ?? item.members[0];
+  return m.iconSrc ?? null;
+};
+
+/**
+ * One rolled mission.
+ *
+ * Three fixed rows — identity, rewards, actions — so a list of cards reads as
+ * a column of aligned data rather than a stack of differently-shaped boxes.
+ * Reward icons sit at their native 32px: AO icons are 32x32, and any other
+ * size resamples them into mush.
+ *
+ * Text goes through PixelText rather than the font, because Chromium on
+ * Windows antialiases every glyph it rasterises and offers no way to stop it.
+ * See src/packages/pixel-text/README.md.
+ */
+export function MissionCard({ mission, onAccept, onPing, noteBind }) {
+  const rewards = useResolvedItems(mission.rewards ?? NO_REWARDS);
+  const [icon, setIcon] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getIcon(mission.icon).then((src) => !cancelled && setIcon(src));
+    return () => {
+      cancelled = true;
+    };
+  }, [mission.icon]);
+
+  const zone = playfieldName(mission.playfield);
+
+  return (
+    <div className="rl-mission">
+      <Row gap={2} className="rl-mission__head">
+        <Slot
+          src={icon}
+          className="rl-mission__icon"
+          {...noteBind(mission.description)}
+        />
+        <div className="rl-mission__id">
+          <PixelText
+            size={16}
+            maxCh={NAME_CH}
+            className="rl-mission__name"
+            title={mission.name}
+          >
+            {mission.name}
+          </PixelText>
+
+          <Row gap={2} className="rl-mission__meta">
+            <PixelText maxCh={ZONE_CH} className="rl-mission__zone" title={zone}>
+              {zone}
+            </PixelText>
+            <PixelText
+              className="ph-num"
+              title={`${exact(mission.credits)} – ${exact(mission.creditsMax)} credits`}
+            >
+              {`${compact(mission.creditsMax)}cr`}
+            </PixelText>
+            <PixelText className="ph-num" title={`${exact(mission.xp)} xp`}>
+              {`${compact(mission.xp)}xp`}
+            </PixelText>
+          </Row>
+        </div>
+      </Row>
+
+      <Row gap={1} className="rl-mission__rewards">
+        {Array.from({ length: REWARD_SLOTS }, (_, i) => {
+          const item = rewards[i];
+          return (
+            <Slot
+              key={item?.low_id ?? item?.id ?? `empty-${i}`}
+              src={iconFor(item)}
+              title={item?.name}
+              size="sm"
+            />
+          );
+        })}
+      </Row>
+
+      <Row gap={1}>
+        <Button variant="primary" block onClick={onAccept}>
+          <PixelText>ACCEPT</PixelText>
+        </Button>
+        <Button onClick={onPing} title="Ping this mission in the client">
+          <PixelText>PING</PixelText>
+        </Button>
+      </Row>
+    </div>
+  );
+}
+
+export default MissionCard;

@@ -1,0 +1,77 @@
+/* ============================================================================
+   Legacy variable bridge.
+
+   Components written before the UI kit (the item row, the tooltip, the flag
+   and modifier filters) reference these names. Rather than touch every one of
+   those files, each legacy name now points at a PHOSPHOR token — so they pick
+   up the new palette, the new font and square corners for free.
+
+   New code should use the --c-* / --u* / --fs-* tokens from src/ui/ui.css
+   directly. Nothing should be added to this file.
+   ========================================================================= */
+
+:root {
+  /* ── Backgrounds ── */
+  --bg-depth0: var(--c-bg-0);
+  --bg-depth1: var(--c-bg-1);
+  --bg-depth2: var(--c-bg-2);
+  --bg-depth3: var(--c-bg-2);
+  --bg-depth5: var(--c-bg-3);
+  --header-bg: var(--c-bg-3);
+  --bg-input: var(--c-bg-0);
+
+  --bg: var(--c-window);
+  --bg-card: var(--c-panel);
+  --bg-card-2: var(--c-bg-3);
+  --bg-card-2half: var(--c-bg-2);
+  --bg-card-tool: transparent;
+  --bg-card-3: var(--c-bg-4);
+
+  --shadow0: none;
+  --shadow1: none;
+  --shadow2: none;
+
+  /* ── Borders ── */
+  --border: var(--c-line);
+  --border-bright: var(--c-line-hi);
+
+  /* ── Accent ── */
+  --accent: var(--c-accent);
+  --accent-dim: var(--c-accent-lo);
+  --accent-mid: var(--c-accent);
+  --accent-subtle: var(--c-accent-lo);
+  --accent-dark: var(--c-accent-lo);
+
+  /* ── Semantic ── */
+  --amber: var(--c-accent);
+  --amber-dim: var(--c-accent-lo);
+  --green: var(--c-good);
+  --red: var(--c-bad);
+  --teal: var(--c-info);
+
+  /* ── Text ── */
+  --text: var(--c-fg);
+  --text-dim: var(--c-fg-dim);
+  --text-muted: var(--c-fg-mute);
+
+  /* ── Fonts ── One face. Terminus has no proportional companion, and mixing
+     a vector face in beside it is what made the old UI look half-finished. */
+  --font-head: var(--ff-12);
+  --font-mono: var(--ff-12);
+  --font-sans: var(--ff-12);
+
+  /* ── Shape ── A pixel grid has no curves. */
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+}
+
+/* In this kit a size always travels with its family, because each generated
+   face is exact at exactly one size. The tooltip title is the only legacy
+   rule that steps up, so it is the only one that needs the pairing spelled
+   out by hand. */
+.tt-name {
+  font-family: var(--ff-16);
+  font-size: var(--fs-16);
+  line-height: var(--lh-16);
+}

@@ -1,0 +1,56 @@
+/* The mask is consumed at its natural size — never stretched, never repeated,
+   so the compositor has nothing to resample. */
+.pxt {
+  position: relative;
+  display: inline-block;
+  vertical-align: top;
+  background-color: currentColor;
+
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 0 0;
+  mask-position: 0 0;
+  -webkit-mask-size: auto;
+  mask-size: auto;
+
+  flex: 0 0 auto;
+}
+
+/**
+ * The real string, laid over the mask and rendered transparent.
+ *
+ * It carries the matching webfont at the matching size, so its glyph boxes sit
+ * exactly where the drawn pixels are: selecting drags over real text, the
+ * clipboard gets real text, and find-in-page still hits. The glyphs themselves
+ * are never seen, so the rasteriser blurring them costs nothing.
+ */
+.pxt__text {
+  position: absolute;
+  left: 0;
+  top: 0;
+  white-space: pre;
+  color: transparent;
+  cursor: inherit;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Translucent, so the highlight reads as a wash over the glyphs rather than
+   painting over them — the mask is the parent's background, which sits below
+   this text layer. */
+.pxt__text::selection {
+  background: rgba(86, 212, 232, 0.45);
+  color: transparent;
+}
+
+.pxt__text::-moz-selection {
+  background: rgba(86, 212, 232, 0.45);
+  color: transparent;
+}
+
+/* Used until the atlas decodes, and for any string containing a glyph the
+   sheet does not carry. Ordinary text — softer, but never missing. */
+.pxt--fallback {
+  position: static;
+  background: none;
+}

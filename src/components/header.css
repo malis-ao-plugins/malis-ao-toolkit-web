@@ -1,0 +1,72 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  height: var(--u6);
+  padding: 0 var(--u);
+  background: var(--c-bg-3);
+  border-bottom: 1px solid var(--c-line);
+  cursor: grab;
+  user-select: none;
+  flex: 0 0 auto;
+}
+
+.header:active {
+  cursor: grabbing;
+}
+
+.header-title {
+  /* Intrinsically sized by PixelText; the auto margin keeps the link dot and
+     the app's own controls pinned to the right of the bar. */
+  margin-right: auto;
+  margin-left: var(--u);
+  color: var(--c-fg);
+  overflow: hidden;
+}
+
+/* Link state. A 8px square on the pixel grid, not a glowing circle. */
+.conn-dot {
+  width: var(--u2);
+  height: var(--u2);
+  flex: 0 0 auto;
+  background: transparent;
+  border: 1px solid var(--c-fg-mute);
+}
+
+.conn-dot--on {
+  background: var(--c-good);
+  border-color: var(--c-good);
+}
+
+/* The header is a drag handle, so its controls must claim their own clicks. */
+.header .ph-btn {
+  cursor: pointer;
+}
+
+.header-min {
+  width: var(--u5);
+  height: var(--u5);
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 0 var(--u) 0;
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.header-min:hover {
+  background: var(--c-bg-4);
+  border-color: var(--c-line-hi);
+}
+
+.header-min__bar {
+  width: var(--u3);
+  height: 2px;
+  background: var(--c-fg-dim);
+}
+
+.header-min:hover .header-min__bar {
+  background: var(--c-accent);
+}

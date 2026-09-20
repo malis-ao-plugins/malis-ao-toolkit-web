@@ -1,0 +1,110 @@
+/* ============================================================================
+   Document base.
+
+   The crispness rules are global rather than scoped to .ph because several
+   components render through createPortal into document.body — a dropdown or
+   tooltip that escaped the app root would otherwise be the one blurry thing
+   on screen.
+   ========================================================================= */
+
+:root {
+  /* Legacy size names, all collapsed onto the 12px step.
+     A generated pixel face is only exact at the size it was built for, so the
+     old six-step ramp (10/11/12/13/14/17px) cannot survive — four of those
+     sizes have no strike at all. Hierarchy in the older components now comes
+     from weight and colour instead. --fs-lg is the one exception and carries
+     its own family override below.
+     Nothing new should use these; see src/ui/ui.css for the real scale. */
+  --fs-2xs: 12px;
+  --fs-xs: 12px;
+  --fs-sm: 12px;
+  --fs-md: 12px;
+  --fs-base: 12px;
+  --fs-lg: 16px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+input,
+button,
+textarea,
+select {
+  font-family: var(--ff-12);
+  font-size: var(--fs-12);
+  line-height: var(--lh-12);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+  font-kerning: none;
+  font-variant-ligatures: none;
+  -webkit-text-stroke: 0;
+  letter-spacing: 0;
+}
+
+body {
+  background: var(--c-bg-0);
+  color: var(--c-fg);
+  min-height: 100vh;
+  overflow: hidden;
+
+  /* No compositing trick here on purpose. An `opacity: 0.999` nudge was tried
+     to force greyscale text and measured to buy nothing — Chromium on Windows
+     antialiases from the system font-smoothing setting, which CSS cannot
+     reach. See src/ui/README.md; the cost was a needless render surface for
+     the whole page. */
+
+  /* A 32px lattice on the same grid the UI is built on. Flat 1px lines and no
+     gradients — a soft backdrop makes hard-edged text look like a mistake. */
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 31px,
+      rgba(86, 212, 232, 0.035) 31px 32px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 31px,
+      rgba(86, 212, 232, 0.035) 31px 32px
+    );
+}
+
+img {
+  image-rendering: pixelated;
+}
+
+input,
+button,
+textarea,
+select {
+  color: inherit;
+}
+
+::selection {
+  background: var(--c-accent);
+  color: var(--c-bg-0);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--c-bg-0);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-bg-4);
+  border: 1px solid var(--c-line);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--c-line-hi);
+}
+::-webkit-scrollbar-corner {
+  background: var(--c-bg-0);
+}

@@ -21,3 +21,10 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# electron-builder output
+/dist
+
+# python bytecode from tools/
+__pycache__/
+*.pyc

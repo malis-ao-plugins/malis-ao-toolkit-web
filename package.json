@@ -1,7 +1,9 @@
 {
-  "name": "malis-mission-roller-web",
+  "name": "malis-ao-toolkit-web",
   "version": "0.1.0",
   "private": true,
+  "homepage": "./",
+  "main": "electron.js",
   "dependencies": {
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
@@ -16,7 +18,27 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "electron:dev": "concurrently \"cross-env BROWSER=none react-scripts start\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
+    "electron:build": "react-scripts build && electron-builder",
+    "mock": "node tools/mock-backends.js"
+  },
+  "build": {
+    "appId": "com.malis.aotoolkit",
+    "productName": "Mali's AO Toolkit",
+    "files": [
+      "build/**/*",
+      "electron.js"
+    ],
+    "extraMetadata": {
+      "main": "electron.js"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
   },
   "eslintConfig": {
     "extends": [
@@ -35,5 +57,13 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
+    "electron": "^35.0.0",
+    "electron-builder": "^26.0.0",
+    "purgecss": "^8.0.0",
+    "wait-on": "^8.0.3"
   }
 }

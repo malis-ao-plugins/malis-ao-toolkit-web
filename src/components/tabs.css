@@ -1,0 +1,41 @@
+.tabs {
+  display: flex;
+  align-items: stretch;
+  background: var(--c-bg-2);
+  border-bottom: 1px solid var(--c-line);
+  flex: 0 0 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.tabs__tab {
+  display: flex;
+  align-items: center;
+  height: var(--ctl-h);
+  padding: 0 var(--u2);
+  flex: 0 0 auto;
+  background: transparent;
+  border: 0;
+  border-right: 1px solid var(--c-line);
+  color: var(--c-fg-mute);
+  cursor: pointer;
+  user-select: none;
+}
+
+.tabs__tab:hover {
+  background: var(--c-bg-3);
+  color: var(--c-fg);
+}
+
+/* A 2px bar rather than a background swap — the panel below already owns the
+   lighter surface. */
+.tabs__tab--on {
+  color: var(--c-accent);
+  box-shadow: inset 0 -2px 0 var(--c-accent);
+}

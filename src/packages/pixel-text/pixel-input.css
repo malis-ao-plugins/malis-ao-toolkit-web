@@ -1,0 +1,92 @@
+/**
+ * Editable field with atlas-drawn text.
+ *
+ * The host styles .pxi like any input — border, background, height, padding.
+ * Everything below only exists to keep the real field and the painted layer
+ * in the same place.
+ */
+.pxi {
+  position: relative;
+  display: block;
+  min-width: 0;
+}
+
+/**
+ * One containing block for both layers.
+ *
+ * Absolutely positioned children resolve against the *padding* box, so
+ * anchoring the painted text to .pxi directly would put it a padding-width to
+ * the left of where the field draws. This inner element is the content box,
+ * which both layers then share.
+ */
+.pxi__inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* Both layers are absolutely positioned, so without this the wrapper has no
+     intrinsic height — and a host that sized its input by padding alone (as a
+     plain <input> allows) would collapse to nothing and swallow every click. */
+  min-height: var(--pxi-cell-h);
+  overflow: hidden;
+}
+
+/* The painted value: offset horizontally to follow the field's scroll, and
+   centred vertically on a whole pixel. */
+.pxi__ink {
+  position: absolute;
+  top: calc((100% - var(--pxi-cell-h)) / 2);
+  pointer-events: none;
+}
+
+.pxi__ink.pxt--fallback {
+  position: absolute;
+}
+
+.pxi__ink--placeholder {
+  color: var(--c-fg-mute, #4d5a6a);
+}
+
+/**
+ * The real field, carrying the caret and the selection.
+ *
+ * `color: transparent` hides its own glyphs — the ones the browser would
+ * antialias — while `caret-color` keeps the cursor visible. The font must
+ * stay set: the caret and the selection rectangle are positioned from these
+ * metrics, and the generated face shares the atlas' cell, so both land on
+ * glyph boundaries.
+ */
+.pxi__field {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font-size: var(--pxi-size);
+  line-height: var(--pxi-cell-h);
+  color: transparent;
+  caret-color: var(--c-accent, #ffb454);
+  cursor: inherit;
+  outline: none;
+}
+
+.pxi__field::placeholder {
+  color: transparent; /* the painted layer draws it instead */
+}
+
+/* Translucent, so the highlight washes over the painted pixels instead of
+   covering them. */
+.pxi__field::selection {
+  background: rgba(86, 212, 232, 0.45);
+  color: transparent;
+}
+
+.pxi__field::-webkit-outer-spin-button,
+.pxi__field::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

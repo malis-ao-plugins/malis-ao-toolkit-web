@@ -1,0 +1,146 @@
+/* ============================================================================
+   Launcher — the overlay's entry point.
+
+   With every window minimised this is the whole UI: a 32px puck over the game.
+   Everything is positioned by integer left/top, never by transform, so the
+   labels on the ring stay on the pixel grid.
+   ========================================================================= */
+
+.lch {
+  position: fixed;
+  z-index: 9000;
+  width: 32px;
+  height: 32px;
+}
+
+/* ─── Puck ─────────────────────────────────────────────────────────────── */
+
+.lch__puck {
+  position: relative;
+  z-index: 2;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line-hi);
+  cursor: grab;
+  touch-action: none;
+}
+
+.lch__puck:active {
+  cursor: grabbing;
+}
+
+.lch__puck--open {
+  border-color: var(--c-accent);
+}
+
+.lch__puck--pinned {
+  background: var(--c-accent-lo);
+}
+
+.lch__bar {
+  width: 16px;
+  height: 2px;
+  background: var(--c-fg-dim);
+}
+
+.lch__puck--open .lch__bar {
+  background: var(--c-accent);
+}
+
+/* ─── Ring ─────────────────────────────────────────────────────────────── */
+
+/* The hit area spans the whole ring so the pointer can travel from the puck
+   to a tile without crossing a gap and triggering the close timer. */
+.lch__ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  z-index: 1;
+}
+
+.lch__ring::before {
+  content: "";
+  position: absolute;
+  left: -110px;
+  top: -110px;
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+}
+
+.lch__tile {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--u);
+  padding: 0;
+  background: var(--c-bg-2);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg-dim);
+  cursor: pointer;
+}
+
+.lch__tile:hover:not(:disabled) {
+  background: var(--c-bg-4);
+  border-color: var(--c-line-hi);
+  color: var(--c-fg-hi);
+}
+
+/* Currently on screen. */
+.lch__tile--on {
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+  background: var(--c-accent-lo);
+}
+
+/* Nothing listening on its port — shown so you can see the app exists, but
+   there is nothing to open. */
+.lch__tile--off {
+  color: var(--c-fg-mute);
+  cursor: default;
+  opacity: 0.6;
+}
+
+.lch__tile-key {
+  pointer-events: none;
+}
+
+.lch__dot {
+  width: var(--u);
+  height: var(--u);
+  background: transparent;
+  border: 1px solid var(--c-fg-mute);
+}
+
+.lch__dot--on {
+  background: var(--c-good);
+  border-color: var(--c-good);
+}
+
+/* ─── Readout ──────────────────────────────────────────────────────────── */
+
+.lch__readout {
+  position: absolute;
+  left: -84px;
+  top: 104px;
+  width: 168px;
+  display: flex;
+  justify-content: center;
+  padding: var(--u) 0;
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+  color: var(--c-fg);
+  pointer-events: none;
+  white-space: nowrap;
+}

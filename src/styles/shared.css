@@ -1,0 +1,242 @@
+.search-input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-input);
+    color: var(--text);
+    font-size: var(--fs-md);
+    outline: none;
+    transition:
+        border-color 0.18s,
+        box-shadow 0.18s;
+}
+
+/* The field now lives inside a wrapper, so focus has to be observed on the
+   subtree rather than on the element itself. */
+.search-input:focus-within {
+    border-color: var(--accent);
+}
+
+.search-input::placeholder {
+    color: var(--text-muted);
+}
+
+/* ── Remove button (mod rows + roll list) ── */
+.remove-btn {
+    width: 28px;
+    background: rgba(192, 57, 43, 0.1);
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    opacity: 0.7;
+    transition:
+        opacity 0.15s,
+        background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    font-size: var(--fs-12);
+    letter-spacing: 1px;
+    color: rgba(192, 57, 43, 0.6);
+    user-select: none;
+    border: 1px solid var(--border);
+    align-self: stretch;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.remove-btn:hover {
+    opacity: 1;
+    background: rgba(192, 57, 43, 0.5);
+    color: rgba(192, 57, 43, 1);
+    border-color: rgb(201, 28, 28);
+}
+
+/* ── Add button (db browser) ── */
+.add-btn {
+    width: 28px;
+    background: rgba(39, 174, 96, 0.1);
+    cursor: pointer;
+    border-radius: 0 4px 4px 0;
+    opacity: 0.7;
+    transition:
+        opacity 0.15s,
+        background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    writing-mode: vertical-rl;
+    font-size: var(--fs-12);
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: rgba(39, 174, 96, 0.6);
+    user-select: none;
+    border: 1px solid var(--border);
+    align-self: stretch;
+    text-transform: uppercase;
+}
+
+.add-btn:hover {
+    opacity: 1;
+    background: rgba(39, 174, 96, 0.5);
+    color: rgba(39, 174, 96, 1);
+    border-color: rgb(28, 174, 74);
+}
+
+.add-btn.confirm {
+    background: rgba(192, 140, 43, 0.1);
+    color: rgba(192, 140, 43, 0.6);
+}
+
+.add-btn.confirm:hover {
+    background: rgba(192, 140, 43, 0.5);
+    color: rgba(192, 140, 43, 1);
+    border-color: rgb(201, 140, 28);
+}
+
+.add-btn:active {
+    background: rgba(39, 174, 96, 0.22);
+    border-color: rgb(28, 174, 74);
+    color: rgba(39, 174, 96, 1);
+    transition: all 0.05s;
+}
+
+.add-btn.confirm:active {
+    background: rgba(192, 140, 43, 0.22);
+    border-color: rgb(201, 140, 28);
+    color: rgba(192, 140, 43, 1);
+    transition: all 0.05s;
+}
+
+.flag-dropdown {
+    z-index: 9999;
+    background: var(--bg-card-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    max-height: 220px;
+    overflow-y: auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.flag-dropdown-item {
+    padding: 6px 10px;
+    font-size: var(--fs-sm);
+    color: var(--text);
+    cursor: pointer;
+}
+
+.flag-dropdown-item.active,
+.flag-dropdown-item:hover {
+    background: var(--bg-card);
+}
+
+.hint-label {
+    font-size: var(--fs-2xs);
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.vertical-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    align-items: stretch;
+    padding: 12px 12px;
+    background-color: var(--bg-depth3);
+}
+
+.section-body {
+    display: flex;
+    flex-direction: column;
+    padding: 6px;
+    gap: 4px;
+    height: 100%;
+    background-color: var(--bg-depth2);
+}
+
+.section-results {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1 1 0;
+    min-height: 0;
+    padding: 6px;
+    padding-right: 12px;
+    margin-right: -6px;
+}
+
+.bubble-tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 3px;
+    background: var(--bg-card-2);
+    color: var(--text-dim);
+    font-size: var(--fs-2xs);
+    font-weight: 400;
+    letter-spacing: 0;
+    cursor: pointer;
+    transition: all 0.16s;
+    padding-top: 3px;
+}
+
+.settings-toggle {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg-card-2);
+    color: var(--text-muted);
+    cursor: pointer;
+    position: relative;
+    transition:
+        border-color 0.18s,
+        color 0.18s;
+}
+
+.settings-toggle:hover {
+    border-color: var(--border-bright);
+    color: var(--text);
+}
+
+.settings-toggle.open {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.settings-toggle.active {
+    border-color: var(--accent);
+}
+
+.settings-collapse {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.22s ease;
+}
+
+.settings-collapse.open {
+    grid-template-rows: 1fr;
+}
+
+.settings-collapse-inner {
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings-collapse-inner-pad {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4px;
+}

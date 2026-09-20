@@ -1,0 +1,103 @@
+/* ============================================================================
+   Item Assistant.
+
+   The columns are the interesting part. At the 320px overlay target there is
+   room for an icon, a name and the pull button and nothing else, so the extra
+   columns are dropped by container query rather than squeezed. A column that
+   is one character wide is worse than no column.
+   ========================================================================= */
+
+.ia-select {
+  height: var(--ctl-h);
+  background: var(--c-bg-0);
+  border: 1px solid var(--c-line);
+}
+
+.ia-select:focus-within {
+  border-color: var(--c-accent);
+}
+
+/* Matches .item-row-main: same 12px gap, same icon width, so the heads sit
+   over the columns rather than near them. */
+.ia-head {
+  display: flex;
+  align-items: center;
+  gap: var(--u3);
+  height: var(--ctl-h);
+  padding: 0 var(--u2);
+  border-bottom: 1px solid var(--c-line);
+  color: var(--c-fg-mute);
+  flex: 0 0 auto;
+}
+
+.ia-head__icon {
+  width: var(--icon);
+  flex: 0 0 auto;
+}
+
+.ia-head__name {
+  flex: 1 1 auto;
+}
+
+.ia-head__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--u2);
+  flex: 0 0 auto;
+}
+
+.ia-list {
+  max-height: 420px;
+}
+
+/* Widths in ch, so a column is a whole number of glyph cells and its text
+   never lands mid-character. */
+/* The row renders these as ItemRow children, which sit in the same flex
+   line as the name — so the same widths here line them up. */
+.ia-col {
+  flex: 0 0 auto;
+  overflow: hidden;
+  color: var(--c-fg-dim);
+}
+
+/* ItemRow's own gap is 12px; match it so the columns do not drift. */
+.ia-list .item-row-main {
+  gap: var(--u3);
+}
+
+.ia-col--char {
+  width: 10ch;
+}
+
+.ia-col--where {
+  width: 16ch;
+}
+
+.ia-col--in {
+  width: 12ch;
+}
+
+
+
+/* ─── Narrowing ────────────────────────────────────────────────────────────
+   The app window sets container-type: inline-size, so these respond to the
+   window rather than the viewport — which is what matters when several
+   windows of different widths sit on the same canvas. */
+
+@container (max-width: 640px) {
+  .ia-col--in {
+    display: none;
+  }
+}
+
+@container (max-width: 520px) {
+  .ia-col--where {
+    display: none;
+  }
+}
+
+@container (max-width: 400px) {
+  .ia-col--char {
+    display: none;
+  }
+}
