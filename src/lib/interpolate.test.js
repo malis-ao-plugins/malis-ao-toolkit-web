@@ -82,4 +82,91 @@ describe("interpolateReqs", () => {
     const low = [{ stat: 17, operator: 2, value: 5 }];
     expect(interpolateReqs(low, [], 50, 0, 100)[0].value).toBe(5);
   });
+
+  it("pairs by the requirement, not by position", () => {
+    // Same two requirements, reversed. Pairing by index interpolated Agility
+    // against Stamina and produced a number the item does not have.
+    const low = [
+      { stat: 17, operator: 2, value: 0 },
+      { stat: 18, operator: 2, value: 1000 },
+    ];
+    const high = [
+      { stat: 18, operator: 2, value: 2000 },
+      { stat: 17, operator: 2, value: 100 },
+    ];
+
+    expect(interpolateReqs(low, high, 50, 0, 100)).toEqual([
+      { stat: 17, operator: 2, value: 50 },
+      { stat: 18, operator: 2, value: 1500 },
+    ]);
+  });
+
+  it("does not shift every later row when the high template has an extra", () => {
+    const low = [{ stat: 17, operator: 2, value: 0 }];
+    const high = [
+      { stat: 99, operator: 2, value: 999 },
+      { stat: 17, operator: 2, value: 100 },
+    ];
+
+    expect(interpolateReqs(low, high, 50, 0, 100)[0].value).toBe(50);
+  });
+
+  it("keeps the same stat under two operators apart", () => {
+    const low = [
+      { stat: 17, operator: 2, value: 0 },
+      { stat: 17, operator: 1, value: 0 },
+    ];
+    const high = [
+      { stat: 17, operator: 1, value: 10 },
+      { stat: 17, operator: 2, value: 100 },
+    ];
+
+    expect(interpolateReqs(low, high, 50, 0, 100).map((r) => r.value)).toEqual([
+      50, 5,
+    ]);
+  });
+
+  it("pairs repeats of one key in the order they appear", () => {
+    const low = [
+      { stat: 17, operator: 2, value: 0 },
+      { stat: 17, operator: 2, value: 0 },
+    ];
+    const high = [
+      { stat: 17, operator: 2, value: 100 },
+      { stat: 17, operator: 2, value: 200 },
+    ];
+
+    expect(interpolateReqs(low, high, 50, 0, 100).map((r) => r.value)).toEqual([
+      50, 100,
+    ]);
+  });
+
+  it("keeps requirements of different actions apart", () => {
+    const low = [
+      { outer_action_type: 1, stat: 17, operator: 2, value: 0 },
+      { outer_action_type: 2, stat: 17, operator: 2, value: 0 },
+    ];
+    const high = [
+      { outer_action_type: 2, stat: 17, operator: 2, value: 200 },
+      { outer_action_type: 1, stat: 17, operator: 2, value: 100 },
+    ];
+
+    expect(interpolateReqs(low, high, 50, 0, 100).map((r) => r.value)).toEqual([
+      50, 100,
+    ]);
+  });
+});
+
+describe("resilience", () => {
+  it("returns an empty list for missing input rather than throwing", () => {
+    expect(interpolateReqs(undefined, undefined, 50, 0, 100)).toEqual([]);
+    expect(interpolateMods(null, null, 50, 0, 100)).toEqual([]);
+    expect(interpolateStats([], null, 50, 0, 100)).toEqual([]);
+  });
+
+  it("leaves a row whose counterpart has no value", () => {
+    const low = [{ stat_id: 1, value: 5 }];
+    const high = [{ stat_id: 1, value: null }];
+    expect(interpolateStats(low, high, 50, 0, 100)[0].value).toBe(5);
+  });
 });
