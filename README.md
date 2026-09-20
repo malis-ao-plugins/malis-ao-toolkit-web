@@ -85,6 +85,16 @@ so a window waits rather than erroring, and the socket retries every 2s.
 Requests to the item database raise a named `ItemDbError` that callers are
 expected to catch.
 
+**Known gap.** The finder's **Flags** panel cannot work yet. The front end
+builds and sends `canBits` / `itemBits` correctly, but the running
+AOItemQueryService ignores both — a search with every bit set returns the
+same rows as one with none (checked against the live service on 2026-09-20).
+`modFilter`, `statFilter` and `reqFilter` were checked the same way and do
+filter. The panel stays inert until the service implements the two fields.
+
+`npm run mock` cannot bind 7070 while the real service is running; stop one
+or the other.
+
 ---
 
 ## Things worth knowing before editing

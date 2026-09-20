@@ -94,6 +94,13 @@ export async function searchItems({
     offset,
     // The flag filters were being passed in by the caller and silently
     // dropped here, so the whole Flags panel did nothing to the results.
+    //
+    // NOTE: sending them is now correct, but as of 2026-09-20 the running
+    // AOItemQueryService ignores both — a search with every bit set returns
+    // exactly the same rows as one with none. `modFilter`, `statFilter` and
+    // `reqFilter` were checked the same way and do filter. So the Flags
+    // panel will stay inert until the service implements these two; there
+    // is nothing further the front end can do about it.
     canBits: canBits || undefined,
     itemBits: itemBits || undefined,
     modFilter,

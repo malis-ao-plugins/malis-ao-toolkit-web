@@ -117,6 +117,10 @@ const CATALOGUE = Array.from({ length: 40 }, (_, i) => {
     name: itemName(lowId),
     ql: members[0].ql,
     members,
+    // Arbitrary but stable bitfields, so the flag filters have something to
+    // actually filter on. Every item can be carried (bit 0); the rest vary.
+    canBits: 1 | ((i % 4) << 2),
+    itemBits: 1 | ((i % 3) << 1),
   };
 });
 
@@ -168,8 +172,16 @@ const itemApi = http.createServer(async (req, res) => {
     case "/search": {
       const body = await readBody(req);
       const needle = (body.name ?? "").toLowerCase();
-      const hits = CATALOGUE.filter((i) =>
-        i.name.toLowerCase().includes(needle),
+
+      // The real service ANDs the requested bits; so does this, so that a
+      // flag filter visibly narrows the list in the dev harness.
+      const hasBits = (have, want) => !want || (have & want) === want;
+
+      const hits = CATALOGUE.filter(
+        (i) =>
+          i.name.toLowerCase().includes(needle) &&
+          hasBits(i.canBits, body.canBits) &&
+          hasBits(i.itemBits, body.itemBits),
       ).slice(0, body.limit ?? 50);
       // The real service hands `members` back as a JSON string.
       return json(
