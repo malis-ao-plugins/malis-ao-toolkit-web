@@ -1024,10 +1024,15 @@
   border-color: var(--c-accent);
 }
 
+/* One pixel over the grid step, and deliberately.
+   16px against two 1px borders leaves a 14px content box, and centring a
+   13px glyph cell in that puts it on a half pixel — soft, and sitting a
+   hair off the bottom rule. 17px leaves 15px, which centres on a whole
+   pixel with a clear one above and below. */
 .flt-tag {
   display: flex;
   align-items: center;
-  height: var(--u4);
+  height: calc(var(--u4) + 1px);
   padding: 0 var(--u);
   background: var(--c-accent-lo);
   border: 1px solid var(--c-accent);
