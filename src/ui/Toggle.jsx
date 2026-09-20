@@ -8,6 +8,9 @@ import { PixelText } from "./pixel";
  * Labels are uppercased, because most of them are the kit's own short
  * captions. Pass `upper={false}` for anything that is a name rather than a
  * caption — a playfield, a character — where capitals read as shouting.
+ *
+ * `fit` truncates the label to the room left over. It is not free, so only
+ * ask for it where the label can genuinely be too long.
  */
 export function Toggle({
   label,
@@ -17,6 +20,7 @@ export function Toggle({
   title,
   className,
   upper = true,
+  fit = false,
 }) {
   return (
     <button
@@ -32,10 +36,10 @@ export function Toggle({
       onClick={() => onChange?.(!on)}
     >
       <span className="ph-toggle__box" />
-      {/* A block toggle fills its row, so a long label has somewhere to be
-          cut: it truncates to the room left over rather than running under
-          whatever sits beside it. */}
-      <PixelText upper={upper} fit={block} className="ph-toggle__text">
+      {/* `fit` costs a ResizeObserver and a second render, so it is asked
+          for rather than assumed: only labels that can actually be too long
+          — a stat, a playfield — need to be cut down to the room left over. */}
+      <PixelText upper={upper} fit={fit} className="ph-toggle__text">
         {label}
       </PixelText>
     </button>

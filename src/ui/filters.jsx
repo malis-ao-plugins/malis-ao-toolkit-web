@@ -18,6 +18,7 @@ export function FilterRow({ name, active = true, onToggle, onRemove, children })
     <div className={cx("flt-row", !active && "flt-row--off")}>
       <Toggle
         block
+        fit
         label={name}
         on={active}
         onChange={() => onToggle?.()}

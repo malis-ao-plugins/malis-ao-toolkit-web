@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
   Button,
   Collapse,
@@ -144,6 +144,7 @@ const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
       <ListRow on={zone.active}>
         <Toggle
           block
+          fit
           upper={false}
           label={zone.name}
           on={zone.active}
@@ -178,9 +179,28 @@ const ZoneRow = memo(function ZoneRow({ id, zone, patchZone }) {
 });
 
 /** Playfields the roller is allowed to roll in, with optional bounds. */
+/** A screenful, so the tab can paint before the whole list is built. */
+const FIRST_ROWS = 12;
+
 export function ZonesPanel({ settings, set, state }) {
   const zones = state.zones;
   const [query, setQuery] = useState("");
+
+  /**
+   * Draw a screenful first, then the rest on the next frame.
+   *
+   * There are 46 playfields and each row carries a drawn label, which is
+   * most of what the Config tab costs to open. Splitting it means the tab
+   * appears immediately and fills in behind, rather than waiting for all of
+   * them before showing anything.
+   */
+  const [rows, setRows] = useState(FIRST_ROWS);
+
+  useEffect(() => {
+    if (rows >= Object.keys(zones ?? {}).length) return undefined;
+    const frame = requestAnimationFrame(() => setRows(Number.MAX_SAFE_INTEGER));
+    return () => cancelAnimationFrame(frame);
+  }, [rows, zones]);
 
   const entries = Object.entries(zones ?? {});
   const needle = query.trim().toLowerCase();
@@ -237,7 +257,7 @@ export function ZonesPanel({ settings, set, state }) {
         <Empty>No zone matches</Empty>
       ) : (
         <List className="rl-scroll">
-          {filtered.map(([id, zone]) => (
+          {filtered.slice(0, rows).map(([id, zone]) => (
             <ZoneRow key={id} id={id} zone={zone} patchZone={patchZone} />
           ))}
         </List>
