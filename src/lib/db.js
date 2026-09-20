@@ -1,4 +1,76 @@
+/**
+ * Client for the AOItemQueryService (the shared item database).
+ *
+ * Every call goes through `request`, so a dead service, an HTTP error and a
+ * malformed body all arrive as one recognisable error type instead of as a
+ * `SyntaxError` from `res.json()` half a stack away. The service runs on
+ * localhost alongside the game, so "not running" is the normal case rather
+ * than an exception, and callers are expected to catch.
+ */
+
 const BASE = "http://localhost:7070";
+
+/** Anything that went wrong talking to the item database. */
+export class ItemDbError extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "ItemDbError";
+  }
+}
+
+async function request(path, body) {
+  const url = `${BASE}${path}`;
+
+  let res;
+  try {
+    res = await fetch(
+      url,
+      body === undefined
+        ? undefined
+        : {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          },
+    );
+  } catch (cause) {
+    throw new ItemDbError(`item database unreachable: ${path}`, { cause });
+  }
+
+  if (!res.ok) {
+    throw new ItemDbError(`item database returned ${res.status} for ${path}`);
+  }
+
+  try {
+    return await res.json();
+  } catch (cause) {
+    throw new ItemDbError(`item database sent malformed JSON for ${path}`, {
+      cause,
+    });
+  }
+}
+
+/** Ids reaching the service must be positive integers; anything else is noise. */
+const validIds = (ids) =>
+  (ids ?? []).filter((id) => Number.isInteger(id) && id > 0);
+
+const iconUrl = (data) => (data ? `data:image/png;base64,${data}` : null);
+
+/**
+ * The service sends `members` as a JSON string, but a stubbed or newer
+ * backend may well send the array itself. Accept both rather than throwing a
+ * parse error out of a search.
+ */
+function parseMembers(raw) {
+  if (Array.isArray(raw)) return raw;
+  if (typeof raw !== "string") return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
 
 export async function searchItems({
   name = "",
@@ -7,121 +79,89 @@ export async function searchItems({
   idPairs = null,
   limit = 50,
   offset = 0,
+  canBits,
+  itemBits,
   modFilter,
   statFilter,
   reqFilter,
 } = {}) {
-  const res = await fetch(`${BASE}/search`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: name || undefined,
-      id: id || undefined,
-      ids: ids?.length ? ids : undefined,
-      idPairs: idPairs?.length ? idPairs : undefined,
-      limit,
-      offset,
-      modFilter,
-      statFilter,
-      reqFilter,
-    }),
+  const rows = await request("/search", {
+    name: name || undefined,
+    id: id || undefined,
+    ids: ids?.length ? ids : undefined,
+    idPairs: idPairs?.length ? idPairs : undefined,
+    limit,
+    offset,
+    // The flag filters were being passed in by the caller and silently
+    // dropped here, so the whole Flags panel did nothing to the results.
+    canBits: canBits || undefined,
+    itemBits: itemBits || undefined,
+    modFilter,
+    statFilter,
+    reqFilter,
   });
 
-  const data = await res.json();
-  const result = data.map((item) => ({
+  return (rows ?? []).map((item) => ({
     ...item,
-    members: JSON.parse(item.members),
+    members: parseMembers(item.members),
   }));
-
-  return result;
 }
 
-export async function getItemStats(id) {
-  const res = await fetch(`${BASE}/item?id=${id}`);
-  return res.json();
-}
-
-export async function getItemModifiers(id) {
-  const res = await fetch(`${BASE}/item/modifiers?id=${id}`);
-  return res.json();
-}
-
-export async function getItemModifierCriteria(id) {
-  const res = await fetch(`${BASE}/item/modifiers/criteria?id=${id}`);
-  return res.json();
-}
-
-export async function getItemModifierText(id) {
-  const res = await fetch(`${BASE}/item/modifiers/text?id=${id}`);
-  return res.json();
-}
-
-export async function getItemRequirements(id) {
-  const res = await fetch(`${BASE}/item/requirements?id=${id}`);
-  return res.json();
-}
+export const getItemStats = (id) => request(`/item?id=${id}`);
+export const getItemModifiers = (id) => request(`/item/modifiers?id=${id}`);
+export const getItemModifierCriteria = (id) =>
+  request(`/item/modifiers/criteria?id=${id}`);
+export const getItemModifierText = (id) =>
+  request(`/item/modifiers/text?id=${id}`);
+export const getItemRequirements = (id) => request(`/item/requirements?id=${id}`);
+export const getItemSkillChecks = (id) => request(`/item/skillchecks?id=${id}`);
+export const getItemMembers = (lowId) => request(`/item/members?lowId=${lowId}`);
 
 export async function getItemIcons(ids) {
-  const validIds = ids.filter((id) => Number.isInteger(id) && id > 0);
-  if (!validIds.length) return {};
-  const res = await fetch(`${BASE}/items/icons?ids=${validIds.join(",")}`);
-  const rows = await res.json();
+  const wanted = validIds(ids);
+  if (!wanted.length) return {};
+
+  const rows = await request(`/items/icons?ids=${wanted.join(",")}`);
   return Object.fromEntries(
-    rows.map((r) => [
-      r.item_id,
-      r.iconData ? `data:image/png;base64,${r.iconData}` : null,
-    ]),
+    (rows ?? []).map((r) => [r.item_id, iconUrl(r.iconData)]),
   );
 }
 
 export async function getIcon(iconId) {
   if (!Number.isInteger(iconId) || iconId <= 0) return null;
 
-  const res = await fetch(`${BASE}/icons?id=${iconId}`);
-  if (!res.ok) return null;
-
-  const row = await res.json();
-  return row.iconData ? `data:image/png;base64,${row.iconData}` : null;
-}
-
-export async function resolveItem(lowId, highId) {
-  const res = await fetch(
-    `${BASE}/item/resolve?lowId=${lowId}&highId=${highId}`,
-  );
-
-  if (!res.ok) throw new Error(`resolve failed: ${lowId}/${highId}`);
-  return res.json();
+  // A missing icon is ordinary — the mission has none — so this one call
+  // answers null instead of raising.
+  try {
+    const row = await request(`/icons?id=${iconId}`);
+    return iconUrl(row?.iconData);
+  } catch {
+    return null;
+  }
 }
 
 export async function getItemNames(ids) {
-  if (!ids.length) return {};
-  const res = await fetch(`${BASE}/items/names?ids=${ids.join(",")}`);
-  const rows = await res.json();
-  return Object.fromEntries(rows.map((r) => [r.id, r.name]));
+  const wanted = validIds(ids);
+  if (!wanted.length) return {};
+
+  const rows = await request(`/items/names?ids=${wanted.join(",")}`);
+  return Object.fromEntries((rows ?? []).map((r) => [r.id, r.name]));
 }
 
-export async function getItemSkillChecks(id) {
-  const res = await fetch(`${BASE}/item/skillchecks?id=${id}`);
-  return res.json();
-}
-
-export async function getItemMembers(lowId) {
-  const res = await fetch(`${BASE}/item/members?lowId=${lowId}`);
-  return res.json();
-}
-
+/**
+ * The two templates a QL sits between.
+ *
+ * An exact match answers itself for both ends, so the caller interpolates
+ * between a template and itself and gets that template's values back.
+ */
 export function findBracketingTemplates(members, selectedQl) {
   const sorted = [...members].sort((a, b) => a.ql - b.ql);
 
-  // exact match
   const exact = sorted.find((m) => m.ql === selectedQl);
   if (exact) return { low: exact, high: exact };
 
-  // find the two members that bracket the selected QL
-  const low =
-    [...sorted].reverse().find((m) => m.ql <= selectedQl) ?? sorted[0];
-  const high =
-    sorted.find((m) => m.ql >= selectedQl) ?? sorted[sorted.length - 1];
+  const low = [...sorted].reverse().find((m) => m.ql <= selectedQl) ?? sorted[0];
+  const high = sorted.find((m) => m.ql >= selectedQl) ?? sorted[sorted.length - 1];
 
   return { low, high };
 }

@@ -1,44 +1,52 @@
+/**
+ * HTTP endpoints belonging to the Item Assistant plugin.
+ *
+ * Separate from src/lib/db.js on purpose: that is the shared item database
+ * every app reads, this is one plugin's own inventory store. Same failure
+ * treatment though — a plugin that is not running is the normal case, so it
+ * arrives as a named error rather than a JSON parse failure.
+ */
+
 const BASE = "http://localhost:7068";
 
-export async function getCharacters() {
-  const res = await fetch(`${BASE}/characters`);
-  return res.json(); // [{ id, name, last_seen }]
+export class InventoryDbError extends Error {
+  constructor(message, options) {
+    super(message, options);
+    this.name = "InventoryDbError";
+  }
 }
 
-export async function getCharacterItems(characterId) {
-  const res = await fetch(`${BASE}/character/items?characterId=${characterId}`);
-  return res.json();
-  // [{ slot, item_id, item_high_id, ql, container_name,
-  //    parent_type, parent_instance }]
+async function request(path) {
+  let res;
+  try {
+    res = await fetch(`${BASE}${path}`);
+  } catch (cause) {
+    throw new InventoryDbError(`item assistant unreachable: ${path}`, { cause });
+  }
+
+  if (!res.ok) {
+    throw new InventoryDbError(
+      `item assistant returned ${res.status} for ${path}`,
+    );
+  }
+
+  try {
+    return await res.json();
+  } catch (cause) {
+    throw new InventoryDbError(
+      `item assistant sent malformed JSON for ${path}`,
+      { cause },
+    );
+  }
 }
 
-export async function getCharacterContainers(characterId) {
-  const res = await fetch(
-    `${BASE}/character/containers?characterId=${characterId}`,
-  );
-  return res.json();
-  // [{ type, instance, name, parent_type, parent_instance, parent_slot }]
-}
+/** [{ id, name, last_seen }] */
+export const getCharacters = () => request("/characters");
 
-export async function getContainerItems(
-  characterId,
-  containerInstance,
-  containerType,
-) {
-  const res = await fetch(
-    `${BASE}/container/items?characterId=${characterId}&instance=${containerInstance}&type=${containerType}`,
-  );
-  return res.json(); // [{ slot, item_id, item_high_id, ql, added_at }]
-}
+/** [{ slot, item_id, item_high_id, ql, container_name, parent_type, parent_instance }] */
+export const getCharacterItems = (characterId) =>
+  request(`/character/items?characterId=${characterId}`);
 
-export async function getItemPath(
-  characterId,
-  containerInstance,
-  containerType,
-  slot,
-) {
-  const res = await fetch(
-    `${BASE}/item/path?characterId=${characterId}&instance=${containerInstance}&type=${containerType}&slot=${slot}`,
-  );
-  return res.json(); // [{ instance, type, slot }] root → target
-}
+/** [{ type, instance, name, parent_type, parent_instance, parent_slot }] */
+export const getCharacterContainers = (characterId) =>
+  request(`/character/containers?characterId=${characterId}`);
