@@ -266,15 +266,47 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
     if (!d.moved) setOpen(true);
   };
 
-  const items = apps ?? [];
-  const angleFor = arcFor(pos, Math.max(1, items.length));
+  /**
+   * What the ring offers, as one list.
+   *
+   * The options window is not an app — nothing is listening on a port for
+   * it — but it is reached the same way, so it is described the same way
+   * and the ring does not need to know the difference. It carries no link
+   * light, because there is no link to report.
+   */
+  const entries = [
+    ...(apps ?? []).map((app) => ({
+      key: app.id,
+      initials: initials(app.name2 ?? app.label),
+      name: app.name2 ?? app.label,
+      available: !!connections?.[app.id],
+      showing: isShown(app.id),
+      title: connections?.[app.id]
+        ? `${app.label} - ${isShown(app.id) ? "hide" : "show"}`
+        : `${app.label} - not connected`,
+      onPick: () => onToggle(app.id),
+      link: true,
+    })),
+    {
+      key: "shell-options",
+      initials: "UI",
+      name: "Interface",
+      available: true,
+      showing: !!optionsOpen,
+      title: `Interface options - ${optionsOpen ? "hide" : "show"}`,
+      onPick: onOptions,
+      link: false,
+    },
+  ];
+
+  const angleFor = arcFor(pos, Math.max(1, entries.length));
 
   // Rounded once, here, so a tile lands on whole pixels and the label inside
   // it stays sharp.
-  const tiles = items.map((app, i) => {
+  const tiles = entries.map((entry, i) => {
     const angle = angleFor(i);
     return {
-      app,
+      entry,
       left: Math.round(Math.cos(angle) * RADIUS - TILE / 2),
       top: Math.round(Math.sin(angle) * RADIUS - TILE / 2),
     };
@@ -304,77 +336,56 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
         <span className="lch__bar" />
       </button>
 
-      {/* Sits under the puck rather than on the ring: the ring is the apps,
-          and this is the toolkit itself. Close enough to the puck to be
-          found, near enough to it that no tile can reach it — the nearest a
-          tile gets is 54px below the centre, and this ends at 36. */}
-      <button
-        type="button"
-        className={`lch__pill${optionsOpen ? " lch__pill--on" : ""}`}
-        title="Interface options"
-        aria-pressed={!!optionsOpen}
-        onClick={onOptions}
-      >
-        <PixelText upper>UI</PixelText>
-      </button>
-
-      {mounted && items.length > 0 && (
+      {mounted && entries.length > 0 && (
         <div
           key={cycle}
           className={`lch__ring${folding ? " lch__ring--folding" : ""}`}
           role="menu"
         >
-          {tiles.map(({ app, left, top }, i) => {
-            const connected = !!connections?.[app.id];
-            const visible = isShown(app.id);
-
-            return (
-              <button
-                key={app.id}
-                type="button"
-                role="menuitem"
-                disabled={!connected}
-                className={
-                  "lch__tile" +
-                  (visible && connected ? " lch__tile--on" : "") +
-                  (connected ? "" : " lch__tile--off")
-                }
-                style={{
-                  "--lch-x": `${left}px`,
-                  "--lch-y": `${top}px`,
-                  "--lch-i": i,
-                  width: TILE,
-                  height: TILE,
-                }}
-                title={
-                  connected
-                    ? `${app.label} — ${visible ? "hide" : "show"}`
-                    : `${app.label} — not connected`
-                }
-                onPointerEnter={() => setHovered(app.id)}
-                onPointerLeave={() => setHovered(null)}
-                onClick={() => {
-                  if (!connected) return;
-                  onToggle(app.id);
-                  setOpen(false);
-                }}
-              >
-                <PixelText size={16} className="lch__tile-key">
-                  {initials(app.name2 ?? app.label)}
-                </PixelText>
+          {tiles.map(({ entry, left, top }, i) => (
+            <button
+              key={entry.key}
+              type="button"
+              role="menuitem"
+              disabled={!entry.available}
+              className={
+                "lch__tile" +
+                (entry.showing && entry.available ? " lch__tile--on" : "") +
+                (entry.available ? "" : " lch__tile--off")
+              }
+              style={{
+                "--lch-x": `${left}px`,
+                "--lch-y": `${top}px`,
+                "--lch-i": i,
+                width: TILE,
+                height: TILE,
+              }}
+              title={entry.title}
+              onPointerEnter={() => setHovered(entry.key)}
+              onPointerLeave={() => setHovered(null)}
+              onClick={() => {
+                if (!entry.available) return;
+                entry.onPick();
+                setOpen(false);
+              }}
+            >
+              <PixelText size={16} className="lch__tile-key">
+                {entry.initials}
+              </PixelText>
+              {entry.link && (
                 <span
-                  className={`lch__dot${connected ? " lch__dot--on" : ""}`}
+                  className={`lch__dot${entry.available ? " lch__dot--on" : ""}`}
                 />
-              </button>
-            );
-          })}
+              )}
+            </button>
+          ))}
 
           {/* Full name of whatever is under the pointer, so the two-letter
               tiles never have to be guessed at. */}
           {hovered && (
             <div className="lch__readout">
               <PixelText upper>
-                {items.find((a) => a.id === hovered)?.name2 ?? ""}
+                {entries.find((e) => e.key === hovered)?.name ?? ""}
               </PixelText>
             </div>
           )}
