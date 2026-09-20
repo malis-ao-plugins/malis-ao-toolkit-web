@@ -150,6 +150,9 @@ export default defineApp({
     },
     rollList: {
       title: ({ settings }) => `Roll List · ${settings.rollList?.length ?? 0}`,
+      // The only panel on its tab, so collapsing it would leave the tab
+      // empty — the same reason missions and browser are fixed.
+      fixed: true,
       component: RollList,
     },
     browser: { title: "Finder", fixed: true, component: Browser },
@@ -160,8 +163,9 @@ export default defineApp({
   },
 
   tabs: [
-    { id: "tab-roll", label: "Roll", panels: ["missions", "rollList"] },
-    { id: "tab-find", label: "Find", panels: ["browser"] },
+    { id: "tab-missions", label: "Missions", panels: ["missions"] },
+    { id: "tab-roll", label: "Roll", panels: ["rollList"] },
+    { id: "tab-browse", label: "Browse", panels: ["browser"] },
     {
       id: "tab-cfg",
       label: "Config",
