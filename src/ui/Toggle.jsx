@@ -5,7 +5,14 @@ import { PixelText } from "../packages/pixel-text";
  * On/off control. Deliberately a hard 8px box rather than a sliding switch —
  * a knob that animates across a track cannot land on whole pixels.
  */
-export function Toggle({ label, on = false, onChange, block = false, title }) {
+export function Toggle({
+  label,
+  on = false,
+  onChange,
+  block = false,
+  title,
+  className,
+}) {
   return (
     <button
       type="button"
@@ -15,6 +22,7 @@ export function Toggle({ label, on = false, onChange, block = false, title }) {
         "ph-toggle",
         on && "ph-toggle--on",
         block && "ph-toggle--block",
+        className,
       )}
       onClick={() => onChange?.(!on)}
     >

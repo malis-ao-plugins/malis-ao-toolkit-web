@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { TagField, TypeAhead } from "../../../ui";
 
 /**
@@ -12,12 +12,20 @@ export default function FlagFilter({ flags, value, onChange, placeholder }) {
   const [query, setQuery] = useState("");
   const fieldRef = useRef(null);
 
+  // The stored value is the flag's key, because that is what the settings
+  // and the plugin agree on; what is shown is its label, because
+  // "Confirm Use" reads and searches better than "ConfirmUse".
+  const labelOf = useCallback(
+    (name) => flags[name]?.label ?? name,
+    [flags],
+  );
+
   const options = useMemo(() => {
     const q = query.trim().toLowerCase();
     return Object.keys(flags)
       .filter((name) => !value.includes(name))
-      .filter((name) => !q || name.toLowerCase().includes(q))
-      .map((name) => ({ key: name, label: name }));
+      .map((name) => ({ key: name, label: flags[name]?.label ?? name }))
+      .filter((o) => !q || o.label.toLowerCase().includes(q));
   }, [flags, value, query]);
 
   const remove = (name) => onChange(value.filter((n) => n !== name));
@@ -25,6 +33,7 @@ export default function FlagFilter({ flags, value, onChange, placeholder }) {
   return (
     <TagField
       tags={value}
+      labelOf={labelOf}
       onRemove={remove}
       onFocusInput={() => fieldRef.current?.focus()}
     >

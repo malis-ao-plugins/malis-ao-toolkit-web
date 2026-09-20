@@ -1,6 +1,5 @@
 import { useState } from "react";
 import {
-
   Button,
   Collapse,
   Empty,
@@ -64,7 +63,7 @@ export function Browser({ settings, set }) {
     });
   };
 
-  const { query, onQueryChange, results, loading } = useItemSearch({
+  const { query, onQueryChange, results, loading, error } = useItemSearch({
     canFilter,
     itemFilter,
     modFilter,
@@ -145,9 +144,11 @@ export function Browser({ settings, set }) {
         <Empty>
           {loading
             ? "Searching…"
-            : query
-              ? "Nothing matches"
-              : "Type to search"}
+            : error
+              ? "Item database not answering"
+              : query
+                ? "Nothing matches"
+                : "Type to search"}
         </Empty>
       ) : (
         <List className="rl-scroll">

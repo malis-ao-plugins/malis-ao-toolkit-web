@@ -91,7 +91,9 @@ export function RangeField({ value, onChange, onCommit, placeholder, maxDigits =
  * Backspace on an empty field removes the last tag, which is the one thing
  * people expect from a tag field and the one thing that is always missing.
  */
-export function TagField({ tags, onRemove, children, onFocusInput }) {
+export function TagField({ tags, onRemove, children, onFocusInput, labelOf }) {
+  const label = labelOf ?? ((tag) => tag);
+
   return (
     <div className="flt-tags" onClick={onFocusInput}>
       {tags.map((tag) => (
@@ -99,13 +101,13 @@ export function TagField({ tags, onRemove, children, onFocusInput }) {
           key={tag}
           type="button"
           className="flt-tag"
-          title={`Remove ${tag}`}
+          title={`Remove ${label(tag)}`}
           onMouseDown={(e) => {
             e.preventDefault();
             onRemove(tag);
           }}
         >
-          <PixelText>{tag}</PixelText>
+          <PixelText>{label(tag)}</PixelText>
         </button>
       ))}
       {children}
