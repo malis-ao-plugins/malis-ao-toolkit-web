@@ -6,7 +6,7 @@ import { measure } from "./fonts";
 /** The bare knob, when it is not carrying a number. */
 const BAR = 4;
 /** Breathing room either side of the number on the knob. */
-const KNOB_PAD = 4;
+const KNOB_PAD = 2;
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
@@ -15,12 +15,16 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
  *
  * Reserved from the extremes rather than from the current value, so the knob
  * is one fixed size and the number inside it cannot resize anything as it
- * changes. Rounded up to the 4px grid.
+ * changes.
+ *
+ * A whole pixel, but not snapped to the 4px grid: the grid is for layout,
+ * and rounding up to it here padded the knob by up to three pixels it did
+ * not need.
  */
 function knobWidth(min, max, showValue) {
   if (!showValue) return BAR;
   const widest = Math.max(measure(String(min)), measure(String(max)));
-  return Math.ceil((widest + KNOB_PAD) / 4) * 4;
+  return Math.ceil(widest) + KNOB_PAD;
 }
 
 /**
