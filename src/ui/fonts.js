@@ -1,4 +1,9 @@
-import { PixelFont, registerFont, getFont } from "../pixelfont/index.js";
+import {
+  PixelFont,
+  registerFont,
+  getFont,
+  rasterizeFont,
+} from "../pixelfont/index.js";
 
 import lucidaConsole16 from "../pixelfont/fonts/lucida-console-16.json";
 import tahoma14 from "../pixelfont/fonts/tahoma-14.json";
@@ -58,29 +63,144 @@ const FACES = Object.entries(ATLASES).map(([name, atlas]) => {
   return { name, family: atlas.face, size: atlas.size, bold: !!atlas.bold };
 });
 
-/** Families, in the order they are offered. */
-export const FAMILIES = [...new Set(FACES.map((f) => f.family))].sort((a, b) =>
-  a.localeCompare(b),
-);
+export const DEFAULT_FAMILY = "verdana";
 
-export const DEFAULT_FAMILY = FAMILIES.includes("verdana")
-  ? "verdana"
-  : FAMILIES[0];
+/** Families, in the order they are offered. Grows when one is rasterised. */
+export const families = () =>
+  [...new Set(FACES.map((f) => f.family))].sort((a, b) => a.localeCompare(b));
+
+/* ── Faces made here ───────────────────────────────────────────────────────
+
+   The exported atlases come out of GDI, which is what the game uses and
+   what makes them right. These come out of the browser: it draws each glyph
+   and the greys are thrown away. With Windows font smoothing off that costs
+   almost nothing; with it on the shapes were never grid-fitted and it
+   shows. Good enough to try a face, not the way to settle on one.
+
+   They are kept rather than rebuilt on every load, because rasterising four
+   steps of latin1 is a second of work nobody should pay for at startup. */
+
+const CUSTOM_KEY = "uiCustomFaces";
+
+/** Two sizes and two weights, matching the coverage Verdana ships with. */
+const STEPS = [
+  { size: 13, bold: false },
+  { size: 16, bold: false },
+  { size: 13, bold: true },
+  { size: 20, bold: true },
+];
+
+/** Enough to try a few without filling local storage with bitmaps. */
+const MAX_CUSTOM = 3;
+
+const nameFor = (atlas) =>
+  [
+    String(atlas.face).toLowerCase().replace(/\s+/g, "-"),
+    atlas.size,
+    atlas.bold ? "bold" : null,
+    "canvas",
+  ]
+    .filter(Boolean)
+    .join("-");
+
+function register(atlas) {
+  const name = nameFor(atlas);
+  registerFont(name, PixelFont.fromJSON(atlas));
+  if (!FACES.some((f) => f.name === name)) {
+    FACES.push({
+      name,
+      family: atlas.face,
+      size: atlas.size,
+      bold: !!atlas.bold,
+    });
+  }
+}
+
+function loadCustom() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CUSTOM_KEY));
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveCustom(entries) {
+  try {
+    localStorage.setItem(CUSTOM_KEY, JSON.stringify(entries));
+  } catch {
+    // Out of room, or private mode. The face still works this session.
+  }
+}
+
+let custom = loadCustom();
+for (const entry of custom) entry.atlases.forEach(register);
+
+/** The families made here rather than exported, newest last. */
+export const customFamilies = () => custom.map((entry) => entry.family);
+
+/**
+ * Rasterise a face the system has, at the steps the kit asks for.
+ *
+ * Synchronous and not fast — four atlases of latin1, each glyph drawn and
+ * read back — so a caller should say it is working before calling.
+ */
+export function addRasterizedFamily(face) {
+  const name = String(face ?? "").trim();
+  if (!name) return null;
+
+  const atlases = STEPS.map((step) =>
+    rasterizeFont({ face: name, size: step.size, bold: step.bold }),
+  );
+
+  // A face the system does not have still rasterises: the browser quietly
+  // substitutes one, and every glyph comes back as the fallback. Nothing in
+  // the result says so, so there is nothing to check here — the preview is
+  // what tells you.
+  atlases.forEach(register);
+
+  custom = [
+    ...custom.filter((entry) => entry.family !== atlases[0].face),
+    { family: atlases[0].face, atlases },
+  ].slice(-MAX_CUSTOM);
+
+  saveCustom(custom);
+  notify();
+  return atlases[0].face;
+}
+
+export function removeRasterizedFamily(family) {
+  custom = custom.filter((entry) => entry.family !== family);
+  saveCustom(custom);
+
+  for (let i = FACES.length - 1; i >= 0; i--) {
+    if (FACES[i].family === family && FACES[i].name.endsWith("-canvas")) {
+      FACES.splice(i, 1);
+    }
+  }
+
+  if (currentFamily() === family) family_ = DEFAULT_FAMILY;
+  notify();
+}
 
 /* ── The chosen family ────────────────────────────────────────
    Module state rather than a context: the face is a property of the whole
    app, every component wants it, and a provider would only be one more
    thing every app had to remember to mount. */
 
-let family = DEFAULT_FAMILY;
+let family_ = DEFAULT_FAMILY;
 const listeners = new Set();
 
-export const currentFamily = () => family;
+const notify = () => {
+  for (const listener of listeners) listener();
+};
+
+export const currentFamily = () => family_;
 
 export function setFamily(next) {
-  if (!next || next === family || !FAMILIES.includes(next)) return;
-  family = next;
-  for (const listener of listeners) listener();
+  if (!next || next === family_ || !families().includes(next)) return;
+  family_ = next;
+  notify();
 }
 
 /** Called when the family changes, so drawn text can be rebuilt. */
@@ -102,7 +222,7 @@ const BOLD_AT = 600;
 export function fontFor(size = 13, weight = 400) {
   const wantBold = weight >= BOLD_AT;
 
-  const inFamily = FACES.filter((f) => f.family === family);
+  const inFamily = FACES.filter((f) => f.family === family_);
   const pool = inFamily.length ? inFamily : FACES;
 
   const weighted = pool.filter((f) => f.bold === wantBold);

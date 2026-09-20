@@ -20,11 +20,14 @@ export {
   fitToWidth,
   lineHeight,
   wrapToWidth,
-  FAMILIES,
+  families,
   DEFAULT_FAMILY,
   setFamily,
   currentFamily,
   onFamilyChange,
+  addRasterizedFamily,
+  removeRasterizedFamily,
+  customFamilies,
 } from "./fonts";
 export { Panel } from "./Panel";
 export { Button } from "./Button";

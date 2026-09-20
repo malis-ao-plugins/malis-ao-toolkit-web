@@ -1,15 +1,14 @@
 import {
   Button,
   ColorField,
-  FAMILIES,
   NumberInput,
   Panel,
   PixelText,
   Row,
-  Segmented,
   Stack,
 } from "../ui";
 import { useWindowFrame } from "../hooks/useWindowFrame";
+import { FontField } from "./FontField";
 import { ThemePreview } from "./ThemePreview";
 import { GROUPS, THEME } from "./theme";
 import "./settings.css";
@@ -59,18 +58,6 @@ const SURFACES = [
 const TEXT = ["#ffffff", "#ccd6e0", "#9aa7b6", "#7c8b9c", "#4d5a6a"];
 
 const SWATCHES_FOR = { surface: SURFACES, text: TEXT };
-
-/** "Lucida Console" as shipped, "verdana" as exported. */
-const titleCase = (name) =>
-  String(name)
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(" ");
-
-const FACE_ITEMS = FAMILIES.map((family) => ({
-  value: family,
-  label: titleCase(family),
-}));
 
 export function SettingsWindow({ theme, onChange, onReset, onClose }) {
   // Wider than an app window: a colour row is swatches plus a picker, and
@@ -141,9 +128,8 @@ export function SettingsWindow({ theme, onChange, onReset, onClose }) {
 
                 {fields.map((field) =>
                   field.type === "font" ? (
-                    <Segmented
+                    <FontField
                       key={field.key}
-                      items={FACE_ITEMS}
                       value={theme[field.key]}
                       onChange={(value) => onChange(field.key, value)}
                     />

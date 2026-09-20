@@ -1,7 +1,7 @@
 import {
   DEFAULT_FAMILY,
-  FAMILIES,
   currentFamily,
+  families,
   fitToWidth,
   fontFor,
   lineHeight,
@@ -155,7 +155,7 @@ describe("wrapToWidth", () => {
 
 describe("families", () => {
   it("offers every family the shared folder has exported", () => {
-    expect(FAMILIES).toEqual(
+    expect(families()).toEqual(
       expect.arrayContaining(["verdana", "tahoma", "Lucida Console"]),
     );
   });
