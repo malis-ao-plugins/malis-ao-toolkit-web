@@ -6,6 +6,19 @@ import { MOD_FILTER_TYPES, MOD_TYPE_BY_ID } from "../../../lib/modFilterTypes";
 let counter = 0;
 const uid = () => `mod-${++counter}`;
 
+/**
+ * How many matches to draw.
+ *
+ * Every option's label is drawn from the atlas, and building one means
+ * encoding a small PNG - so the count is a cost you can feel the first time
+ * a list opens, before the masks are cached. The list is 220px tall, which
+ * is eleven rows; two hundred was two hundred encodes to show eleven of
+ * them. Fifty leaves something to scroll and still opens at once.
+ *
+ * The list is meant to be typed at rather than scrolled anyway.
+ */
+const MAX_OPTIONS = 50;
+
 function rowLabel(row) {
   switch (row.modType) {
     case "stat":
@@ -61,14 +74,12 @@ export default function ModifierFilter({ value, onChange }) {
       ).map((t) => ({ key: t.id, label: t.label, hint: t.hint, type: t }));
     }
 
-    // 2000+ stats exist; the list is capped because nobody scrolls past the
-    // first screen, they type.
     return ALL_STATS.filter(
       (s) =>
         !taken.has(`${stage.id}-${s.id}`) &&
         (!q || s.name.toLowerCase().includes(q)),
     )
-      .slice(0, 200)
+      .slice(0, MAX_OPTIONS)
       .map((s) => ({ key: s.id, label: s.name, stat: s }));
   }, [stage, query, taken]);
 

@@ -9,6 +9,19 @@ import { ALL_STATS, statName } from "../../../lib/stats";
  * Entries are keyed by `statId`, so a stat can only appear once; picking one
  * already in the list is a no-op rather than a duplicate row.
  */
+/**
+ * How many matches to draw.
+ *
+ * Every option's label is drawn from the atlas, and building one means
+ * encoding a small PNG - so the count is a cost you can feel the first time
+ * a list opens, before the masks are cached. The list is 220px tall, which
+ * is eleven rows; two hundred was two hundred encodes to show eleven of
+ * them. Fifty leaves something to scroll and still opens at once.
+ *
+ * The list is meant to be typed at rather than scrolled anyway.
+ */
+const MAX_OPTIONS = 50;
+
 export default function StatRangeFilter({ value, onChange, placeholder }) {
   const [query, setQuery] = useState("");
   const [draft, setDraft] = useState(null);
@@ -21,7 +34,7 @@ export default function StatRangeFilter({ value, onChange, placeholder }) {
     return ALL_STATS.filter(
       (s) => !taken.has(s.id) && (!q || s.name.toLowerCase().includes(q)),
     )
-      .slice(0, 200)
+      .slice(0, MAX_OPTIONS)
       .map((s) => ({ key: s.id, label: s.name, stat: s }));
   }, [query, rows]);
 
