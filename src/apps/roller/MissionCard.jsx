@@ -102,7 +102,7 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
           })}
         </Row>
 
-        <Row gap={1} className="rl-mission__go">
+        <Row gap={2} className="rl-mission__go">
           <Button variant="primary" block onClick={onAccept}>
             <PixelText>ACCEPT</PixelText>
           </Button>
