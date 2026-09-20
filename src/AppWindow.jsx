@@ -28,7 +28,7 @@ function loadCollapsed(id) {
  * which panels are collapsed.
  */
 export function AppWindow({ config, session, initialPos, onMinimise }) {
-  const { frame, handlers } = useWindowFrame(config.id, initialPos);
+  const { frame, handlers, windowRef } = useWindowFrame(config.id, initialPos);
   const [tabId, setTabId] = useState(config.defaultActiveTab);
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(config.id));
 
@@ -71,6 +71,7 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
 
   return (
     <div
+      ref={windowRef}
       className="app ph"
       data-skin={skin}
       data-density={density}

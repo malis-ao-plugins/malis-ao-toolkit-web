@@ -15,14 +15,19 @@ import "./items.css";
  * shelf re-renders every sibling, and each sibling holds a tooltip data hook
  * — so one click would churn the whole list.
  *
- *   qlMode "pick"  a QL control (the finder: choose what to add)
- *   qlMode "show"  a readout (the inventory: the QL is a fact, not a choice)
+ *   qlMode   "pick" a QL control (the finder: choose what to add)
+ *            "show" a readout (the inventory: the QL is a fact)
+ *            "none" no QL at all
+ *   actionVia "button" a button on the row
+ *             "context" right-click the row, and no button — for a list
+ *             where the action is secondary and the width is not there
  */
 export const ItemRow = memo(function ItemRow({
   item,
   onAction,
   actionLabel = "Add",
   showAction = true,
+  actionVia = "button",
   qlMode = "pick",
   children,
 }) {
@@ -47,9 +52,25 @@ export const ItemRow = memo(function ItemRow({
     setFlash((n) => n + 1);
   };
 
+  const showButton = showAction && actionVia === "button";
+  const byContextMenu = showAction && actionVia === "context";
+  const showQl = qlMode === "pick" || qlMode === "show";
+
   return (
     <div className="irow">
-      <div key={flash} className={flash ? "irow__main irow__main--hit" : "irow__main"}>
+      <div
+        key={flash}
+        className={flash ? "irow__main irow__main--hit" : "irow__main"}
+        title={byContextMenu ? `Right-click to ${actionLabel.toLowerCase()}` : undefined}
+        onContextMenu={
+          byContextMenu
+            ? (e) => {
+                e.preventDefault();
+                act();
+              }
+            : undefined
+        }
+      >
         <ItemIcon
           src={active.iconSrc}
           alt={active.name ?? ""}
@@ -69,9 +90,9 @@ export const ItemRow = memo(function ItemRow({
 
         {children}
 
-        {showAction && (
+        {(showQl || showButton) && (
           <div className="irow__actions">
-            {qlMode === "pick" ? (
+            {qlMode === "pick" && (
               <NumberInput
                 value={ql}
                 min={low}
@@ -79,12 +100,15 @@ export const ItemRow = memo(function ItemRow({
                 onChange={hover.setQl}
                 title="Quality level"
               />
-            ) : (
-              <PixelText className="irow__ql ph-num">{String(ql)}</PixelText>
             )}
-            <Button variant="primary" size="sm" onClick={act}>
-              {actionLabel}
-            </Button>
+            {qlMode === "show" && (
+              <PixelText className="irow__ql">{String(ql)}</PixelText>
+            )}
+            {showButton && (
+              <Button variant="primary" size="sm" onClick={act}>
+                {actionLabel}
+              </Button>
+            )}
           </div>
         )}
       </div>

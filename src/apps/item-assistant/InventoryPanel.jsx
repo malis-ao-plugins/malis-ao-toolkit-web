@@ -76,7 +76,6 @@ export function InventoryPanel({ settings, set, send }) {
             <PixelText className="ia-col ia-col--in">In</PixelText>
             <div className="ia-head__actions">
               <PixelText className="ia-head__ql">QL</PixelText>
-              <PixelText className="ia-head__pull">Pull</PixelText>
             </div>
           </div>
 
@@ -86,6 +85,7 @@ export function InventoryPanel({ settings, set, send }) {
                 item={item}
                 qlMode="show"
                 actionLabel="Pull"
+                actionVia="context"
                 onAction={() => pull(item)}
               >
                 <PixelText className="ia-col ia-col--char">

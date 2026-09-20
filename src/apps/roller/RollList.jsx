@@ -58,7 +58,7 @@ export function RollList({ settings, set, state }) {
       {resolved.map((item) => {
         const key = entryKey(item);
         return (
-          <ItemRow key={key} item={item} showAction={false}>
+          <ItemRow key={key} item={item} showAction={false} qlMode="none">
             <NumberInput
               value={counts.get(key) ?? 1}
               min={1}

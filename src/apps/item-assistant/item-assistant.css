@@ -98,20 +98,11 @@
   flex-basis: 12ch;
 }
 
-/* Over the row's QL readout and its button: four cells for the number, and
-   for the button its four cells of label plus 4px of padding either side
-   and its two 1px borders. The button centres its own label, so the heading
-   centres over it. */
+/* Over the row's QL readout, which is right-aligned in the same four cells. */
 .ia-head .ia-head__ql {
   flex: 0 0 4ch;
   -webkit-mask-position: 100% 0;
   mask-position: 100% 0;
-}
-
-.ia-head .ia-head__pull {
-  flex: 0 0 calc(4ch + var(--u2) + 2px);
-  -webkit-mask-position: 50% 0;
-  mask-position: 50% 0;
 }
 
 

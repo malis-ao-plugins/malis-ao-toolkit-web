@@ -13,6 +13,11 @@ const MIN_H = 160;
  * Move and resize only — panels no longer move, so there is nothing else for
  * a window to remember beyond which tab is showing and what is collapsed.
  *
+ * A gesture writes straight to the element and only commits to state when it
+ * ends. Setting state on every pointermove re-rendered the window and
+ * everything in it, which an inventory of a few hundred rows turns into a
+ * visibly heavy drag — and wrote to localStorage once per pixel moved.
+ *
  * Every value is rounded to a whole pixel on the way in. A window at x=10.5
  * puts every glyph inside it on a half pixel, which is the one thing the
  * pixel-drawn text cannot survive.
@@ -38,6 +43,9 @@ export function useWindowFrame(id, initialPos) {
 
   const frameRef = useRef(frame);
   frameRef.current = frame;
+
+  /** The window element, so a gesture can move it without a render. */
+  const nodeRef = useRef(null);
 
   useEffect(() => {
     try {
@@ -67,21 +75,34 @@ export function useWindowFrame(id, initialPos) {
     const dx = Math.round(event.clientX - g.x);
     const dy = Math.round(event.clientY - g.y);
 
-    setFrame((prev) => {
-      if (g.mode === "move") {
-        return { ...prev, x: g.start.x + dx, y: g.start.y + dy };
-      }
-      const next = { ...prev };
+    const next = { ...g.start };
+    if (g.mode === "move") {
+      next.x = g.start.x + dx;
+      next.y = g.start.y + dy;
+    } else {
       if (g.mode.includes("e")) next.width = Math.max(MIN_W, g.start.width + dx);
       if (g.mode.includes("s")) next.height = Math.max(MIN_H, g.start.height + dy);
-      return next;
-    });
+    }
+
+    g.latest = next;
+
+    const el = nodeRef.current;
+    if (el) {
+      el.style.left = `${next.x}px`;
+      el.style.top = `${next.y}px`;
+      el.style.width = `${next.width}px`;
+      el.style.height = `${next.height}px`;
+    }
   }, []);
 
   const end = useCallback((event) => {
-    if (!gesture.current) return;
+    const g = gesture.current;
+    if (!g) return;
     gesture.current = null;
     event.currentTarget.releasePointerCapture?.(event.pointerId);
+
+    // One render, and one write to storage, for the whole gesture.
+    if (g.latest) setFrame(g.latest);
   }, []);
 
   /** Spread onto the title bar (mode "move") or a resize grip. */
@@ -95,7 +116,7 @@ export function useWindowFrame(id, initialPos) {
     [begin, move, end],
   );
 
-  return { frame, handlers };
+  return { frame, handlers, windowRef: nodeRef };
 }
 
 export default useWindowFrame;
