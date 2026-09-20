@@ -12,6 +12,11 @@ const OPEN_DELAY = 60;
 const CLOSE_DELAY = 260;
 const DRAG_SLOP = 3;
 
+/** How far outside a lane the pointer may stray before the ring gives up. */
+const AIM_SLOP = 10;
+/** And for how long, so a flick across a gap does not close it instantly. */
+const AIM_GRACE = 140;
+
 const POS_KEY = "launcherPos";
 
 function loadPos() {
@@ -20,6 +25,24 @@ function loadPos() {
   } catch {
     return { x: 24, y: 24 };
   }
+}
+
+/**
+ * Shortest distance from a point to a line segment.
+ *
+ * The segment is the lane from the puck to a tile; this is how far the
+ * pointer is from travelling straight down it.
+ */
+function distanceToSegment(px, py, ax, ay, bx, by) {
+  const dx = bx - ax;
+  const dy = by - ay;
+  const length = dx * dx + dy * dy;
+
+  const t = length
+    ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / length))
+    : 0;
+
+  return Math.hypot(px - (ax + dx * t), py - (ay + dy * t));
 }
 
 /**
@@ -93,11 +116,14 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
 
   const openTimer = useRef(null);
   const closeTimer = useRef(null);
+  const aimTimer = useRef(null);
   const dragRef = useRef(null);
 
   const clearTimers = () => {
     clearTimeout(openTimer.current);
     clearTimeout(closeTimer.current);
+    clearTimeout(aimTimer.current);
+    aimTimer.current = null;
   };
 
   useEffect(() => clearTimers, []);
@@ -116,6 +142,67 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [open]);
+
+  /**
+   * Close when the pointer stops heading anywhere.
+   *
+   * The ring's hover area is one disc big enough to bridge the gap between
+   * the puck and a tile, which means anywhere inside it counted as still
+   * interested — so the ring stayed open while the pointer sat in the empty
+   * space between two tiles.
+   *
+   * What actually matters is whether the pointer is travelling down a lane
+   * towards something: the corridor from the puck's centre to a tile's
+   * centre, a tile's width across. That is generous where it needs to be,
+   * because every lane starts at the same place — near the puck they all
+   * overlap and any direction is still "towards" something — and it narrows
+   * to the tile itself at the far end.
+   */
+  useEffect(() => {
+    if (!open) return undefined;
+
+    const onMove = (event) => {
+      const cx = pos.x + PUCK / 2;
+      const cy = pos.y + PUCK / 2;
+
+      const onPuck =
+        Math.hypot(event.clientX - cx, event.clientY - cy) <=
+        PUCK / 2 + AIM_SLOP;
+
+      const aiming =
+        onPuck ||
+        tilesRef.current.some(
+          (tile) =>
+            distanceToSegment(
+              event.clientX,
+              event.clientY,
+              cx,
+              cy,
+              cx + tile.left + TILE / 2,
+              cy + tile.top + TILE / 2,
+            ) <=
+            TILE / 2 + AIM_SLOP,
+        );
+
+      if (aiming) {
+        clearTimeout(aimTimer.current);
+        aimTimer.current = null;
+      } else if (!aimTimer.current) {
+        aimTimer.current = setTimeout(() => {
+          aimTimer.current = null;
+          setOpen(false);
+          setHovered(null);
+        }, AIM_GRACE);
+      }
+    };
+
+    window.addEventListener("pointermove", onMove);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      clearTimeout(aimTimer.current);
+      aimTimer.current = null;
+    };
+  }, [open, pos.x, pos.y]);
 
   const enter = useCallback(() => {
     clearTimers();
@@ -170,6 +257,20 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
   const items = apps ?? [];
   const angleFor = arcFor(pos, Math.max(1, items.length));
 
+  // Rounded once, here, so a tile lands on whole pixels and the label inside
+  // it stays sharp.
+  const tiles = items.map((app, i) => {
+    const angle = angleFor(i);
+    return {
+      app,
+      left: Math.round(Math.cos(angle) * RADIUS - TILE / 2),
+      top: Math.round(Math.sin(angle) * RADIUS - TILE / 2),
+    };
+  });
+
+  const tilesRef = useRef(tiles);
+  tilesRef.current = tiles;
+
   return (
     <div
       className="lch ph"
@@ -193,19 +294,7 @@ export function Launcher({ apps, connections, isShown, onToggle }) {
 
       {open && items.length > 0 && (
         <div className="lch__ring" role="menu">
-          {items.map((app, i) => {
-            // Measured from the ring's own origin, which CSS has already put
-            // at the centre of the puck. Adding the centre again here shifted
-            // every tile 16px down and right — off-centre, and far enough out
-            // that the bottom-right ones fell outside the ring's hover area,
-            // so the menu closed as you reached for them.
-            //
-            // Rounded once, here, so the tile lands on whole pixels and the
-            // label inside it stays sharp.
-            const angle = angleFor(i);
-            const left = Math.round(Math.cos(angle) * RADIUS - TILE / 2);
-            const top = Math.round(Math.sin(angle) * RADIUS - TILE / 2);
-
+          {tiles.map(({ app, left, top }, i) => {
             const connected = !!connections?.[app.id];
             const visible = isShown(app.id);
 
