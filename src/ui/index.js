@@ -18,7 +18,7 @@ export { Button } from "./Button";
 export { Toggle } from "./Toggle";
 export { Segmented } from "./Segmented";
 export { NumberInput } from "./NumberInput";
-export { Slider } from "./Slider";
+export { Slider, knobWidthFor } from "./Slider";
 export { SearchInput } from "./SearchInput";
 export { TypeAhead } from "./TypeAhead";
 export { FilterRow, RangeField, TagField } from "./filters";

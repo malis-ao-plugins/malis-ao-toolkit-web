@@ -12,7 +12,7 @@ import {
   Stack,
   Toggle,
 } from "../../ui";
-import { measure } from "../../ui";
+import { knobWidthFor, measure } from "../../ui";
 import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
 
 /**
@@ -24,6 +24,15 @@ import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
  */
 /** Playfield coordinates run to four digits. */
 const BOUND = 9999;
+
+/**
+ * One knob size for the whole stack, measured across every slider.
+ *
+ * Easy/Hard only runs to 11, so left to itself it would carry a visibly
+ * smaller handle than the rest - which go to -100 - sitting directly above
+ * and below it.
+ */
+const KNOB_PX = Math.max(...SLIDERS.map((s) => knobWidthFor(s.min, s.max)));
 
 const CAP_PX = Math.ceil(
   Math.max(
@@ -88,6 +97,7 @@ export function SlidersPanel({ settings, set }) {
           right={s.right}
           min={s.min}
           max={s.max}
+          knobPx={KNOB_PX}
           value={drag?.key === s.key ? drag.value : (settings[s.key] ?? s.min)}
           onChange={(v) => setDrag({ key: s.key, value: v })}
           onCommit={(v) => {

@@ -20,11 +20,18 @@ const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
  * A whole pixel, but not snapped to the 4px grid: the grid is for layout,
  * and rounding up to it here padded the knob by up to three pixels it did
  * not need.
+ *
+ * A host with several sliders should measure across all of them and pass the
+ * result as `knobPx`, so that a slider whose range happens to be short does
+ * not get a visibly smaller handle than the one beside it.
  */
-function knobWidth(min, max, showValue) {
+export function knobWidthFor(min, max) {
+  return Math.ceil(Math.max(measure(String(min)), measure(String(max)))) + KNOB_PAD;
+}
+
+function knobWidth(min, max, showValue, knobPx) {
   if (!showValue) return BAR;
-  const widest = Math.max(measure(String(min)), measure(String(max)));
-  return Math.ceil(widest) + KNOB_PAD;
+  return knobPx ?? knobWidthFor(min, max);
 }
 
 /**
@@ -49,6 +56,7 @@ export function Slider({
   left,
   right,
   showValue = true,
+  knobPx,
   className,
 }) {
   const trackRef = useRef(null);
@@ -66,7 +74,7 @@ export function Slider({
     return () => ro.disconnect();
   }, []);
 
-  const knob = knobWidth(min, max, showValue);
+  const knob = knobWidth(min, max, showValue, knobPx);
   const span = Math.max(1, width - knob);
   const ratio = (clamp(value, min, max) - min) / (max - min || 1);
   const knobLeft = Math.round(ratio * span);
