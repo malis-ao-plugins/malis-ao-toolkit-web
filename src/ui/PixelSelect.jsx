@@ -132,7 +132,9 @@ export function PixelSelect({
         {/* Drawn with borders rather than a glyph: the atlases are latin1,
             and a triangle is not in latin1. A border triangle is also exact
             on the pixel grid, which a scaled glyph would not be. */}
-        <span className={`pxs__caret${open ? " pxs__caret--open" : ""}`} />
+        <span
+          className={`ph-caret pxs__caret${open ? " ph-caret--open pxs__caret--open" : ""}`}
+        />
       </button>
 
       {open && (

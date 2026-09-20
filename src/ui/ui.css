@@ -944,6 +944,26 @@
   }
 }
 
+/* ─── Caret ────────────────────────────────────────────────────────────────
+   Drawn with borders rather than a glyph: the atlases are latin1 and a
+   triangle is not in latin1. Borders are also exact on the pixel grid, which
+   a scaled glyph would not be. Takes currentColor, so it follows whatever
+   control it sits in. */
+
+.ph-caret {
+  flex: 0 0 auto;
+  width: 0;
+  height: 0;
+  border-left: 3px solid transparent;
+  border-right: 3px solid transparent;
+  border-top: 3px solid currentColor;
+}
+
+.ph-caret--open {
+  border-top: 0;
+  border-bottom: 3px solid currentColor;
+}
+
 /* ─── Divider ──────────────────────────────────────────────────────────── */
 
 .ph-hr {

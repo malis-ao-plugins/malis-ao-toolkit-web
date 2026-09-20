@@ -227,6 +227,7 @@
 }
 
 .iids__more {
+  gap: 2px;
   height: var(--ctl-h-sm);
 }
 

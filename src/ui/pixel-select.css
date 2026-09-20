@@ -40,19 +40,13 @@
   color: var(--c-fg-mute, #4d5a6a);
 }
 
-/* A 6x3 triangle on whole pixels: 3px of border either side, 3px tall. */
+/* The triangle itself is .ph-caret in the kit; this only colours it. */
 .pxs__caret {
-  flex: 0 0 auto;
-  width: 0;
-  height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-top: 3px solid var(--c-fg-mute, #4d5a6a);
+  color: var(--c-fg-mute, #4d5a6a);
 }
 
 .pxs__caret--open {
-  border-top: 0;
-  border-bottom: 3px solid var(--c-accent, #ffb454);
+  color: var(--c-accent, #ffb454);
 }
 
 /* Sits above the field it belongs to. Fixed max height so a long character

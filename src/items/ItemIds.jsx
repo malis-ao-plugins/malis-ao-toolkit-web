@@ -5,7 +5,9 @@ import { Button, PixelText, Row } from "../ui";
  * and the QL span the family covers.
  *
  * A family with more than one template gets a control to open the variant
- * shelf, labelled with the count — the count is the reason to open it.
+ * shelf, labelled with the count — the count is the reason to open it. The
+ * caret is the same one the character select uses, so a thing that opens
+ * looks like a thing that opens wherever it appears.
  */
 export function ItemIds({ members, active, expanded, onToggle }) {
   const qls = members.map((m) => m.ql);
@@ -32,7 +34,8 @@ export function ItemIds({ members, active, expanded, onToggle }) {
             onToggle();
           }}
         >
-          {`${expanded ? "-" : "+"}${members.length}`}
+          <span className={`ph-caret${expanded ? " ph-caret--open" : ""}`} />
+          <PixelText>{String(members.length)}</PixelText>
         </Button>
       )}
     </Row>
