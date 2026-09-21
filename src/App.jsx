@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { APP_CONFIGS } from "./apps.config";
 import { useAppSessions } from "./hooks/useAppSessions";
 import { useShownApps } from "./shell/useShownApps";
@@ -45,11 +45,73 @@ const firstPos = (index) => {
   };
 };
 
+/**
+ * One app's window, insulated from the others.
+ *
+ * Every incoming message replaces the whole states object, so without this
+ * every window reconciles whenever any plugin says anything. The dungeon map
+ * sends a frame at the game's frame rate, which meant the item assistant —
+ * several hundred elements — re-rendered sixty times a second for news that
+ * had nothing to do with it. Measured at 41fps with it open, 160fps without.
+ *
+ * `patch` keeps the other apps' slices by identity, so a memo here holds for
+ * every app but the one the message was for.
+ */
+const AppSlot = memo(function AppSlot({
+  config,
+  connected,
+  state,
+  send,
+  push,
+  hide,
+  raise,
+  initialPos,
+  z,
+}) {
+  const session = useMemo(
+    () => ({
+      connected,
+      state,
+      send: (msg) => send(config.id, msg),
+      push: (partial) => push(config.id, partial),
+    }),
+    [connected, state, send, push, config.id],
+  );
+
+  const onMinimise = useCallback(() => hide(config.id), [hide, config.id]);
+  const onRaise = useCallback(() => raise(config.id), [raise, config.id]);
+
+  return (
+    <AppWindow
+      config={config}
+      session={session}
+      initialPos={initialPos}
+      z={z}
+      onRaise={onRaise}
+      onMinimise={onMinimise}
+    />
+  );
+});
+
 export default function App() {
   const { connections, states, send, push } = useAppSessions(APP_CONFIGS);
   const { isShown, hide, toggle } = useShownApps();
   const { theme, set: setTheme, reset: resetTheme } = useTheme();
   const [options, setOptions] = useState(false);
+
+  // Which window is in front. Windows stacked in declaration order before,
+  // so the one you were dragging could sit under one you had not touched.
+  // Front-most is last; anything never touched keeps the base layer.
+  const [stack, setStack] = useState([]);
+
+  const raise = useCallback((id) => {
+    setStack((order) =>
+      order[order.length - 1] === id ? order : [...order.filter((x) => x !== id), id],
+    );
+  }, []);
+
+  // Held by identity, or every window's props change on every render.
+  const positions = useMemo(() => APP_CONFIGS.map((_, i) => firstPos(i)), []);
 
   return (
     <>
@@ -75,17 +137,17 @@ export default function App() {
         if (!connections[config.id] || !isShown(config.id)) return null;
 
         return (
-          <AppWindow
+          <AppSlot
             key={config.id}
             config={config}
-            initialPos={firstPos(i)}
-            onMinimise={() => hide(config.id)}
-            session={{
-              connected: connections[config.id],
-              state: states[config.id] ?? {},
-              send: (msg) => send(config.id, msg),
-              push: (partial) => push(config.id, partial),
-            }}
+            connected={connections[config.id]}
+            state={states[config.id]}
+            send={send}
+            push={push}
+            hide={hide}
+            raise={raise}
+            initialPos={positions[i]}
+            z={10 + stack.indexOf(config.id) + 1}
           />
         );
       })}

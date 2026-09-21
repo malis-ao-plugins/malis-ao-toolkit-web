@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useWindowFrame } from "./hooks/useWindowFrame";
+import { useWindowFlight } from "./hooks/useWindowFlight";
 import { Panel } from "./ui";
 import Header from "./components/Header";
 import Tabs from "./components/Tabs";
@@ -27,8 +28,8 @@ function loadCollapsed(id) {
  * What a window remembers now is its position, its size, the open tab and
  * which panels are collapsed.
  */
-export function AppWindow({ config, session, initialPos, onMinimise }) {
-  const { frame, handlers, windowRef } = useWindowFrame(config.id, initialPos);
+export function AppWindow({ config, session, initialPos, onMinimise, z = 10, onRaise }) {
+  const { frame, handlers, windowRef, dragging } = useWindowFrame(config.id, initialPos);
   const [tabId, setTabId] = useState(config.defaultActiveTab);
   const [collapsed, setCollapsed] = useState(() => loadCollapsed(config.id));
 
@@ -66,13 +67,15 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
     ),
   };
 
+  const { flightClass, dismiss } = useWindowFlight(windowRef, onMinimise);
+
   const skin = frame.width <= 360 ? "overlay" : undefined;
   const density = frame.width >= 560 ? "comfortable" : undefined;
 
   return (
     <div
       ref={windowRef}
-      className="app ph"
+      className={`app ph${flightClass}${dragging ? " app--dragging" : ""}`}
       data-skin={skin}
       data-density={density}
       style={{
@@ -81,7 +84,10 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
         top: frame.y,
         width: frame.width,
         height: frame.height,
+        zIndex: z,
       }}
+      // capture, so it still raises when the press lands on a control inside
+      onPointerDownCapture={onRaise}
       onDragStart={(e) => e.preventDefault()}
     >
       <div className="window-drag-handle" {...handlers("move")}>
@@ -91,7 +97,7 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
           activeState={session.state}
           send={session.send}
           pushConfig={session.push}
-          onMinimise={onMinimise}
+          onMinimise={dismiss}
         />
       </div>
 
@@ -116,7 +122,7 @@ export function AppWindow({ config, session, initialPos, onMinimise }) {
                   collapsible={def.collapsible}
                   open={def.open}
                   onToggle={() => toggle(key)}
-                  className="shell-section"
+                  className={`shell-section${def.fill ? " shell-section--fill" : ""}`}
                 >
                   {def.content}
                 </Panel>

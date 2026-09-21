@@ -8,6 +8,7 @@ import {
   Stack,
 } from "../ui";
 import { useWindowFrame } from "../hooks/useWindowFrame";
+import { useWindowFlight } from "../hooks/useWindowFlight";
 import { FontField } from "./FontField";
 import { ThemePreview } from "./ThemePreview";
 import { GROUPS, THEME } from "./theme";
@@ -62,17 +63,19 @@ const SWATCHES_FOR = { surface: SURFACES, text: TEXT };
 export function SettingsWindow({ theme, onChange, onReset, onClose }) {
   // Wider than an app window: a colour row is swatches plus a picker, and
   // the frame hook takes a whole frame as its first-run position.
-  const { frame, handlers, windowRef } = useWindowFrame("shell_settings", {
+  const { frame, handlers, windowRef, dragging } = useWindowFrame("shell_settings", {
     x: 120,
     y: 120,
     width: 360,
     height: 620,
   });
 
+  const { flightClass, dismiss } = useWindowFlight(windowRef, onClose);
+
   return (
     <div
       ref={windowRef}
-      className="app ph"
+      className={`app ph${flightClass}${dragging ? " app--dragging" : ""}`}
       style={{
         position: "fixed",
         left: frame.x,
@@ -106,7 +109,7 @@ export function SettingsWindow({ theme, onChange, onReset, onClose }) {
             title="Close"
             aria-label="Close"
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={onClose}
+            onClick={dismiss}
           >
             <span className="header-min__bar" />
           </button>
