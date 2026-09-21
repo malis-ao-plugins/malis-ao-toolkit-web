@@ -1,0 +1,85 @@
+/* The map is a WebGL canvas, so the kit's type rules do not reach inside it.
+   Nothing in there draws text; the labels around it go through PixelText. */
+
+/* The panel declares `fill` in config.jsx; this passes that height on down. */
+.dm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--u);
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.dm__stage {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--c-bg-1);
+  border: 1px solid var(--c-line);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.dm__stage:active {
+  cursor: grabbing;
+}
+
+/* Sized to the stage by the ResizeObserver; centred for the moment between a
+   resize and the next frame, when it is briefly the old size. */
+.dm__canvas {
+  display: block;
+  margin: auto;
+}
+
+.dm__empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--c-fg-mute);
+}
+
+.dm__bar {
+  align-items: center;
+}
+
+.dm__muted {
+  color: var(--c-fg-mute);
+  overflow: hidden;
+}
+
+/* Config tab: a thickness row reads as label then track, like the shell's. */
+.dm__section {
+  margin-top: calc(var(--u) * 2);
+  color: var(--c-fg-dim);
+}
+
+/* Colour field and its thickness, side by side. Bottom-aligned so the number
+   lands on the swatch row rather than beside the caption above it. */
+.dm__field {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--u);
+}
+
+.dm__field > .ph-color {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* A Stack stretches its children, which turned every toggle into a full-width
+   bar once the window got wide. Each control sizes to itself instead; the
+   colour fields ask for a column, since a swatch row on its own is narrow. */
+.dm__options {
+  align-items: flex-start;
+}
+
+.dm__options .dm__field {
+  width: calc(var(--u) * 104);
+  max-width: 100%;
+}

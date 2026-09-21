@@ -64,6 +64,7 @@ src/index.js          mounts App and the stylesheets
     defineApp.jsx     the app contract
     roller/           Mission Roller   (plugin on :7069)
     item-assistant/   Item Assistant   (plugin on :7068)
+    dungeon-map/      Dungeon Map      (plugin on :7071)
   items/              shared item row, tooltip and their data hooks
   ui/                 PHOSPHOR: the UI kit — see ui/README.md
   pixelfont/          SHARED, junctioned in — see "The font" below
@@ -87,6 +88,7 @@ discovers it, there is nothing to register.
 | `ws://localhost:7069/ws` | Mission Roller plugin | messages, both ways |
 | `ws://localhost:7068/ws` | Item Assistant plugin | messages, both ways |
 | `http://localhost:7068` | Item Assistant plugin | inventory, over HTTP |
+| `ws://localhost:7071/ws` | Dungeon Map plugin | the dungeon, then position updates |
 | `http://localhost:7070` | AOItemQueryService | the shared item database |
 
 All four have a stand-in in `npm run mock`.

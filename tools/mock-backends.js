@@ -2,6 +2,7 @@
    Dev harness: stand-ins for the backends the UI talks to.
 
      ws://localhost:7069/ws   Mission Roller plugin
+     ws://localhost:7071/ws   Dungeon Map plugin
      ws://localhost:7068/ws   Item Assistant plugin
      http://localhost:7068    Item Assistant inventory
      http://localhost:7070    AOItemQueryService
@@ -13,6 +14,8 @@
      node tools/mock-backends.js
    ========================================================================= */
 
+const fs = require("fs");
+const path = require("path");
 const http = require("http");
 const zlib = require("zlib");
 const WebSocket = require("ws");
@@ -402,8 +405,99 @@ wss.on("connection", (ws) => {
   });
 });
 
-itemApi.listen(7070, () => console.log("mock item api   http://localhost:7070"));
-rollerHttp.listen(7069, () => console.log("mock roller     ws://localhost:7069/ws"));
-inventoryHttp.listen(7068, () =>
-  console.log("mock inventory  ws://localhost:7068/ws + http://localhost:7068"),
+
+// ─── Dungeon Map stand-in (7071) ──────────────────────────────────────────
+//
+// Replays a real capture: the 30-room clan mission in `fixtures/dungeon-clan
+// .json`, built from the template's own tilemap, in the same shape the plugin
+// sends. The player walks the room centres so the follow mode has something
+// to follow.
+
+const dungeon = JSON.parse(
+  fs.readFileSync(path.join(__dirname, "fixtures", "dungeon-clan.json"), "utf8"),
 );
+
+const mapHttp = http.createServer();
+const mapWss = new WebSocket.Server({ server: mapHttp, path: "/ws" });
+
+mapWss.on("connection", (ws) => {
+  console.log("[7071] client connected");
+  ws.send(JSON.stringify(dungeon));
+
+  const route = dungeon.rooms.filter((r) => r.f === 0).map((r) => r.c);
+  let leg = 0;
+  let t = 0;
+
+  const walk = setInterval(() => {
+    const from = route[leg % route.length];
+    const to = route[(leg + 1) % route.length];
+    t += 0.0064;
+    if (t >= 1) {
+      t = 0;
+      leg++;
+    }
+
+    const x = from[0] + (to[0] - from[0]) * t;
+    const z = from[1] + (to[1] - from[1]) * t;
+    const a = (Math.atan2(to[0] - from[0], to[1] - from[1]) * 180) / Math.PI;
+
+    // one message a frame, the way the plugin sends it
+    const d = dungeon.rooms
+      .filter((r) => r.f === 0)
+      .slice(0, 12)
+      .map((r, i) => ({
+        k: i % 4 === 0 ? "chest" : "npc",
+        x: r.c[0] + Math.sin(Date.now() / 900 + i) * 3,
+        z: r.c[1] + Math.cos(Date.now() / 900 + i) * 3,
+        a: ((Date.now() / 20 + i * 40) % 360) - 180,
+        f: 0,
+        n: i % 4 === 0 ? "Locked Chest" : "Clan Guard",
+      }));
+
+    ws.send(JSON.stringify({ type: "frame", p: { x, z, a, f: 0, room: 1 }, d }));
+  }, 16);
+
+  ws.on("message", (raw) => {
+    try {
+      console.log("[7071] <-", JSON.parse(raw).type);
+    } catch {
+      /* ignore */
+    }
+  });
+
+  ws.on("close", () => {
+    clearInterval(walk);
+    console.log("[7071] client gone");
+  });
+});
+
+/**
+ * Start one stand-in.
+ *
+ * A port already in use means the real plugin is up, which is the better
+ * thing to be talking to - so say so and carry on. Each of these is
+ * independent, and one being taken used to kill the whole harness before the
+ * others had started, which left the apps behind them greyed out in the
+ * launcher with nothing to explain it.
+ */
+function serve(server, port, what, wss) {
+  const onError = (err) => {
+    if (err.code === "EADDRINUSE") {
+      console.log(`port ${port} is taken - leaving ${what.trim()} to the real plugin`);
+    } else {
+      console.error(`[${port}]`, err.message);
+    }
+  };
+
+  server.on("error", onError);
+  // ws forwards the http server's error onto the WebSocketServer as well, and
+  // an emitter with no listener for 'error' throws. Both need one.
+  wss?.on("error", () => {});
+
+  server.listen(port, () => console.log(`mock ${what}`));
+}
+
+serve(itemApi, 7070, "item api   http://localhost:7070");
+serve(rollerHttp, 7069, "roller     ws://localhost:7069/ws", wss);
+serve(inventoryHttp, 7068, "inventory  ws://localhost:7068/ws + http://localhost:7068", inventoryWss);
+serve(mapHttp, 7071, "dungeon    ws://localhost:7071/ws", mapWss);
