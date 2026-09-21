@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 import { cx } from "./cx";
 import { PixelText, pixelize } from "./pixel";
 
@@ -71,13 +71,18 @@ export function Slot({ src, alt = "", size = "md", title, className, ...rest }) 
 }
 
 /** Scrollable region. Callers set the height via style/class. */
-export function List({ className, children, ...rest }) {
+export const List = forwardRef(function List(
+  { className, children, ...rest },
+  ref,
+) {
   return (
-    <div className={cx("ph-list", className)} {...rest}>
+    // The ref is here for windowed lists, which need the scrolling box to
+    // measure a row against and to read scrollTop from.
+    <div ref={ref} className={cx("ph-list", className)} {...rest}>
       {children}
     </div>
   );
-}
+});
 
 /** One line inside a List. */
 export function ListRow({ on = false, className, children, ...rest }) {

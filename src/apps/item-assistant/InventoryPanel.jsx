@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { Empty, List, PixelSelect, PixelText, SearchInput, Stack } from "../../ui";
 import { ItemRow } from "../../items";
 import { useInventory } from "./useInventory";
+import { useWindowedRows } from "../../hooks/useWindowedRows";
 import "./item-assistant.css";
 
 const ALL = "";
@@ -28,17 +29,24 @@ export function InventoryPanel({ settings, set, send }) {
     ...characters.map((c) => ({ value: c.id, label: c.name })),
   ];
 
-  const pull = (item) =>
-    send({
-      type: "pullItem",
-      charid: item.charid,
-      parentType: item.parentType,
-      parentInstance: item.parentInstance,
-      slot: item.slot,
-    });
+  // Only the rows on screen are rendered: a row carries seven pixel-font
+  // labels, and every one of them is an image.
+  const rows = useWindowedRows(results.length);
+
+  const pull = useCallback(
+    (item) =>
+      send({
+        type: "pullItem",
+        charid: item.charid,
+        parentType: item.parentType,
+        parentInstance: item.parentInstance,
+        slot: item.slot,
+      }),
+    [send],
+  );
 
   return (
-    <Stack gap={2}>
+    <Stack gap={2} className="ia-fill">
       <PixelSelect
         className="ia-select"
         value={characterId ?? ALL}
@@ -62,7 +70,7 @@ export function InventoryPanel({ settings, set, send }) {
               : "Nothing matches"}
         </Empty>
       ) : (
-        <List className="ia-list">
+        <List className="ia-list" ref={rows.ref} onScroll={rows.onScroll}>
           {/* The head is the list's first row, not a sibling above it, so it
               shares the rows' content box — scrollbar included. It mirrors
               ItemRow's layout: icon, name, the three columns, then the
@@ -79,7 +87,9 @@ export function InventoryPanel({ settings, set, send }) {
             </div>
           </div>
 
-          {results.map((item) => (
+          {rows.padTop > 0 && <div style={{ height: rows.padTop }} />}
+
+          {results.slice(rows.start, rows.end).map((item) => (
               <ItemRow
                 key={item.key}
                 item={item}
@@ -99,6 +109,8 @@ export function InventoryPanel({ settings, set, send }) {
                 </PixelText>
               </ItemRow>
           ))}
+
+          {rows.padBottom > 0 && <div style={{ height: rows.padBottom }} />}
         </List>
       )}
     </Stack>

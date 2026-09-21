@@ -110,9 +110,17 @@ describe("messages", () => {
 });
 
 describe("persistence", () => {
+  // Writing is deferred, so that a streaming app cannot turn each message into
+  // a synchronous localStorage write. These tests let that timer run.
+  const flushSaves = () => act(() => jest.advanceTimersByTime(500));
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
   it("keeps transient state out of storage", () => {
     const { result } = mount();
     act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 9 } }));
+    flushSaves();
 
     // `seen` came from the same message and is not transient, so the write
     // definitely happened — `lastHit` was left out of it deliberately.
@@ -136,6 +144,17 @@ describe("persistence", () => {
     expect(result.current.states.app_1.seen).toEqual({ id: 9 });
   });
 
+  it("keeps a setting the saved state has never heard of", () => {
+    // saved before `volume` had a companion
+    localStorage.setItem(KEY, JSON.stringify({ settings: { volume: 4 } }));
+
+    const { result } = mount([
+      config({ initialState: () => ({ settings: { volume: 1, muted: false }, rolling: false }) }),
+    ]);
+
+    expect(result.current.states.app_1.settings).toEqual({ volume: 4, muted: false });
+  });
+
   it("restores ordinary state over the declared defaults", () => {
     localStorage.setItem(KEY, JSON.stringify({ settings: { volume: 4 } }));
 
@@ -146,8 +165,39 @@ describe("persistence", () => {
   it("persists everything when an app declares nothing transient", () => {
     mount([config({ transientKeys: [] })]);
     act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 1 } }));
+    flushSaves();
 
     expect(stored()).toHaveProperty("lastHit");
+  });
+
+  it("collapses a burst of messages into one write", () => {
+    mount();
+    const writes = jest.spyOn(Storage.prototype, "setItem");
+
+    act(() => {
+      for (let i = 0; i < 20; i += 1) {
+        FakeSocket.instances[0].deliver({ type: "hit", item: { id: i } });
+      }
+    });
+
+    // The dungeon map sends a position 10 times a second. Twenty of those must
+    // not be twenty writes.
+    expect(writes).not.toHaveBeenCalled();
+
+    flushSaves();
+    expect(writes).toHaveBeenCalledTimes(1);
+    expect(stored().seen).toEqual({ id: 19 });
+
+    writes.mockRestore();
+  });
+
+  it("writes what is still queued when the window goes away", () => {
+    const { unmount } = mount();
+    act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 4 } }));
+    expect(stored()).toBeNull();
+
+    unmount();
+    expect(stored().seen).toEqual({ id: 4 });
   });
 });
 

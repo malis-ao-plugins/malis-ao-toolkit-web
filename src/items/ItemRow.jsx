@@ -57,11 +57,11 @@ export const ItemRow = memo(function ItemRow({
   const showQl = qlMode === "pick" || qlMode === "show";
 
   return (
-    <div className="irow">
+    // `data-row` is how a windowed list measures one row to place the rest.
+    <div className="irow" data-row>
       <div
         key={flash}
         className={flash ? "irow__main irow__main--hit" : "irow__main"}
-        title={byContextMenu ? `Right-click to ${actionLabel.toLowerCase()}` : undefined}
         onContextMenu={
           byContextMenu
             ? (e) => {

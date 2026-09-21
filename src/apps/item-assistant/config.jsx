@@ -14,6 +14,7 @@ export default defineApp({
     inventory: {
       title: "Inventory",
       fixed: true,
+      fill: true,
       component: InventoryPanel,
     },
   },

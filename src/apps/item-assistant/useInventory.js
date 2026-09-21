@@ -24,6 +24,9 @@ import {
  * walk, and each stage can be read on its own.
  */
 
+/** How long a pause in typing counts as "done typing". */
+const SETTLE_MS = 160;
+
 // Parent types that are top-level containers — nothing above them to name.
 const TOP_LEVEL = { 104: "Inventory", 105: "Bank" };
 
@@ -132,6 +135,22 @@ export function useInventory({ characterId, query }) {
   }, [charKey]);
 
   // ── 3. results ──────────────────────────────────────────────────────────
+
+  // Typing is not a reason to hit the database.
+  //
+  // The search below is a query plus an icon fetch, and it was running once
+  // per keystroke: eight characters typed quickly meant eight round trips,
+  // seven of whose results were thrown away before anyone saw them. Waiting
+  // for a pause in typing costs nothing anyone can perceive and does the work
+  // once.
+  const [settled, setSettled] = useState(query);
+
+  useEffect(() => {
+    if (settled === query) return undefined;
+    const timer = setTimeout(() => setSettled(query), SETTLE_MS);
+    return () => clearTimeout(timer);
+  }, [query, settled]);
+
   const idPairs = useMemo(() => {
     const seen = new Map();
     for (const r of records) {
@@ -166,7 +185,7 @@ export function useInventory({ characterId, query }) {
     let alive = true;
     setLoading(true);
 
-    searchItems({ idPairs, name: query, limit: idPairs.length })
+    searchItems({ idPairs, name: settled, limit: idPairs.length })
       .then(async (items) => {
         if (!alive) return;
 
@@ -178,6 +197,15 @@ export function useInventory({ characterId, query }) {
 
         // One row per physical copy: the same item in three places is three
         // rows, because the point of the panel is finding where a thing is.
+        // A key that is unique whatever the data says.
+        //
+        // item + character + container + slot ought to identify one physical
+        // copy, and usually does — but the plugin can record the same slot
+        // twice, and two rows with one key make React remount both on every
+        // update rather than keep them. A counter costs nothing and cannot
+        // collide.
+        let seq = 0;
+
         setResults(
           items.flatMap((item) =>
             (byItemId.get(item.low_id) ?? []).map((rec) => ({
@@ -195,7 +223,7 @@ export function useInventory({ characterId, query }) {
               slot: rec.slot,
               parentType: rec.parentType,
               parentInstance: rec.parentInstance,
-              key: `${item.low_id}-${rec.charid}-${rec.parentInstance}-${rec.slot}`,
+              key: `${item.low_id}-${rec.charid}-${rec.parentInstance}-${rec.slot}-${seq++}`,
             })),
           ),
         );
@@ -209,7 +237,7 @@ export function useInventory({ characterId, query }) {
     return () => {
       alive = false;
     };
-  }, [idPairs, byItemId, nameOf, query]);
+  }, [idPairs, byItemId, nameOf, settled]);
 
   return { characters, results, loading, total: records.length };
 }

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const PREFIX = "appState_";
+const SAVE_DELAY = 400;
 
 /**
  * One WebSocket per app, owned in one place.
@@ -69,18 +70,62 @@ export function useAppSessions(configs) {
       configs.map((c) => {
         const initial = c.initialState();
         const saved = load(c.id, new Set(c.transientKeys ?? []));
-        return [c.id, saved ? { ...initial, ...saved } : initial];
+
+        // Settings merge a level deeper than the rest of state. A flat spread
+        // replaces the whole settings object with whatever was saved, so a
+        // setting added after someone last used the app arrives undefined -
+        // and its control renders empty.
+        return [
+          c.id,
+          saved
+            ? { ...initial, ...saved, settings: { ...initial.settings, ...(saved.settings ?? {}) } }
+            : initial,
+        ];
       }),
     ),
   );
 
-  const patch = useCallback((id, partial) => {
-    setStates((prev) => {
-      const next = { ...prev[id], ...partial };
-      save(id, next, transientRef.current.get(id));
-      return { ...prev, [id]: next };
-    });
+  // Persisting runs on a timer, not inside the state updater.
+  //
+  // A streaming app makes that difference expensive: the dungeon map sends a
+  // position ten times a second, and saving per message turned each one into a
+  // synchronous localStorage write on the main thread. A write is also a side
+  // effect, and React is free to run an updater twice for one update, so in
+  // StrictMode every message wrote twice. Recording the state in a ref is
+  // idempotent, which is why that part can stay where it is.
+  const dirty = useRef(new Map());
+  const flushTimer = useRef(null);
+
+  const flush = useCallback(() => {
+    clearTimeout(flushTimer.current);
+    flushTimer.current = null;
+    for (const [id, state] of dirty.current) {
+      save(id, state, transientRef.current.get(id));
+    }
+    dirty.current.clear();
   }, []);
+
+  const patch = useCallback(
+    (id, partial) => {
+      setStates((prev) => {
+        const next = { ...prev[id], ...partial };
+        dirty.current.set(id, next);
+        return { ...prev, [id]: next };
+      });
+      if (!flushTimer.current) flushTimer.current = setTimeout(flush, SAVE_DELAY);
+    },
+    [flush],
+  );
+
+  // Nothing queued may be lost to a reload or a closed tab.
+  useEffect(() => {
+    const onHide = () => flush();
+    window.addEventListener("pagehide", onHide);
+    return () => {
+      window.removeEventListener("pagehide", onHide);
+      flush();
+    };
+  }, [flush]);
 
   const send = useCallback((id, msg) => {
     const ws = sockets.current[id];

@@ -68,6 +68,21 @@
   max-height: 420px;
 }
 
+/* The panel declares `fill` in config.jsx; these pass that height down to the
+   list, which is the part that should grow. The cap above still applies
+   anywhere the list is not the thing filling a panel. */
+
+.ia-fill,
+.shell-section--fill .ia-list,
+.shell-section--fill .ph-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.shell-section--fill .ia-list {
+  max-height: none;
+}
+
 /* The row renders these as ItemRow children, so they sit in the same flex
    line as the name — the same basis here is what puts a heading over its
    column rather than beside it.

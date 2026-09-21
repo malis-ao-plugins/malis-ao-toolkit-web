@@ -41,7 +41,7 @@ import "./pixel.css";
  * pathological case, such as a live counter, growing without limit.
  */
 const cache = new Map();
-const MAX_CACHE = 2000;
+const MAX_CACHE = 6000;
 
 function maskFor(text, size, weight, scale) {
   const font = fontFor(size, weight);
@@ -58,7 +58,13 @@ function maskFor(text, size, weight, scale) {
   ].join("|");
 
   const hit = cache.get(key);
-  if (hit) return hit;
+  if (hit) {
+    // Re-inserting moves it to the end, which is what makes the eviction
+    // below drop what is genuinely cold rather than what is merely oldest.
+    cache.delete(key);
+    cache.set(key, hit);
+    return hit;
+  }
 
   // pad 0: the box is the text, so a trailing gap would offset everything
   // laid out after it.
@@ -74,7 +80,22 @@ function maskFor(text, size, weight, scale) {
     height: (comp.h * s) / dpr,
   };
 
-  if (cache.size >= MAX_CACHE) cache.clear();
+  // Evict the coldest fifth, never the whole thing.
+  //
+  // clear() meant that crossing the bound threw away every mask on screen,
+  // and each one costs a canvas render and a PNG encode to rebuild. An
+  // inventory of a few hundred distinct item names can reach the bound on its
+  // own, and the whole window then re-encoded at once. Dropping a fifth keeps
+  // what is in front of you and still bounds the map.
+  if (cache.size >= MAX_CACHE) {
+    const drop = Math.ceil(MAX_CACHE / 5);
+    let n = 0;
+    for (const old of cache.keys()) {
+      if (n++ >= drop) break;
+      cache.delete(old);
+    }
+  }
+
   cache.set(key, result);
   return result;
 }
@@ -178,7 +199,23 @@ export function PixelText({
     const el = hostRef.current;
     if (!el) return undefined;
 
-    const read = () => setRoom(Math.floor(el.getBoundingClientRect().width));
+    /*
+     * Layout width, not what is on the screen.
+     *
+     * getBoundingClientRect() is the rect after transforms, so a window
+     * mid-animation reports a fraction of its real width and every label in
+     * it truncates to nothing. The ResizeObserver cannot put that right
+     * afterwards either: a transform changes nothing about layout, so it
+     * never fires. offsetWidth is the laid-out width and ignores transforms.
+     *
+     * It is an integer and excludes the border, which is what is wanted here:
+     * the room inside the box. The rect is kept as a fallback for a host with
+     * no box of its own — `display: contents` or inline — where offsetWidth
+     * is 0 and meaningless.
+     */
+    const read = () =>
+      setRoom(el.offsetWidth || Math.floor(el.getBoundingClientRect().width));
+
     read();
 
     const observer = new ResizeObserver(read);
