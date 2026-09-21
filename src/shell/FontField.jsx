@@ -105,9 +105,10 @@ export function FontField({ value, onChange }) {
         )}
       </Row>
 
+      {/* Short enough to survive a narrow window. A mask cannot wrap, so a
+          long hint is a truncated hint. */}
       <PixelText fit className="set__hint">
-        Verdana, Tahoma and Lucida Console are exported; anything else is
-        drawn by the browser.
+        Anything not shipped is drawn by the browser
       </PixelText>
     </Stack>
   );

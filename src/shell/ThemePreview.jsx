@@ -36,9 +36,11 @@ const PREVIEW_TABS = [
 function TypePreview() {
   return (
     <Stack gap={1}>
-      <PixelText size={20}>Retrieve the data cube</PixelText>
-      <PixelText size={16}>Pristine Kevlar Vest</PixelText>
-      <PixelText>ID 100201 &middot; QL 1-300 &middot; 842.5k credits</PixelText>
+      <PixelText fit size={20}>Retrieve the data cube</PixelText>
+      <PixelText fit size={16}>Pristine Kevlar Vest</PixelText>
+      <PixelText fit>
+        ID 100201 &middot; QL 1-300 &middot; 842.5k credits
+      </PixelText>
     </Stack>
   );
 }
@@ -81,7 +83,7 @@ function DataPreview() {
 function TextPreview() {
   return (
     <Stack gap={2}>
-      <PixelText size={16}>Pristine Kevlar Vest</PixelText>
+      <PixelText fit size={16}>Pristine Kevlar Vest</PixelText>
       <Stat k="Slot" v="Chest" />
       <SearchInput value="" onChange={() => {}} placeholder="Search..." count={9} />
     </Stack>
@@ -143,9 +145,9 @@ function SurfacePreview() {
         {/* Overflowing on purpose: a scrollbar cannot be previewed without
             something to scroll. */}
         <div className="set__surface-scroll">
-          <PixelText>A line between them</PixelText>
-          <PixelText>And something to scroll</PixelText>
-          <PixelText>So the bar has a reason to appear</PixelText>
+          <PixelText fit>A line between them</PixelText>
+          <PixelText fit>And something to scroll</PixelText>
+          <PixelText fit>So the bar has a reason to appear</PixelText>
         </div>
       </div>
     </div>
