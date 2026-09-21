@@ -1,9 +1,9 @@
 {
   "url": "http://localhost:3000",
-  "out": "shot-gl-holo.png",
+  "out": "shot-dungeon.png",
   "width": 1000,
   "height": 780,
   "wait": 4500,
-  "script": "screenshot-dungeon-holo.js",
+  "script": "screenshot-dungeon.js",
   "afterScript": 4500
 }

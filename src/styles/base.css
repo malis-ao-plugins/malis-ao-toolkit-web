@@ -44,19 +44,21 @@ body {
      reach. See src/ui/README.md; the cost was a needless render surface for
      the whole page. */
 
-  /* A 32px lattice on the same grid the UI is built on. Flat 1px lines and no
-     gradients — a soft backdrop makes hard-edged text look like a mistake. */
-  background-image:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0 31px,
-      rgba(86, 212, 232, 0.035) 31px 32px
-    ),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 31px,
-      rgba(86, 212, 232, 0.035) 31px 32px
-    );
+  /* Dots on the 32px grid the UI is built on, rather than a lattice of lines.
+     A continuous line is a continuous edge for the eye to track, and a whole
+     screen of them reads as texture you have to look past; a dot only marks
+     the intersection, so the same grid is there to measure against without
+     being something to see. Lifted from the node editor in materialize-web,
+     where the same change was made for the same reason.
+
+     Still flat and hard-edged — 1px at a whole-pixel position, no blur — so
+     nothing here softens the backdrop under pixel-drawn text. */
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    rgba(86, 212, 232, 0.09) 1px,
+    transparent 0
+  );
+  background-size: 32px 32px;
 }
 
 img {

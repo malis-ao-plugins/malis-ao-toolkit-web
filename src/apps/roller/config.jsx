@@ -153,9 +153,10 @@ export default defineApp({
       // The only panel on its tab, so collapsing it would leave the tab
       // empty — the same reason missions and browser are fixed.
       fixed: true,
+      fill: true,
       component: RollList,
     },
-    browser: { title: "Finder", fixed: true, component: Browser },
+    browser: { title: "Browse", fixed: true, fill: true, component: Browser },
     types: { title: "Mission Types", component: TypesPanel },
     behaviour: { title: "Behaviour", component: BehaviourPanel },
     sliders: { title: "Sliders", component: SlidersPanel },

@@ -116,6 +116,11 @@ export function defineApp(spec) {
         // lets it be dragged out, it just cannot be collapsed away.
         collapsible: !panel.fixed,
         open: panel.fixed ? true : (props.sectionOpen?.[key] ?? true),
+        // A filling panel takes whatever height its tab has rather than
+        // sitting at its content's height with dead space under it. The panel
+        // says so itself; the shell used to work it out from what was inside,
+        // which broke the moment a list was empty.
+        fill: !!panel.fill,
         content: <Panel {...props} />,
       };
     },

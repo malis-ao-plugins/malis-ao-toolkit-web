@@ -48,7 +48,7 @@ export function RollList({ settings, set, state }) {
   }, [lastHit]);
 
   if (rollList.length === 0) {
-    return <Empty>Add items from the finder</Empty>;
+    return <Empty>Add items from Browse</Empty>;
   }
 
   const counts = new Map(rollList.map((e) => [entryKey(e), e.count]));

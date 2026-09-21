@@ -504,6 +504,34 @@
   background: var(--c-accent-lo);
 }
 
+/* The quiet one: no box around the control, so a column of these reads as a
+   list rather than a stack of filled bars. The state is the tick and the
+   colour of the label, which is all the filled version was saying anyway. */
+.ph-toggle--plain,
+.ph-toggle--plain:hover,
+.ph-toggle--plain.ph-toggle--on {
+  background: transparent;
+  border-color: transparent;
+  padding-left: 0;
+}
+
+.ph-toggle--plain:hover {
+  color: var(--c-fg);
+}
+
+.ph-toggle--plain:hover .ph-toggle__box {
+  border-color: var(--c-fg);
+}
+
+.ph-toggle--plain.ph-toggle--on {
+  color: var(--c-accent);
+}
+
+.ph-toggle--plain.ph-toggle--on .ph-toggle__box {
+  border-color: var(--c-accent);
+  background: var(--c-accent);
+}
+
 .ph-toggle--on .ph-toggle__box {
   background: var(--c-accent);
   border-color: var(--c-accent);

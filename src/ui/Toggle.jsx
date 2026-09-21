@@ -17,6 +17,8 @@ export function Toggle({
   on = false,
   onChange,
   block = false,
+  /** No chrome: the box, and a label that takes the accent when it is on. */
+  plain = false,
   title,
   className,
   upper = true,
@@ -31,6 +33,7 @@ export function Toggle({
         "ph-toggle",
         on && "ph-toggle--on",
         block && "ph-toggle--block",
+        plain && "ph-toggle--plain",
         className,
       )}
       onClick={() => onChange?.(!on)}

@@ -79,7 +79,7 @@ export function Browser({ settings, set }) {
     reqFilter.length;
 
   return (
-    <Stack gap={2}>
+    <Stack gap={2} className="rl-fill">
       <SearchInput
         value={query}
         onChange={(v) => {

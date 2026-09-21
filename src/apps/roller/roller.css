@@ -146,6 +146,20 @@
   max-height: 200px;
 }
 
+/* Browse and the roll list fill their tab (declared in config.jsx). The cap
+   above still applies wherever a list is not the one filling a panel. */
+
+.rl-fill,
+.shell-section--fill .rl-scroll,
+.shell-section--fill .ph-empty {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.shell-section--fill .rl-scroll {
+  max-height: none;
+}
+
 .rl-filters {
   padding-top: var(--u);
 }
