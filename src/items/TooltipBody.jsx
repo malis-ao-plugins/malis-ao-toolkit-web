@@ -1,4 +1,4 @@
-import { PixelText } from "../ui";
+import { PixelText, wrapToWidth } from "../ui";
 
 /**
  * Item tooltip contents.
@@ -43,6 +43,27 @@ export function Row({ label, value, suffix, valueColor, style }) {
           </PixelText>
         )}
       </span>
+    </div>
+  );
+}
+
+/**
+ * A description, broken into lines.
+ *
+ * One PixelText is one mask image, so it is one line however long the text
+ * is - a paragraph ran off the side of the tooltip. The text is wrapped to
+ * the tooltip's own width and each line drawn on its own.
+ */
+const DESCRIPTION_PX = 420 - 24; // .itt max-width less its padding
+
+function Description({ text }) {
+  const lines = wrapToWidth(String(text), DESCRIPTION_PX, 13);
+
+  return (
+    <div className="tt-description">
+      {lines.map((line, i) => (
+        <PixelText key={i}>{line}</PixelText>
+      ))}
     </div>
   );
 }
@@ -162,9 +183,7 @@ export function TooltipBody({ data }) {
         </Section>
       )}
 
-      {data.description && (
-        <PixelText className="tt-description">{data.description}</PixelText>
-      )}
+      {data.description && <Description text={data.description} />}
     </>
   );
 }

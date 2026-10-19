@@ -384,8 +384,12 @@
   margin: var(--u) 0;
 }
 
+/* One line per PixelText, stacked. A mask image cannot wrap, so the wrapping
+   happens in the markup and this only has to lay the lines out. */
 .tt-description {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
   margin-top: var(--u2);
   padding-top: var(--u2);
   border-top: 1px solid var(--c-line);
