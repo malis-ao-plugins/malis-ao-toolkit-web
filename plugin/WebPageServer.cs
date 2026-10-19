@@ -1,5 +1,6 @@
 using System.Net;
 using System.Reflection;
+using AOSharp.Common.GameData;
 using AOSharp.Core.UI;
 
 /// <summary>
@@ -94,7 +95,7 @@ public class WebPageServer
                 return;
             }
 
-            Chat.WriteLine($"Toolkit page: http://localhost:{Port}");
+            Chat.WriteLine($"Toolkit page: http://localhost:{Port}", ChatColor.LightBlue);
 
             try
             {
