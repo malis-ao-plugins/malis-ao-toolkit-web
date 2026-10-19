@@ -100,7 +100,6 @@ export default defineApp({
     autoAdjustLvlSlider: true,
     removeRolledEntries: true,
     autoAcceptMissions: true,
-    showPlayfieldBounds: true,
 
     rollList: [],
 
@@ -129,6 +128,8 @@ export default defineApp({
   messages: {
     missionResults: (d) => ({ missions: d.missions }),
     missionHit: (d) => ({ lastHit: d.item }),
+    // The plugin stops by itself on a match when Auto Accept is off.
+    rolling: (d) => ({ rolling: !!d.rolling }),
   },
 
   // Zone ids carry no names over the wire; the panel wants them by name.

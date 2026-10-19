@@ -202,9 +202,20 @@ describe("persistence", () => {
 });
 
 describe("sending", () => {
+  it("sends the current settings as soon as the socket opens", () => {
+    localStorage.setItem(KEY, JSON.stringify({ settings: { volume: 7 } }));
+    mount();
+    act(() => FakeSocket.instances[0].open());
+
+    expect(FakeSocket.instances[0].sent).toEqual([
+      { type: "updateConfig", settings: { volume: 7 } },
+    ]);
+  });
+
   it("mirrors a settings change to the plugin", () => {
     const { result } = mount();
     act(() => FakeSocket.instances[0].open());
+    FakeSocket.instances[0].sent = [];
     act(() => result.current.push("app_1", { settings: { volume: 3 } }));
 
     expect(FakeSocket.instances[0].sent).toEqual([
@@ -216,6 +227,7 @@ describe("sending", () => {
   it("does not announce a state change that is not a setting", () => {
     const { result } = mount();
     act(() => FakeSocket.instances[0].open());
+    FakeSocket.instances[0].sent = [];
     act(() => result.current.push("app_1", { rolling: true }));
 
     expect(FakeSocket.instances[0].sent).toEqual([]);

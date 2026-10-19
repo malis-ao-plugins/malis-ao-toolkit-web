@@ -85,6 +85,10 @@ export function useAppSessions(configs) {
     ),
   );
 
+  // The socket handlers outlive renders; this is how they read current state.
+  const statesRef = useRef(states);
+  statesRef.current = states;
+
   // Persisting runs on a timer, not inside the state updater.
   //
   // A streaming app makes that difference expensive: the dungeon map sends a
@@ -156,9 +160,15 @@ export function useAppSessions(configs) {
         const ws = new WebSocket(`ws://localhost:${config.port}/ws`);
         sockets.current[config.id] = ws;
 
-        ws.onopen = () =>
-          alive.current &&
+        // A plugin starts with no settings of its own, and only hears
+        // updateConfig when something changes. Send the whole set on every
+        // connect, so a fresh inject works without touching a control.
+        ws.onopen = () => {
+          if (!alive.current) return;
           setConnections((p) => ({ ...p, [config.id]: true }));
+          const settings = statesRef.current[config.id]?.settings;
+          if (settings) ws.send(JSON.stringify({ type: "updateConfig", settings }));
+        };
 
         ws.onclose = () => {
           if (!alive.current) return;

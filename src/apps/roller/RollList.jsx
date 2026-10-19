@@ -9,8 +9,9 @@ const EMPTY = [];
 /**
  * The wanted-items list the roller matches missions against.
  *
- * Entries are `{ ids, ql, max_ql, count }`. A `missionHit` for an entry
- * decrements it, and the entry disappears at zero.
+ * Entries are `{ ids, ql, max_ql, count }`. With Remove On Hit on, a
+ * `missionHit` for an entry decrements it, and the entry disappears at zero;
+ * with it off, entries stay as they are and keep being rolled for.
  *
  * All edits rebuild the settings object. The previous version assigned into
  * `settings.rollList` in place and then pushed the same object reference, so
@@ -37,6 +38,8 @@ export function RollList({ settings, set, state }) {
   useEffect(() => {
     if (!lastHit || lastHit === lastSeen.current) return;
     lastSeen.current = lastHit;
+
+    if (!settings?.removeRolledEntries) return;
 
     const key = entryKey(lastHit);
     const match = rollList.find((e) => entryKey(e) === key);

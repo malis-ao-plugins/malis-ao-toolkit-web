@@ -30,7 +30,6 @@ export const BEHAVIOURS = [
   { key: "autoAdjustLvlSlider", label: "Auto Slider", hint: "Track level with the easy/hard slider" },
   { key: "removeRolledEntries", label: "Remove On Hit", hint: "Drop an entry from the roll list once it lands" },
   { key: "autoAcceptMissions", label: "Auto Accept", hint: "Accept a mission as soon as it matches" },
-  { key: "showPlayfieldBounds", label: "Show Bounds", hint: "Draw the zone bounds in the client" },
 ];
 
 /** Compact number for a 320px column. The exact value goes in a title. */
