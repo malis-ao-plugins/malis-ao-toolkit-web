@@ -1,6 +1,7 @@
 using System.Net;
 using System.Reflection;
 using AOSharp.Common.GameData;
+using AOSharp.Core;
 using AOSharp.Core.UI;
 
 /// <summary>
@@ -42,6 +43,10 @@ public class WebPageServer
     private HttpListener? _listener;
     private Task? _task;
 
+    // The server runs off the game thread, and the game client only tolerates chat from its own
+    // thread, so the address is written on the next game frame once the port is taken.
+    private volatile bool _announce;
+
     public WebPageServer()
     {
         // Request path ("static/js/main.js") to resource name. MSBuild writes
@@ -59,14 +64,25 @@ public class WebPageServer
             return;
         }
 
+        Game.OnUpdate += OnUpdate;
         _task = Task.Run(RunAsync);
     }
 
     public void Stop()
     {
+        Game.OnUpdate -= OnUpdate;
         _cts.Cancel();
         try { _listener?.Stop(); _listener?.Close(); } catch { }
         try { _task?.Wait(1000); } catch { }
+    }
+
+    private void OnUpdate(object? sender, float deltaTime)
+    {
+        if (!_announce)
+            return;
+
+        _announce = false;
+        Chat.WriteLine($"Toolkit page: http://localhost:{Port}", ChatColor.LightBlue);
     }
 
     private async Task RunAsync()
@@ -95,7 +111,7 @@ public class WebPageServer
                 return;
             }
 
-            Chat.WriteLine($"Toolkit page: http://localhost:{Port}", ChatColor.LightBlue);
+            _announce = true;
 
             try
             {

@@ -67,6 +67,8 @@ function load(id) {
   }
 }
 
+const INTERACTIVE = "button, a, input, select, textarea, [role='button']";
+
 export function useWindowFrame(id, initialPos) {
   const [frame, setFrame] = useState(() => {
     const saved = load(id);
@@ -114,7 +116,11 @@ export function useWindowFrame(id, initialPos) {
   // the drag ran with the flight transition still live.
   const [dragging, setDragging] = useState(false);
 
+  // The title bar is the drag handle, and it also holds controls such as the
+  // roller's Roll button. Capturing the pointer on a press that lands on one of
+  // them swallowed its click, so presses on controls never start a drag.
   const begin = useCallback((event, mode) => {
+    if (mode === "move" && event.target.closest?.(INTERACTIVE)) return;
     event.preventDefault();
     event.currentTarget.setPointerCapture?.(event.pointerId);
     gesture.current = {
