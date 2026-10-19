@@ -50,6 +50,18 @@ ESLint runs as part of the build (`eslintConfig: react-app` in
 `package.json`). `CI=true npm run build` treats warnings as errors, and is
 the check worth running before a commit — it should be clean.
 
+## The page in game
+
+Users don't run any of this. The toolkit plugins serve a finished build of
+the page on `http://localhost:7067` while any of them is injected. That build
+lives in `plugin/www`, inside a small C# library in `plugin/` that the plugins
+list as a dependency; see `plugin/README.md`.
+
+`npm run plugins` builds the page and copies it into `plugin/www`. A push to
+`main` that touches the page's source does the same in CI and commits the
+result (`.github/workflows/publish-page.yml`), so `plugin/www` is never older
+than `src/`. Don't edit `plugin/www` by hand.
+
 ---
 
 ## How it is put together
@@ -167,7 +179,7 @@ junction to a folder shared with other projects, and it is gitignored. A
 fresh clone has to create it before `npm start` will compile:
 
 ```powershell
-New-Item -ItemType Junction -Path "src/pixelfont" -Target "C:/Users/abdul/aowebui/pixelfont"
+New-Item -ItemType Junction -Path "src/pixelfont" -Target "C:/Users/abdul/source/repos/aowebui/pixelfont"
 ```
 
 Anything changed in there changes for every project that links it, so don't.

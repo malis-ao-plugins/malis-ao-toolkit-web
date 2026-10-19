@@ -35,3 +35,7 @@ __pycache__/
 
 # shared piece, junctioned from C:\Usersbdulowebui\pixelfont
 /src/pixelfont
+
+# plugin library build output (plugin/www is the built page and is committed)
+/plugin/bin
+/plugin/obj

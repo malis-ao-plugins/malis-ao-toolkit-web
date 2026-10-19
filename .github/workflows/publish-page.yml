@@ -1,0 +1,67 @@
+# Rebuilds plugin/www, the page the toolkit plugins serve in game, whenever
+# the page's source changes, and commits it. Plugins are installed by cloning
+# and compiling, so the committed plugin/www is what users get.
+#
+# The pixel font lives in the aowebui repo. Reading it needs a token with read
+# access to that repo, stored as the AOWEBUI_TOKEN secret.
+
+name: Publish page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "public/**"
+      - "package.json"
+      - "package-lock.json"
+      - "tools/publish-plugins.js"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-page
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: Malishade/aowebui
+          token: ${{ secrets.AOWEBUI_TOKEN }}
+          path: .aowebui
+
+      - name: Put the pixel font in place
+        run: cp -r .aowebui/pixelfont src/pixelfont && rm -rf .aowebui
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run test:ci
+
+      - run: npm run plugins
+
+      - name: Commit plugin/www
+        run: |
+          git add plugin/www
+          if git diff --cached --quiet; then
+            echo "The page is unchanged."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Rebuild the plugin page"
+          git push

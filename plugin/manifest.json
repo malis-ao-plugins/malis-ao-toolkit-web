@@ -1,0 +1,6 @@
+{
+  "author": "Malishade",
+  "description": "Serves the toolkit web page on http://localhost:7067 for the toolkit plugins.",
+  "library": true,
+  "dependencies": []
+}

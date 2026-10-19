@@ -371,7 +371,6 @@ const PARAM = {
   bodyPart: 56,
   texture: 57,
   text: 65,
-  mesh: 76,
   nano: 88,
 };
 
@@ -435,7 +434,7 @@ const MOD_FORMATTERS = {
 
   [FunctionType.ChangeBodyMesh]: (p) => ({
     label: "Change body mesh",
-    value: p[PARAM.mesh]?.[0],
+    value: p[PARAM.text]?.[0],
   }),
 
   [FunctionType.SystemText]: (p) => ({

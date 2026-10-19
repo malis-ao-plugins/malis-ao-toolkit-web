@@ -23,6 +23,7 @@
     "electron:dev": "concurrently \"cross-env BROWSER=none react-scripts start\" \"wait-on http://localhost:3000 && cross-env NODE_ENV=development electron .\"",
     "electron:build": "react-scripts build && electron-builder",
     "mock": "node tools/mock-backends.js",
+    "plugins": "react-scripts build && node tools/publish-plugins.js",
     "shot": "electron tools/screenshot.js"
   },
   "build": {
