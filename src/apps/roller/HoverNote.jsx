@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { PixelText, useFontRefresh, wrapToWidth } from "../../ui";
 
 /** Matches .rl-note's box in roller.css: 264px less 8px of padding each side. */
@@ -17,6 +18,11 @@ const NOTE_PX = 248;
  * The text was the last raw string left in the app, rendering in the
  * fallback font while everything around it came from the atlas. A mask
  * cannot wrap, so it is broken into lines here and drawn a line at a time.
+ *
+ * Portalled to the body, like the item tooltip. The app window has
+ * `contain: layout paint`, which makes it the box a fixed element inside it
+ * is placed against, so the note sat a whole window's offset away from the
+ * pointer and was clipped at the window's edge.
  */
 export function useHoverNote() {
   const [note, setNote] = useState(null);
@@ -37,7 +43,7 @@ export function useHoverNote() {
         }
       : {};
 
-  const element = note ? (
+  const element = note ? createPortal(
     <div
       className="rl-note"
       style={{
@@ -49,7 +55,8 @@ export function useHoverNote() {
       {wrapToWidth(note.text, NOTE_PX).map((line, i) => (
         <PixelText key={i}>{line}</PixelText>
       ))}
-    </div>
+    </div>,
+    document.body,
   ) : null;
 
   return { bind, element };

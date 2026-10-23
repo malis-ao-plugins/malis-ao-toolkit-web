@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button, PixelText, Row, Slot } from "../../ui";
 import { useResolvedItems } from "../../hooks/useResolvedItems";
+import { ItemTooltip, useItemHover } from "../../items";
 import { getIcon } from "../../lib/db";
 import { PLAYFIELDS } from "../../lib/data";
 import { compact, exact } from "./rollerData";
@@ -17,6 +18,34 @@ const iconFor = (item) => {
   const m = item.members.find((x) => x.ql === item.ql) ?? item.members[0];
   return m.iconSrc ?? null;
 };
+
+/**
+ * A reward, with the same tooltip as an item in Browse: hover to preview,
+ * click to pin and pick a QL.
+ */
+function RewardSlot({ item }) {
+  const members = item.members ?? NO_REWARDS;
+  const [ql, setQl] = useState(item.ql);
+  const hover = useItemHover(item, members, ql, setQl);
+
+  return (
+    <>
+      <Slot src={iconFor(item)} size="sm" {...hover.handlers} />
+      {hover.open && (
+        <ItemTooltip
+          item={item}
+          data={hover.data}
+          loading={hover.loading}
+          at={hover.at}
+          ql={ql}
+          setQl={hover.setQl}
+          pinned={hover.pinned}
+          panelRef={hover.panelRef}
+        />
+      )}
+    </>
+  );
+}
 
 /**
  * One rolled mission.
@@ -91,13 +120,10 @@ export function MissionCard({ mission, onAccept, noteBind }) {
         <Row gap={1} className="rl-mission__rewards">
           {Array.from({ length: REWARD_SLOTS }, (_, i) => {
             const item = rewards[i];
-            return (
-              <Slot
-                key={item?.low_id ?? item?.id ?? `empty-${i}`}
-                src={iconFor(item)}
-                title={item?.name}
-                size="sm"
-              />
+            return item ? (
+              <RewardSlot key={`${i}-${item.low_id}`} item={item} />
+            ) : (
+              <Slot key={`empty-${i}`} size="sm" />
             );
           })}
         </Row>
