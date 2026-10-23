@@ -2,8 +2,9 @@
 # the page's source changes, and commits it. Plugins are installed by cloning
 # and compiling, so the committed plugin/www is what users get.
 #
-# The pixel font lives in the aowebui repo. Reading it needs a token with read
-# access to that repo, stored as the AOWEBUI_TOKEN secret.
+# The pixel font lives in the private aowebui repo. It is read with a
+# read-only deploy key on that repo, whose private half is stored here as the
+# AOWEBUI_SSH_KEY secret.
 
 name: Publish page
 
@@ -37,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: Malishade/aowebui
-          token: ${{ secrets.AOWEBUI_TOKEN }}
+          ssh-key: ${{ secrets.AOWEBUI_SSH_KEY }}
           path: .aowebui
 
       - name: Put the pixel font in place
