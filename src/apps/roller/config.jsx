@@ -6,12 +6,13 @@ import { RollList } from "./RollList";
 import { Browser } from "./Browser";
 import {
   BehaviourPanel,
+  RollRatePanel,
   SlidersPanel,
   TypesPanel,
   ZonesPanel,
 } from "./Settings";
 import { useHoverNote } from "./HoverNote";
-import { SLIDERS } from "./rollerData";
+import { ROLL_INTERVAL, SLIDERS } from "./rollerData";
 import "./roller.css";
 
 const MAX_MISSIONS = 6;
@@ -102,6 +103,8 @@ export default defineApp({
 
     rollList: [],
 
+    rollInterval: ROLL_INTERVAL.default,
+
     // Browse only items whose chain holds one of the PRK ids.
     prkOnly: false,
 
@@ -169,6 +172,7 @@ export default defineApp({
     browser: { title: "Browse", fixed: true, fill: true, component: Browser },
     types: { title: "Mission Types", component: TypesPanel },
     behaviour: { title: "Behaviour", component: BehaviourPanel },
+    rollRate: { title: "Roll Every (ms)", component: RollRatePanel },
     sliders: { title: "Sliders", component: SlidersPanel },
     zones: { title: "Zones", component: ZonesPanel },
   },
@@ -180,7 +184,7 @@ export default defineApp({
     {
       id: "tab-cfg",
       label: "Opt",
-      panels: ["types", "behaviour", "sliders", "zones"],
+      panels: ["types", "behaviour", "rollRate", "sliders", "zones"],
     },
   ],
 });

@@ -15,7 +15,7 @@ import {
   Toggle,
 } from "../../ui";
 import { knobWidthFor, measure, useFontRefresh } from "../../ui";
-import { BEHAVIOURS, MISSION_TYPES, SLIDERS } from "./rollerData";
+import { BEHAVIOURS, MISSION_TYPES, ROLL_INTERVAL, SLIDERS } from "./rollerData";
 
 /**
  * The widest caption any of the sliders carries.
@@ -126,6 +126,31 @@ export function SlidersPanel({ settings, set }) {
         ))}
       </Stack>
     </Defer>
+  );
+}
+
+/**
+ * How often the plugin asks the terminal for missions. Held locally while
+ * dragging and pushed on release, like the mission sliders.
+ */
+export function RollRatePanel({ settings, set }) {
+  const { min, max, step } = ROLL_INTERVAL;
+  const [drag, setDrag] = useState(null);
+  const snap = (v) => Math.round(v / step) * step;
+
+  return (
+    <Slider
+      left="FAST"
+      right="SLOW"
+      min={min}
+      max={max}
+      value={drag ?? settings.rollInterval ?? ROLL_INTERVAL.default}
+      onChange={(v) => setDrag(snap(v))}
+      onCommit={(v) => {
+        setDrag(null);
+        set({ rollInterval: snap(v) });
+      }}
+    />
   );
 }
 

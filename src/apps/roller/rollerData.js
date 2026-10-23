@@ -17,6 +17,9 @@ export const SLIDERS = [
   { key: "creditsXp", left: "CRED", right: "XP", min: -100, max: 100 },
 ];
 
+/** Time between terminal requests, in ms. The plugin clamps to the same range. */
+export const ROLL_INTERVAL = { min: 500, max: 10000, step: 100, default: 1500 };
+
 /** Mission kinds the roller will accept. */
 export const MISSION_TYPES = [
   { key: "returnItem", label: "Return Item" },
