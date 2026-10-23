@@ -72,7 +72,6 @@ function MissionsPanel({ state, send }) {
             mission={m}
             noteBind={note.bind}
             onAccept={() => send({ type: "accept", id: m.id })}
-            onPing={() => send({ type: "ping", id: m.id })}
           />
         ))}
       </Stack>
@@ -121,13 +120,20 @@ export default defineApp({
 
   state: { rolling: false },
 
-  // `rolling` mirrors the plugin, which we cannot know about after a reload;
-  // `lastHit` is a single event that the roll list consumes exactly once.
-  transient: ["rolling", "lastHit"],
+  // `rolling` mirrors the plugin, which says so again whenever we connect.
+  transient: ["rolling"],
 
   messages: {
     missionResults: (d) => ({ missions: d.missions }),
-    missionHit: (d) => ({ lastHit: d.item }),
+    // The plugin takes the hit off its own list and sends that list back.
+    // Handled here, not in the roll list panel: that panel is only mounted
+    // while its tab is open, and a hit seen on any other tab was lost - the
+    // plugin kept the entry and went on accepting missions for it.
+    // Merged locally only; the plugin already has this list.
+    missionHit: (d) =>
+      d.rollList
+        ? (s) => ({ settings: { ...s.settings, rollList: d.rollList } })
+        : null,
     // The plugin stops by itself on a match when Auto Accept is off.
     rolling: (d) => ({ rolling: !!d.rolling }),
   },

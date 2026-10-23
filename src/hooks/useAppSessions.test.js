@@ -92,6 +92,24 @@ describe("messages", () => {
     expect(result.current.states.app_1.lastHit).toEqual({ id: 9 });
   });
 
+  it("applies a handler's function of the current state", () => {
+    const { result } = mount([
+      config({
+        handleMessage: (data) => (s) => ({
+          settings: { ...s.settings, list: data.list },
+        }),
+      }),
+    ]);
+    const socket = FakeSocket.instances[0];
+    act(() => {
+      socket.deliver({ list: [1] });
+      socket.deliver({ list: [2] });
+    });
+
+    expect(result.current.states.app_1.settings).toEqual({ volume: 1, list: [2] });
+    expect(socket.sent).toEqual([]);
+  });
+
   it("ignores a message no handler claims", () => {
     const { result } = mount();
     const before = result.current.states.app_1;
@@ -239,5 +257,27 @@ describe("sending", () => {
     act(() => result.current.send("app_1", { type: "start" }));
 
     expect(FakeSocket.instances[0].sent).toEqual([]);
+  });
+});
+
+describe("loading saved settings", () => {
+  it("keeps keyed defaults that were added after the save", () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({ settings: { zones: { a: { on: false } }, list: [3] } }),
+    );
+    const { result } = mount([
+      config({
+        initialState: () => ({
+          settings: { volume: 1, zones: { a: { on: true }, b: { on: true } }, list: [] },
+        }),
+      }),
+    ]);
+
+    expect(result.current.states.app_1.settings).toEqual({
+      volume: 1,
+      zones: { a: { on: false }, b: { on: true } },
+      list: [3],
+    });
   });
 });

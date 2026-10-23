@@ -1,4 +1,3 @@
-import { useEffect, useRef } from "react";
 import { Button, Empty, List, NumberInput } from "../../ui";
 import { ItemRow } from "../../items";
 import { useResolvedItems } from "../../hooks/useResolvedItems";
@@ -9,17 +8,17 @@ const EMPTY = [];
 /**
  * The wanted-items list the roller matches missions against.
  *
- * Entries are `{ ids, ql, max_ql, count }`. With Remove On Hit on, a
- * `missionHit` for an entry decrements it, and the entry disappears at zero;
- * with it off, entries stay as they are and keep being rolled for.
+ * Entries are `{ ids, ql, max_ql, count }`. With Remove On Hit on, the plugin
+ * decrements an entry when it lands and drops it at zero, then sends the list
+ * back; the app's `missionHit` handler puts it in settings, whatever tab is
+ * open.
  *
  * All edits rebuild the settings object. The previous version assigned into
  * `settings.rollList` in place and then pushed the same object reference, so
  * React saw no change and the list only redrew when something else happened to
  * re-render it.
  */
-export function RollList({ settings, set, state }) {
-  const lastHit = state.lastHit;
+export function RollList({ settings, set }) {
   const rollList = settings?.rollList ?? EMPTY;
   const resolved = useResolvedItems(rollList);
 
@@ -32,23 +31,6 @@ export function RollList({ settings, set, state }) {
 
   const remove = (key) =>
     set({ rollList: rollList.filter((e) => entryKey(e) !== key) });
-
-  // Consume hits. Held in a ref so a re-render with the same hit is a no-op.
-  const lastSeen = useRef(null);
-  useEffect(() => {
-    if (!lastHit || lastHit === lastSeen.current) return;
-    lastSeen.current = lastHit;
-
-    if (!settings?.removeRolledEntries) return;
-
-    const key = entryKey(lastHit);
-    const match = rollList.find((e) => entryKey(e) === key);
-    if (!match) return;
-
-    if (match.count > 1) setCount(key, match.count - 1);
-    else remove(key);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lastHit]);
 
   if (rollList.length === 0) {
     return <Empty>Add items from Browse</Empty>;

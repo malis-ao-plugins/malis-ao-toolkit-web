@@ -36,6 +36,26 @@ const load = (id, transientKeys) => {
   }
 };
 
+const isPlainObject = (v) =>
+  v !== null && typeof v === "object" && !Array.isArray(v);
+
+/**
+ * Saved settings over the app's defaults, one level deeper for keyed
+ * collections: saved zones replaced the whole default zone list, so a zone
+ * added to the defaults later stayed missing - which the plugin reads as off.
+ */
+const mergeSettings = (initial = {}, saved = {}) =>
+  Object.fromEntries(
+    Object.keys({ ...initial, ...saved }).map((key) => [
+      key,
+      isPlainObject(initial[key]) && isPlainObject(saved[key])
+        ? { ...initial[key], ...saved[key] }
+        : key in saved
+          ? saved[key]
+          : initial[key],
+    ]),
+  );
+
 const save = (id, state, transientKeys) => {
   try {
     localStorage.setItem(
@@ -78,7 +98,7 @@ export function useAppSessions(configs) {
         return [
           c.id,
           saved
-            ? { ...initial, ...saved, settings: { ...initial.settings, ...(saved.settings ?? {}) } }
+            ? { ...initial, ...saved, settings: mergeSettings(initial.settings, saved.settings) }
             : initial,
         ];
       }),
@@ -109,10 +129,17 @@ export function useAppSessions(configs) {
     dirty.current.clear();
   }, []);
 
+  /**
+   * `partial` may be a function of the app's current state, for a message
+   * that changes part of a nested value: the socket handler cannot see state
+   * that has not rendered yet, and the updater can.
+   */
   const patch = useCallback(
     (id, partial) => {
       setStates((prev) => {
-        const next = { ...prev[id], ...partial };
+        const changes =
+          typeof partial === "function" ? partial(prev[id]) : partial;
+        const next = { ...prev[id], ...changes };
         dirty.current.set(id, next);
         return { ...prev, [id]: next };
       });

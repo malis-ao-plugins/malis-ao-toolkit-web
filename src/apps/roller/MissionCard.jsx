@@ -37,7 +37,7 @@ const iconFor = (item) => {
  * Windows antialiases every glyph it rasterises and offers no way to stop it.
  * See src/pixelfont/README.md.
  */
-export function MissionCard({ mission, onAccept, onPing, noteBind }) {
+export function MissionCard({ mission, onAccept, noteBind }) {
   const rewards = useResolvedItems(mission.rewards ?? NO_REWARDS);
   const [icon, setIcon] = useState(null);
 
@@ -105,9 +105,6 @@ export function MissionCard({ mission, onAccept, onPing, noteBind }) {
         <Row gap={1} className="rl-mission__go">
           <Button variant="primary" block onClick={onAccept}>
             <PixelText>ACCEPT</PixelText>
-          </Button>
-          <Button onClick={onPing} title="Ping this mission in the client">
-            <PixelText>PING</PixelText>
           </Button>
         </Row>
       </div>

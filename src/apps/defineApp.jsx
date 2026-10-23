@@ -76,6 +76,8 @@ export function defineApp(spec) {
     // that is not running.
     transientKeys: transient,
 
+    // A handler returns the state to merge, or a function of the current
+    // state that returns it.
     handleMessage: (data) => {
       const handler = messages[data?.type];
       if (!handler) return null;
