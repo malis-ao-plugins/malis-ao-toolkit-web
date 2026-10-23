@@ -1,0 +1,29 @@
+{
+  "name": "@aowebui/pixelfont",
+  "version": "0.1.0",
+  "description": "1-bit bitmap text for the web. No antialiasing, no dependencies, no build step.",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": "./index.js",
+    "./pixelfont.js": "./pixelfont.js",
+    "./elements.js": "./elements.js",
+    "./rasterize.js": "./rasterize.js",
+    "./fonts/*": "./fonts/*",
+    "./metrics-font.js": "./metrics-font.js"
+  },
+  "sideEffects": [
+    "./elements.js",
+    "./index.js"
+  ],
+  "files": [
+    "index.js",
+    "pixelfont.js",
+    "elements.js",
+    "rasterize.js",
+    "metrics-font.js",
+    "fonts",
+    "README.md"
+  ],
+  "private": true
+}

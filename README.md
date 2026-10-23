@@ -79,7 +79,7 @@ src/index.js          mounts App and the stylesheets
     dungeon-map/      Dungeon Map      (plugin on :7071)
   items/              shared item row, tooltip and their data hooks
   ui/                 PHOSPHOR: the UI kit — see ui/README.md
-  pixelfont/          SHARED, junctioned in — see "The font" below
+  pixelfont/          copied in from aowebui — see "The font" below
   lib/                item database client, cache, formatter, game data
 ```
 
@@ -174,15 +174,11 @@ Use `flex-basis` for the box and `mask-position` for the alignment.
 
 ## The font
 
-`src/pixelfont` is **not part of this repository**. It is a directory
-junction to a folder shared with other projects, and it is gitignored. A
-fresh clone has to create it before `npm start` will compile:
+`src/pixelfont` is a copy of `pixelfont` from `aowebui`, a private repo
+shared with other projects. It is committed here so a fresh clone builds
+without access to it. Don't edit it in place: change it in `aowebui`, then
+copy the folder over again.
 
-```powershell
-New-Item -ItemType Junction -Path "src/pixelfont" -Target "C:/Users/abdul/source/repos/aowebui/pixelfont"
-```
-
-Anything changed in there changes for every project that links it, so don't.
 If an atlas is missing a character or a size, ask for it — give the face, the
 style, and the cell height in pixels, which is not a point size. The
 workbench that produces the atlases, and the research behind how the game
