@@ -82,7 +82,10 @@ public class WebPageServer
             return;
 
         _announce = false;
-        Chat.WriteLine($"Toolkit page: http://localhost:{Port}", ChatColor.LightBlue);
+        // [Open] shows an info window whose link runs /start, which opens the page
+        // in the browser; the same form the AOSetups exporter uses for its links.
+        var url = $"http://localhost:{Port}";
+        Chat.WriteLine($"Toolkit page: {url} <a href=\"text://<a href='chatcmd:///start {url}'>Open the toolkit page</a>\">[Open]</a>", ChatColor.LightBlue);
     }
 
     private async Task RunAsync()
