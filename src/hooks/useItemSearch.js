@@ -19,6 +19,11 @@ import { CanFlags, ItemFlags } from "../lib/enums";
  *   explanation. Errors are surfaced instead.
  *
  * Typing is debounced so a six-letter word is one request rather than six.
+ *
+ * `memberIds` limits results to chains holding one of those ids. With it set,
+ * a blank box lists the matching chains instead of nothing. It is compared by
+ * identity, not content like the other filters: it runs to thousands of ids,
+ * and the caller holds one array for as long as it applies.
  */
 
 export const DEBOUNCE_MS = 200;
@@ -34,6 +39,7 @@ export function useItemSearch({
   modFilter,
   statFilter,
   reqFilter,
+  memberIds = null,
 }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
@@ -58,6 +64,7 @@ export function useItemSearch({
         modFilter: filters.modFilter?.length ? filters.modFilter : undefined,
         statFilter: filters.statFilter?.length ? filters.statFilter : undefined,
         reqFilter: filters.reqFilter?.length ? filters.reqFilter : undefined,
+        memberIds: filters.memberIds ?? undefined,
       });
 
       const ids = new Set(
@@ -94,12 +101,12 @@ export function useItemSearch({
   const filters = { canFilter, itemFilter, modFilter, statFilter, reqFilter };
   const filterKey = JSON.stringify(filters);
   const filtersRef = useRef(filters);
-  filtersRef.current = filters;
+  filtersRef.current = { ...filters, memberIds };
 
   useEffect(() => {
     const name = query.trim();
 
-    if (!name) {
+    if (!name && !memberIds) {
       // Abandon anything in flight so its results cannot arrive into a box
       // the user has just cleared. The updaters return the existing value
       // when there is nothing to clear, so React bails out instead of
@@ -117,7 +124,7 @@ export function useItemSearch({
     );
 
     return () => clearTimeout(timer);
-  }, [query, filterKey, search]);
+  }, [query, filterKey, memberIds, search]);
 
   return { query, onQueryChange: setQuery, results, loading, error };
 }

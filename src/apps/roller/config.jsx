@@ -102,6 +102,9 @@ export default defineApp({
 
     rollList: [],
 
+    // Browse only items whose chain holds one of the PRK ids.
+    prkOnly: false,
+
     dbFilters: {
       canFilter: [],
       itemFilter: [],

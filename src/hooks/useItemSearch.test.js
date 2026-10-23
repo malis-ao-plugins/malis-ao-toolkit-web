@@ -85,6 +85,29 @@ describe("useItemSearch", () => {
     expect(result.current.results).toEqual([]);
   });
 
+  it("lists the chains holding the given ids for a blank box", async () => {
+    searchItems.mockResolvedValue([]);
+    const memberIds = [152740, 199398];
+    renderHook(() => useItemSearch({ ...NO_FILTERS, memberIds }));
+
+    await afterDebounce();
+    expect(searchItems).toHaveBeenCalledTimes(1);
+    expect(searchItems.mock.calls[0][0]).toMatchObject({ name: "", memberIds });
+  });
+
+  it("sends the ids along with a typed search", async () => {
+    searchItems.mockResolvedValue([]);
+    const memberIds = [152740];
+    const { result } = renderHook(() =>
+      useItemSearch({ ...NO_FILTERS, memberIds }),
+    );
+
+    await afterDebounce();
+    type(result, "blade");
+    await afterDebounce();
+    expect(searchItems.mock.calls.at(-1)[0]).toMatchObject({ name: "blade", memberIds });
+  });
+
   it("keeps the newest answer when an older one arrives late", async () => {
     const slow = deferred();
     const fast = deferred();

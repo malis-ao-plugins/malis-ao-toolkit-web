@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Button,
   Collapse,
@@ -26,6 +26,30 @@ const EMPTY = [];
  */
 const rollKey = (e) => `${e.ids.join("-")}@${e.ql}`;
 
+/**
+ * The PRK item ids, loaded the first time the PRK filter is on. Some 14,000
+ * of them, so they stay out of the main bundle, and the one array is kept so
+ * the search sees the same list every time.
+ */
+let prkIds = null;
+const loadPrkIds = () =>
+  (prkIds ??= import("./prkIds.json").then((m) => m.default));
+
+function usePrkIds(on) {
+  const [ids, setIds] = useState(null);
+
+  useEffect(() => {
+    if (!on) return undefined;
+    let cancelled = false;
+    loadPrkIds().then((list) => !cancelled && setIds(list));
+    return () => {
+      cancelled = true;
+    };
+  }, [on]);
+
+  return on ? ids : null;
+}
+
 export function Browser({ settings, set }) {
   const [open, setOpen] = useState(false);
 
@@ -38,6 +62,9 @@ export function Browser({ settings, set }) {
 
   const setFilter = (key, value) =>
     set({ dbFilters: { ...f, [key]: value } });
+
+  const prkOnly = !!settings.prkOnly;
+  const memberIds = usePrkIds(prkOnly);
 
   /**
    * Add a found item to the roll list, or bump its count if already there.
@@ -69,6 +96,7 @@ export function Browser({ settings, set }) {
     modFilter,
     statFilter,
     reqFilter,
+    memberIds,
   });
 
   const activeFilters =
@@ -89,13 +117,22 @@ export function Browser({ settings, set }) {
         placeholder={"Find item..."}
         count={loading ? "..." : results.length || null}
         right={
-          <Button
-            variant={open ? "primary" : "default"}
-            onClick={() => setOpen((v) => !v)}
-            title="Filters"
-          >
-            {activeFilters > 0 ? `F ${activeFilters}` : "F"}
-          </Button>
+          <>
+            <Button
+              variant={prkOnly ? "primary" : "default"}
+              onClick={() => set({ prkOnly: !prkOnly })}
+              title="Only items found on PRK"
+            >
+              PRK
+            </Button>
+            <Button
+              variant={open ? "primary" : "default"}
+              onClick={() => setOpen((v) => !v)}
+              title="Filters"
+            >
+              {activeFilters > 0 ? `F ${activeFilters}` : "F"}
+            </Button>
+          </>
         }
       />
 
@@ -146,7 +183,7 @@ export function Browser({ settings, set }) {
             ? "Searching..."
             : error
               ? "Item database not answering"
-              : query
+              : query || memberIds
                 ? "Nothing matches"
                 : "Type to search"}
         </Empty>

@@ -77,6 +77,7 @@ export async function searchItems({
   id = null,
   ids = null,
   idPairs = null,
+  memberIds = null,
   limit = 50,
   offset = 0,
   canBits,
@@ -90,6 +91,8 @@ export async function searchItems({
     id: id || undefined,
     ids: ids?.length ? ids : undefined,
     idPairs: idPairs?.length ? idPairs : undefined,
+    // Only chains holding one of these ids, at any QL in the chain.
+    memberIds: memberIds?.length ? memberIds : undefined,
     limit,
     offset,
     // The flag filters were being passed in by the caller and silently
