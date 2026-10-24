@@ -120,6 +120,8 @@ export const PixelInput = forwardRef(function PixelInput(
   const [proxyCaretColor, setProxyCaretColor] = useState(null);
   const inputProxyEnabled =
     new URLSearchParams(window.location.search).get("inputProxyEnabled") === "1";
+  const directInputEnabled =
+    new URLSearchParams(window.location.search).get("directInputEnabled") === "1";
 
   const setRefs = useCallback(
     (el) => {
@@ -425,8 +427,16 @@ export const PixelInput = forwardRef(function PixelInput(
           onKeyUp={sync}
           onSelect={sync}
           onMouseDown={(event) => {
-            event.preventDefault();
-            openInputProxy(event);
+            if (overlayInputProxy && inputProxyEnabled) {
+              event.preventDefault();
+              openInputProxy(event);
+            } else if (
+              directInputEnabled &&
+              !event.currentTarget.disabled &&
+              !event.currentTarget.readOnly
+            ) {
+              window.electronAPI?.focusOverlayDirectInput?.();
+            }
           }}
           onFocus={(event) => {
             sync();

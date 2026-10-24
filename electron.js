@@ -34,8 +34,8 @@ function setOverlayInputProxyTopmostLevel(win, level) {
   if (
     !win ||
     win.isDestroyed() ||
-    !win.overlayInputProxyEnabled ||
-    win.overlayInputProxyTopmostLevel === level
+    (!win.overlayInputProxyEnabled && !win.overlayDirectInputEnabled) ||
+    (win.overlayInputProxyTopmostLevel === level && win.isAlwaysOnTop())
   ) {
     return;
   }
@@ -73,7 +73,12 @@ function isOverlayWindowActive(win, active) {
 
 function getAppUrl(
   appId,
-  { overlay = false, inputProxyEnabled = false, inputProxy = false } = {},
+  {
+    overlay = false,
+    inputProxyEnabled = false,
+    inputProxy = false,
+    directInputEnabled = false,
+  } = {},
 ) {
   const url =
     process.env.NODE_ENV === "development"
@@ -96,6 +101,10 @@ function getAppUrl(
     url.searchParams.set("inputProxy", "1");
   }
 
+  if (directInputEnabled) {
+    url.searchParams.set("directInputEnabled", "1");
+  }
+
   return url.toString();
 }
 
@@ -107,6 +116,8 @@ function createWindow(
   height = 634,
   { overlay = false } = {},
 ) {
+  const overlayDirectInputEnabled =
+    overlay && hasFlag("--overlay-direct-input");
   const win = new BrowserWindow({
     width,
     height,
@@ -122,7 +133,7 @@ function createWindow(
           alwaysOnTop: true,
           skipTaskbar: true,
           hasShadow: false,
-          focusable: false,
+          focusable: overlayDirectInputEnabled,
           resizable: false,
           movable: false,
           show: false,
@@ -137,28 +148,73 @@ function createWindow(
   });
   
   win.isAoOverlay = overlay;
+  win.overlayDirectInputEnabled = overlayDirectInputEnabled;
+  win.overlayDirectInputActive = false;
+  win.overlayDirectInputRequestedUntil = 0;
+  win.overlayDirectInputClosedAt = 0;
   win.setMenu(null);
   win.setMenuBarVisibility(false);
-  win.overlayInputProxyEnabled = overlay && hasFlag("--overlay-input-proxy");
+  win.overlayInputProxyEnabled =
+    overlay &&
+    !overlayDirectInputEnabled &&
+    hasFlag("--overlay-input-proxy");
   win.overlayInputProxy = null;
   win.overlayInputProxyFieldId = null;
   win.overlayInputProxyLastNativeId = null;
   win.overlayInputProxyClosedAt = 0;
-  win.overlayInputProxyTopmostLevel = overlay ? "floating" : null;
+  win.overlayInputProxyTopmostLevel = overlay
+    ? overlayDirectInputEnabled
+      ? "screen-saver"
+      : "floating"
+    : null;
   win.overlayNativeWindowId = nativeWindowId(win);
   if (overlay) {
+    if (overlayDirectInputEnabled) {
+      traceOverlayInputProxy("direct input enabled", {
+        launchFlag: "--overlay-direct-input",
+        focusable: true,
+      });
+    }
     win.on("always-on-top-changed", (_event, alwaysOnTop) => {
       traceOverlayInputProxy("overlay topmost changed", {
         alwaysOnTop,
         level: win.overlayInputProxyTopmostLevel,
       });
     });
+    if (overlayDirectInputEnabled) {
+      win.on("focus", () => {
+        win.overlayDirectInputActive = true;
+        win.overlayDirectInputRequestedUntil = 0;
+        win.overlayDirectInputClosedAt = 0;
+        setOverlayInputProxyTopmostLevel(win, "screen-saver");
+        traceOverlayInputProxy("direct input window focused", {
+          visible: win.isVisible(),
+          alwaysOnTop: win.isAlwaysOnTop(),
+        });
+      });
+      win.on("blur", () => {
+        win.overlayDirectInputActive = false;
+        win.overlayDirectInputRequestedUntil = 0;
+        win.overlayDirectInputClosedAt = Date.now();
+        // Keep the overlay above the game while focus returns to it. Tracking
+        // hides the overlay after the generic transition grace if another app
+        // remains foreground.
+        setOverlayInputProxyTopmostLevel(win, "screen-saver");
+        traceOverlayInputProxy("direct input window blurred", {
+          visible: win.isVisible(),
+          alwaysOnTop: win.isAlwaysOnTop(),
+        });
+      });
+    }
     traceOverlayInputProxy(
       win.overlayInputProxyEnabled ? "enabled" : "disabled",
       { launchFlag: "--overlay-input-proxy" },
     );
   }
   if (overlay) {
+    if (overlayDirectInputEnabled) {
+      win.setAlwaysOnTop(true, "screen-saver");
+    }
     // Pass mouse input through to the game underneath.
     win.setIgnoreMouseEvents(true, { forward: true });
   }
@@ -175,6 +231,7 @@ function createWindow(
     getAppUrl(appId, {
       overlay,
       inputProxyEnabled: win.overlayInputProxyEnabled,
+      directInputEnabled: win.overlayDirectInputEnabled,
     }),
   ).catch((error) => {
     console.error("Failed to load Mali's AO Toolkit window:", error);
@@ -279,6 +336,7 @@ async function startOverlayTracking(win) {
   let disposed = false;
   let ready = false;
   let lastBounds = null;
+  let lastForegroundKey = null;
 
   win.once("ready-to-show", () => {
     ready = true;
@@ -325,6 +383,25 @@ async function startOverlayTracking(win) {
     // switches to or away from the Start menu. Keep the last overlay state.
     if (!active) return;
 
+    const foregroundKey = [
+      active.id ?? "",
+      active.owner?.processId ?? "",
+      active.owner?.path ?? "",
+      active.title ?? "",
+    ].join("|");
+    if (foregroundKey !== lastForegroundKey) {
+      lastForegroundKey = foregroundKey;
+      traceOverlayInputProxy("tracking foreground changed", {
+        activeId: active.id ?? null,
+        activeTitle: active.title ?? null,
+        activeProcessId: active.owner?.processId ?? null,
+        activeProcessPath: active.owner?.path ?? null,
+        isAnarchyOnline: isAnarchyOnline(active),
+        overlayVisible: win.isVisible(),
+        overlayFocused: win.isFocused(),
+      });
+    }
+
     // A missing active-window result is not evidence that AO was closed or
     // backgrounded. Keep the last placement until the OS reports a window.
     // Deliberately hide the overlay when AO isn't the foreground application.
@@ -335,9 +412,14 @@ async function startOverlayTracking(win) {
         win.overlayInputProxy.isVisible();
       const proxyJustClosed =
         Date.now() - win.overlayInputProxyClosedAt < 500;
+      const directInputTransition =
+        win.overlayDirectInputEnabled &&
+        (win.overlayDirectInputActive ||
+          Date.now() < win.overlayDirectInputRequestedUntil);
       if (
         isOverlayWindowActive(win, active) ||
-        proxyVisible
+        proxyVisible ||
+        directInputTransition
       ) {
         if (!win.isVisible()) win.showInactive();
         setOverlayInputProxyTopmostLevel(win, "screen-saver");
@@ -360,10 +442,17 @@ async function startOverlayTracking(win) {
           activeProcessPath: active?.owner?.path ?? null,
           overlayWindowId: win.overlayNativeWindowId,
           proxyWindowId: win.overlayInputProxyLastNativeId,
+          directInputActive: win.overlayDirectInputActive,
+          directInputRequestedUntil: win.overlayDirectInputRequestedUntil,
+          directInputClosedAt: win.overlayDirectInputClosedAt,
+          alwaysOnTop: win.isAlwaysOnTop(),
         });
         win.hide();
       }
-      setOverlayInputProxyTopmostLevel(win, "floating");
+      setOverlayInputProxyTopmostLevel(
+        win,
+        win.overlayDirectInputEnabled ? "screen-saver" : "floating",
+      );
       win.overlayInputProxyLastNativeId = null;
       win.overlayInputProxyClosedAt = 0;
 
@@ -416,7 +505,9 @@ async function startOverlayTracking(win) {
       }
     }
 
-    if (win.overlayInputProxyUsed) {
+    if (win.overlayDirectInputEnabled) {
+      setOverlayInputProxyTopmostLevel(win, "screen-saver");
+    } else if (win.overlayInputProxyUsed) {
       setOverlayInputProxyTopmostLevel(win, "screen-saver");
     }
 
@@ -591,6 +682,31 @@ app.whenReady().then(() => {
 	}
 
 	win.setIgnoreMouseEvents(Boolean(passthrough), { forward: true });
+  });
+
+  ipcMain.on("overlay:focus-direct-input", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (
+      !win ||
+      win.isDestroyed() ||
+      !win.isAoOverlay ||
+      !win.overlayDirectInputEnabled
+    ) {
+      return;
+    }
+
+    win.overlayDirectInputActive = win.isFocused();
+    win.overlayDirectInputRequestedUntil = Date.now() + 1200;
+    win.overlayDirectInputClosedAt = 0;
+    win.setIgnoreMouseEvents(false, { forward: true });
+    setOverlayInputProxyTopmostLevel(win, "screen-saver");
+    if (!win.isVisible()) win.showInactive();
+    win.focus();
+    traceOverlayInputProxy("direct input focus requested", {
+      visible: win.isVisible(),
+      focused: win.isFocused(),
+      alwaysOnTop: win.isAlwaysOnTop(),
+    });
   });
 
   ipcMain.on("overlay-input-proxy:open", (event, field) => {

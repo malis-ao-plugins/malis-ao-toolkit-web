@@ -23,6 +23,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   setOverlayMousePassthrough: (passthrough) =>
   ipcRenderer.send("overlay:set-mouse-passthrough", passthrough),
+  focusOverlayDirectInput: () =>
+    ipcRenderer.send("overlay:focus-direct-input"),
   openOverlayInputProxy: (field) =>
     ipcRenderer.send("overlay-input-proxy:open", field),
   updateOverlayInputProxyPosition: (position) =>

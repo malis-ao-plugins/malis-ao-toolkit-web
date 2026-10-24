@@ -186,8 +186,8 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
 
     function onBlur() {
       pointerDownOnUI = false;
-      // Focusing the temporary input window blurs this non-focusable parent.
-      // Keep the overlay available so a click on another panel can reach it.
+      // When focus leaves the overlay, return to click-through mode so the
+      // game can receive input. The proxy field keeps its own pending guard.
       if (!proxyFieldPending) setPassthrough(true);
     }
 

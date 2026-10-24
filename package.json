@@ -30,6 +30,7 @@
   "build": {
     "appId": "com.malis.aotoolkit",
     "productName": "Mali's AO Toolkit",
+    "npmRebuild": false,
     "files": [
       "build/**/*",
       "electron.js",
