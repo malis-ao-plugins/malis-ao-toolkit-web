@@ -1,39 +1,76 @@
+
 const { app, BrowserWindow, ipcMain } = require("electron");
-const path = require("path");
+const path = require("node:path");
+const { pathToFileURL } = require("node:url");
 
 // ── rendering ────────────────────────────────────────────────────────────────
 
-// Turn ClearType off for this process.
-//
-// The UI's text is drawn from bitmap atlases (see src/pixelfont), so it is
-// already immune to this. The handful of characters that do go through the
-// font stack — a panel's caret, the number field's nudge buttons — are not.
-// ClearType filters every edge across the R/G/B stripes, so even a correctly
-// aligned one-pixel stem comes out with a blue edge down one side and a red
-// edge down the other.
-//
-// CSS cannot switch it off — `-webkit-font-smoothing` is macOS-only in Blink
-// and is ignored on Windows. This switch is the supported lever. With
-// greyscale coverage of a grid-aligned rectangle being exactly 0 or 1, the
-// result is hard pixels, not soft grey.
 app.commandLine.appendSwitch("disable-lcd-text");
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── command-line helpers ─────────────────────────────────────────────────────
 
-function getAppUrl(appId) {
-  const base =
-    process.env.NODE_ENV === "development"
-      ? "http://localhost:3000"
-      : `file://${path.join(__dirname, "build/index.html")}`;
-  return appId ? `${base}?app=${appId}` : base;
+function hasFlag(flag) {
+  return process.argv.includes(flag);
 }
 
-function createWindow(appId = null, width = 720, height = 634) {
+function getFlagValue(name, fallback = null) {
+  const prefix = `${name}=`;
+  const arg = process.argv.find((value) => value.startsWith(prefix));
+  return arg ? arg.slice(prefix.length) : fallback;
+}
+
+function getNumberFlag(name, fallback) {
+  const value = Number(getFlagValue(name));
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
+// ── URLs ─────────────────────────────────────────────────────────────────────
+
+function getAppUrl(appId, { overlay = false } = {}) {
+  const url =
+    process.env.NODE_ENV === "development"
+      ? new URL("http://localhost:3000/")
+      : pathToFileURL(path.join(__dirname, "build", "index.html"));
+
+  if (appId) {
+    url.searchParams.set("app", appId);
+  }
+
+  if (overlay) {
+    url.searchParams.set("overlay", "1");
+  }
+
+  return url.toString();
+}
+
+// ── window creation ──────────────────────────────────────────────────────────
+
+function createWindow(
+  appId = null,
+  width = 720,
+  height = 634,
+  { overlay = false } = {},
+) {
   const win = new BrowserWindow({
     width,
     height,
     frame: false,
     icon: path.join(__dirname, "build", "avatar.ico"),
+
+    ...(overlay
+      ? {
+          transparent: true,
+          backgroundColor: "#00000000",
+          alwaysOnTop: true,
+          skipTaskbar: true,
+          hasShadow: false,
+          focusable: false,
+          resizable: false,
+          movable: false,
+          show: false,
+        }
+      : {}),
+
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -41,36 +78,186 @@ function createWindow(appId = null, width = 720, height = 634) {
     },
   });
 
-  // loadURL in both cases: file:// with a query string is not loadFile's job.
-  win.loadURL(getAppUrl(appId));
+  if (overlay) {
+    // Pass mouse input through to the game underneath.
+    win.setIgnoreMouseEvents(true, { forward: true });
+  }
+
+  win.loadURL(getAppUrl(appId, { overlay })).catch((error) => {
+    console.error("Failed to load Mali's AO Toolkit window:", error);
+  });
 
   return win;
 }
 
+// ── overlay tracking ─────────────────────────────────────────────────────────
+
+function isAnarchyOnline(windowInfo) {
+  if (!windowInfo?.owner) {
+    return false;
+  }
+
+  const exePath = String(windowInfo.owner.path || "")
+    .replace(/\//g, "\\")
+    .toLowerCase();
+
+  const name = String(windowInfo.owner.name || "").toLowerCase();
+
+  return (
+    exePath.endsWith("\\anarchyonline.exe") ||
+    name === "anarchyonline.exe" ||
+    name === "anarchy online"
+  );
+}
+
+function sameBounds(a, b) {
+  return (
+    a &&
+    b &&
+    a.x === b.x &&
+    a.y === b.y &&
+    a.width === b.width &&
+    a.height === b.height
+  );
+}
+
+async function startOverlayTracking(win) {
+  let activeWindowSync;
+  let timer = null;
+  let disposed = false;
+  let ready = false;
+  let lastBounds = null;
+
+  win.once("ready-to-show", () => {
+    ready = true;
+  });
+
+  win.on("closed", () => {
+    disposed = true;
+
+    if (timer !== null) {
+      clearInterval(timer);
+      timer = null;
+    }
+  });
+
+  try {
+    // get-windows is ESM-only; dynamic import works from this CommonJS file.
+    ({ activeWindowSync } = await import("get-windows"));
+  } catch (error) {
+    console.error("Could not load get-windows:", error);
+    return;
+  }
+
+  if (disposed) {
+    return;
+  }
+
+  timer = setInterval(() => {
+    if (disposed || win.isDestroyed()) {
+      return;
+    }
+
+    let active;
+
+    try {
+      active = activeWindowSync();
+    } catch (error) {
+      console.error("Could not detect foreground window:", error);
+      win.hide();
+      lastBounds = null;
+      return;
+    }
+
+    // Deliberately hide the overlay when AO isn't the foreground application.
+    if (!isAnarchyOnline(active)) {
+      if (win.isVisible()) {
+        win.hide();
+      }
+
+      lastBounds = null;
+      return;
+    }
+
+    const rect = active.contentBounds || active.bounds;
+
+    if (
+      !rect ||
+      !Number.isFinite(rect.x) ||
+      !Number.isFinite(rect.y) ||
+      rect.width <= 0 ||
+      rect.height <= 0
+    ) {
+      win.hide();
+      lastBounds = null;
+      return;
+    }
+
+    const bounds = {
+      x: Math.round(rect.x),
+      y: Math.round(rect.y),
+      width: Math.round(rect.width),
+      height: Math.round(rect.height),
+    };
+
+    if (!sameBounds(lastBounds, bounds)) {
+      win.setBounds(bounds);
+      lastBounds = bounds;
+    }
+
+    // Don't show an empty/uninitialised renderer.
+    if (ready && !win.isVisible()) {
+      win.showInactive();
+    }
+  }, 100);
+}
+
 // ── lifecycle ─────────────────────────────────────────────────────────────────
 
-/** Track per-app windows so we focus instead of duplicating */
-const appWindows = new Map(); // appId → BrowserWindow
+const appWindows = new Map();
 
 app.whenReady().then(() => {
-  createWindow(); // the "all apps" hub window
+  const overlayMode = hasFlag("--overlay");
 
-  // ── IPC: open (or focus) a single-app window ─────────────────────────────
+  if (overlayMode) {
+    const appId = getFlagValue("--overlay-tool");
+    const width = getNumberFlag("--overlay-width", 720);
+    const height = getNumberFlag("--overlay-height", 634);
+
+    const win = createWindow(appId, width, height, {
+      overlay: true,
+    });
+
+    startOverlayTracking(win);
+  } else {
+    // Normal toolkit startup: preserve the existing hub.
+    createWindow();
+  }
+
+  // Preserve existing open/focus behaviour for individual app windows.
   ipcMain.on(
     "open-app-window",
     (_event, { appId, width = 720, height = 634 }) => {
       const existing = appWindows.get(appId);
+
       if (existing && !existing.isDestroyed()) {
         existing.focus();
         return;
       }
+
       const win = createWindow(appId, width, height);
+
       appWindows.set(appId, win);
-      win.on("closed", () => appWindows.delete(appId));
+
+      win.on("closed", () => {
+        appWindows.delete(appId);
+      });
     },
   );
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
 });
