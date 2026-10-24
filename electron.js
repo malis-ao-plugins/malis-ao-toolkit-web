@@ -1,5 +1,5 @@
 
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, screen } = require("electron");
 const path = require("node:path");
 const { pathToFileURL } = require("node:url");
 
@@ -111,6 +111,8 @@ function createWindow(
     width,
     height,
     frame: false,
+    thickFrame: false,
+    autoHideMenuBar: true,
     icon: path.join(__dirname, "build", "avatar.ico"),
 
     ...(overlay
@@ -135,6 +137,8 @@ function createWindow(
   });
   
   win.isAoOverlay = overlay;
+  win.setMenu(null);
+  win.setMenuBarVisibility(false);
   win.overlayInputProxyEnabled = overlay && hasFlag("--overlay-input-proxy");
   win.overlayInputProxy = null;
   win.overlayInputProxyFieldId = null;
@@ -208,6 +212,47 @@ function sameBounds(a, b) {
     a.width === b.width &&
     a.height === b.height
   );
+}
+
+function proxyWindowBounds(parent, rect) {
+  if (
+    !rect ||
+    ![rect.left, rect.top, rect.width, rect.height].every(Number.isFinite) ||
+    rect.width <= 0 ||
+    rect.height <= 0
+  ) {
+    return null;
+  }
+
+  const parentBounds = parent.getBounds();
+  return {
+    x: Math.round(parentBounds.x + rect.left),
+    y: Math.round(parentBounds.y + rect.top),
+    width: Math.max(1, Math.round(rect.width)),
+    height: Math.max(1, Math.round(rect.height)),
+  };
+}
+
+function positionOverlayInputProxy(parent, fieldId, rect) {
+  const proxy = parent.overlayInputProxy;
+  if (
+    !proxy ||
+    proxy.isDestroyed() ||
+    fieldId !== parent.overlayInputProxyFieldId
+  ) {
+    return;
+  }
+
+  const bounds = proxyWindowBounds(parent, rect);
+  if (!bounds) return;
+
+  proxy.overlayInputProxyField = {
+    ...proxy.overlayInputProxyField,
+    rect,
+  };
+  if (!sameBounds(proxy.getBounds(), bounds)) {
+    proxy.setBounds(bounds);
+  }
 }
 
 function keepOverlayAboveInputProxy(parent, proxy) {
@@ -340,16 +385,35 @@ async function startOverlayTracking(win) {
       return;
     }
 
-    const bounds = {
+    const screenBounds = {
       x: Math.round(rect.x),
       y: Math.round(rect.y),
       width: Math.round(rect.width),
       height: Math.round(rect.height),
     };
+    // get-windows reports native screen coordinates on Windows (physical
+    // pixels), while BrowserWindow bounds and renderer client rects use DIPs.
+    // Convert before sizing the overlay so proxy fields, which are positioned
+    // from renderer CSS pixels, share the same coordinate space.
+    const bounds =
+      process.platform === "win32"
+        ? screen.screenToDipRect(null, screenBounds)
+        : screenBounds;
+    bounds.x = Math.round(bounds.x);
+    bounds.y = Math.round(bounds.y);
+    bounds.width = Math.round(bounds.width);
+    bounds.height = Math.round(bounds.height);
 
     if (!sameBounds(lastBounds, bounds)) {
       win.setBounds(bounds);
       lastBounds = bounds;
+      if (win.overlayInputProxy) {
+        positionOverlayInputProxy(
+          win,
+          win.overlayInputProxyFieldId,
+          win.overlayInputProxy.overlayInputProxyField?.rect,
+        );
+      }
     }
 
     if (win.overlayInputProxyUsed) {
@@ -389,28 +453,14 @@ function closeOverlayInputProxy(parent, commit = true, reason = "requested") {
 }
 
 function openOverlayInputProxy(parent, field) {
-  const rect = field?.rect;
-  if (
-    !field?.id ||
-    !rect ||
-    ![rect.left, rect.top, rect.width, rect.height].every(Number.isFinite) ||
-    rect.width <= 0 ||
-    rect.height <= 0
-  ) {
+  const bounds = proxyWindowBounds(parent, field?.rect);
+  if (!field?.id || !bounds) {
     traceOverlayInputProxy("invalid field geometry", {
       fieldId: field?.id,
       rect,
     });
     return;
   }
-
-  const parentBounds = parent.getBounds();
-  const bounds = {
-    x: Math.round(parentBounds.x + rect.left),
-    y: Math.round(parentBounds.y + rect.top),
-    width: Math.max(1, Math.round(rect.width)),
-    height: Math.max(1, Math.round(rect.height)),
-  };
 
   if (parent.overlayInputProxy && !parent.overlayInputProxy.isDestroyed()) {
     const proxy = parent.overlayInputProxy;
@@ -419,7 +469,7 @@ function openOverlayInputProxy(parent, field) {
     proxy.overlayInputProxyField = field;
     proxy.overlayInputProxyValue = String(field.value ?? "");
     proxy.hasLoggedFirstTextChange = false;
-    proxy.setBounds(bounds);
+    positionOverlayInputProxy(parent, field.id, field.rect);
     proxy.webContents.send("overlay-input-proxy:init", field);
     proxy.show();
     proxy.focus();
@@ -430,6 +480,9 @@ function openOverlayInputProxy(parent, field) {
     ...bounds,
     parent,
     frame: false,
+    thickFrame: false,
+    title: "",
+    autoHideMenuBar: true,
     transparent: true,
     backgroundColor: "#00000000",
     alwaysOnTop: true,
@@ -447,6 +500,8 @@ function openOverlayInputProxy(parent, field) {
   });
 
   proxy.isAoTextInputProxy = true;
+  proxy.setMenu(null);
+  proxy.setMenuBarVisibility(false);
   proxy.overlayInputProxyNativeId = nativeWindowId(proxy);
   proxy.overlayInputProxyField = field;
   proxy.overlayInputProxyValue = String(field.value ?? "");
@@ -573,6 +628,21 @@ app.whenReady().then(() => {
     }
 
     proxy.webContents.send("overlay-input-proxy:update", update);
+  });
+
+  ipcMain.on("overlay-input-proxy:position", (event, position) => {
+    const parent = BrowserWindow.fromWebContents(event.sender);
+    if (
+      !parent ||
+      parent.isDestroyed() ||
+      !parent.isAoOverlay ||
+      !parent.overlayInputProxyEnabled ||
+      position?.id !== parent.overlayInputProxyFieldId
+    ) {
+      return;
+    }
+
+    positionOverlayInputProxy(parent, position.id, position.rect);
   });
 
   ipcMain.on("overlay-input-proxy:close", (event) => {

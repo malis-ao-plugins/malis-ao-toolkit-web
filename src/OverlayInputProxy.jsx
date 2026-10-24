@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { installMetricsFontByName } from "./ui/fonts";
 import "./OverlayInputProxy.css";
 
 const sendChange = (field, input) => {
@@ -13,12 +14,30 @@ const sendChange = (field, input) => {
   });
 };
 
+const proxyFontSize = (field) => {
+  const size = Number.parseFloat(field?.fontSize);
+  const scale = Number(field?.pixelScale) || 1;
+  return Number.isFinite(size) ? `${size * scale}px` : field?.fontSize || "13px";
+};
+
 export default function OverlayInputProxy() {
   const inputRef = useRef(null);
   const [field, setField] = useState(null);
 
   useEffect(() => {
-    const stopInit = window.electronAPI?.onOverlayInputProxyInit?.((next) => {
+    let latestInit = 0;
+    const activate = async (next) => {
+      const initId = ++latestInit;
+      if (next.metricsFontKey) {
+        const family = await installMetricsFontByName(next.metricsFontKey);
+        if (family) {
+          await document.fonts.load(
+            `${next.fontWeight || 400} ${proxyFontSize(next)} "${family}"`,
+          );
+        }
+      }
+      if (initId !== latestInit) return;
+
       setField(next);
       requestAnimationFrame(() => {
         const input = inputRef.current;
@@ -30,7 +49,8 @@ export default function OverlayInputProxy() {
         );
         input.scrollLeft = next.scrollLeft ?? 0;
       });
-    });
+    };
+    const stopInit = window.electronAPI?.onOverlayInputProxyInit?.(activate);
     const stopUpdate = window.electronAPI?.onOverlayInputProxyUpdate?.((update) => {
       setField((current) => {
         if (!current || current.id !== update.id || current.value === update.value) {
@@ -100,19 +120,24 @@ export default function OverlayInputProxy() {
         width: "100%",
         height: "100%",
         margin: 0,
-        padding: 0,
-        border: 0,
         outline: "none",
         background: "transparent",
         color: "transparent",
-        caretColor: field.caretColor || "#ffb454",
+        caretColor: "transparent",
         fontFamily: field.fontFamily || "monospace",
-        fontSize: field.fontSize || "13px",
+        fontSize: proxyFontSize(field),
         fontWeight: field.fontWeight || 400,
+        fontStyle: field.fontStyle || "normal",
         lineHeight: field.lineHeight || "normal",
         letterSpacing: field.letterSpacing || "normal",
         textAlign: field.textAlign || "left",
-        boxSizing: "border-box",
+        textIndent: field.textIndent || "0px",
+        padding: field.padding || "0px",
+        borderWidth: field.borderWidth || "0px",
+        borderStyle: "solid",
+        borderColor: "transparent",
+        boxSizing: field.boxSizing || "border-box",
+        direction: field.direction || "ltr",
       }}
     />
   );

@@ -8,8 +8,53 @@ import {
   useState,
 } from "react";
 import { PixelText, useFontRefresh } from "./pixel";
-import { cssSizeFor, fontFor, measure, metricsFamily } from "./fonts";
+import {
+  cssSizeFor,
+  fontFor,
+  fontKeyFor,
+  measure,
+  metricsFamily,
+} from "./fonts";
 import "./pixel-input.css";
+
+function caretIndexAtX({
+  value,
+  upper,
+  size,
+  weight,
+  align,
+  box,
+  offset,
+  pixelScale,
+  rect,
+  clientX,
+}) {
+  const text = String(value ?? "");
+  const shown = upper ? text.toUpperCase() : text;
+  const slack = Math.max(0, box - measure(shown, size, weight) * pixelScale);
+  const inkLeft =
+    (align === "center"
+      ? Math.round(slack / 2)
+      : align === "right"
+        ? Math.round(slack)
+        : 0) -
+    offset;
+  const targetX = clientX - rect.left - inkLeft;
+
+  if (targetX <= 0) return 0;
+
+  let sourceIndex = 0;
+  let drawnWidth = 0;
+  for (const character of text) {
+    const drawnCharacter = upper ? character.toUpperCase() : character;
+    const advance = measure(drawnCharacter, size, weight) * pixelScale;
+    if (targetX < drawnWidth + advance / 2) return sourceIndex;
+    drawnWidth += advance;
+    sourceIndex += character.length;
+  }
+
+  return text.length;
+}
 
 /**
  * An editable field whose text is drawn from the pixelfont atlases.
@@ -64,10 +109,15 @@ export const PixelInput = forwardRef(function PixelInput(
 
   const face = fontFor(size, weight);
   const metric = metricsFamily(size, weight);
+  const dpr = window.devicePixelRatio || 1;
+  const pixelScale = Math.max(1, Math.round(dpr)) / dpr;
   const innerRef = useRef(null);
   const proxyId = useId();
   const [offset, setOffset] = useState(0);
   const [box, setBox] = useState(0);
+  const [proxyActive, setProxyActive] = useState(false);
+  const [proxySelection, setProxySelection] = useState({ start: 0, end: 0 });
+  const [proxyCaretColor, setProxyCaretColor] = useState(null);
   const inputProxyEnabled =
     new URLSearchParams(window.location.search).get("inputProxyEnabled") === "1";
 
@@ -89,7 +139,7 @@ export const PixelInput = forwardRef(function PixelInput(
 
   useLayoutEffect(sync, [value, sync]);
 
-  const openInputProxy = useCallback(() => {
+  const openInputProxy = useCallback((event) => {
     const input = innerRef.current;
     if (
       !overlayInputProxy ||
@@ -101,6 +151,9 @@ export const PixelInput = forwardRef(function PixelInput(
       return;
     }
 
+    if (!window.electronAPI?.openOverlayInputProxy) return;
+    setProxyActive(true);
+
     const rect = input.getBoundingClientRect();
     const computed = window.getComputedStyle(input);
     let selectionStart = String(value ?? "").length;
@@ -111,6 +164,23 @@ export const PixelInput = forwardRef(function PixelInput(
     } catch {
       // Some non-text input types don't expose a text selection.
     }
+    if (event && Number.isFinite(event.clientX)) {
+      selectionStart = caretIndexAtX({
+        value,
+        upper,
+        size,
+        weight,
+        align,
+        box: box || input.clientWidth,
+        offset,
+        pixelScale,
+        rect,
+        clientX: event.clientX,
+      });
+      selectionEnd = selectionStart;
+    }
+    setProxySelection({ start: selectionStart, end: selectionEnd });
+    setProxyCaretColor(computed.caretColor);
 
     window.electronAPI?.openOverlayInputProxy?.({
       id: proxyId,
@@ -129,14 +199,36 @@ export const PixelInput = forwardRef(function PixelInput(
         height: rect.height,
       },
       fontFamily: computed.fontFamily,
+      metricsFontKey: metric ? fontKeyFor(size, weight) : null,
       fontSize: computed.fontSize,
+      pixelScale,
       fontWeight: computed.fontWeight,
+      fontStyle: computed.fontStyle,
       lineHeight: computed.lineHeight,
       letterSpacing: computed.letterSpacing,
       textAlign: computed.textAlign,
+      textIndent: computed.textIndent,
+      padding: computed.padding,
+      borderWidth: computed.borderWidth,
+      boxSizing: computed.boxSizing,
+      direction: computed.direction,
       caretColor: computed.caretColor,
     });
-  }, [inputProxyEnabled, overlayInputProxy, placeholder, proxyId, value]);
+  }, [
+    align,
+    box,
+    inputProxyEnabled,
+    metric,
+    offset,
+    overlayInputProxy,
+    placeholder,
+    proxyId,
+    size,
+    upper,
+    value,
+    weight,
+    pixelScale,
+  ]);
 
   useEffect(() => {
     if (!overlayInputProxy || !inputProxyEnabled) return undefined;
@@ -150,6 +242,10 @@ export const PixelInput = forwardRef(function PixelInput(
           currentTarget: input,
         });
       }
+      setProxySelection({
+        start: change.selectionStart ?? change.value.length,
+        end: change.selectionEnd ?? change.value.length,
+      });
       setOffset(Math.round(change.scrollLeft ?? 0));
       setBox(input?.clientWidth ?? 0);
 
@@ -171,6 +267,7 @@ export const PixelInput = forwardRef(function PixelInput(
 
     const stopClosed = window.electronAPI?.onOverlayInputProxyClosed?.((closed) => {
       if (closed.fieldId !== proxyId) return;
+      setProxyActive(false);
       const input = innerRef.current;
       if (input && document.activeElement === input) input.blur();
     });
@@ -180,6 +277,46 @@ export const PixelInput = forwardRef(function PixelInput(
       stopClosed?.();
     };
   }, [inputProxyEnabled, onChange, overlayInputProxy, proxyId]);
+
+  useEffect(() => {
+    if (!overlayInputProxy || !inputProxyEnabled || !proxyActive) {
+      return undefined;
+    }
+
+    let frame = 0;
+    let previous = null;
+
+    const followField = () => {
+      const input = innerRef.current;
+      if (!input?.isConnected) return;
+
+      const rect = input.getBoundingClientRect();
+      const next = {
+        left: rect.left,
+        top: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+      if (
+        !previous ||
+        next.left !== previous.left ||
+        next.top !== previous.top ||
+        next.width !== previous.width ||
+        next.height !== previous.height
+      ) {
+        window.electronAPI?.updateOverlayInputProxyPosition?.({
+          id: proxyId,
+          rect: next,
+        });
+        previous = next;
+      }
+
+      frame = requestAnimationFrame(followField);
+    };
+
+    frame = requestAnimationFrame(followField);
+    return () => cancelAnimationFrame(frame);
+  }, [inputProxyEnabled, overlayInputProxy, proxyActive, proxyId]);
 
   useEffect(() => {
     if (overlayInputProxy && inputProxyEnabled) {
@@ -208,12 +345,43 @@ export const PixelInput = forwardRef(function PixelInput(
    * scrolls instead, and `offset` follows it.
    */
   const inkLeft = (() => {
-    const painted = measure(empty ? placeholder : shown, size, weight);
+    const painted = measure(empty ? placeholder : shown, size, weight) * pixelScale;
     const slack = Math.max(0, box - painted);
     if (align === "center") return Math.round(slack / 2) - offset;
     if (align === "right") return Math.round(slack) - offset;
     return -offset;
   })();
+
+  const selectionStart = Math.min(
+    proxySelection.start,
+    proxySelection.end,
+    text.length,
+  );
+  const selectionEnd = Math.min(
+    Math.max(proxySelection.start, proxySelection.end),
+    text.length,
+  );
+  const shownBeforeCaret = upper
+    ? text.slice(0, proxySelection.end).toUpperCase()
+    : text.slice(0, proxySelection.end);
+  const caretLeft =
+    inkLeft + measure(shownBeforeCaret, size, weight) * pixelScale;
+  const selectionLeft =
+    inkLeft +
+    measure(
+      upper
+        ? text.slice(0, selectionStart).toUpperCase()
+        : text.slice(0, selectionStart),
+      size,
+      weight,
+    ) * pixelScale;
+  const selectionWidth = measure(
+    upper
+      ? text.slice(selectionStart, selectionEnd).toUpperCase()
+      : text.slice(selectionStart, selectionEnd),
+    size,
+    weight,
+  ) * pixelScale;
 
   return (
     <span
@@ -225,6 +393,13 @@ export const PixelInput = forwardRef(function PixelInput(
       }}
     >
       <span className="pxi__inner">
+        {proxyActive && selectionWidth > 0 && (
+          <span
+            aria-hidden="true"
+            className="pxi__proxy-selection"
+            style={{ left: selectionLeft, width: selectionWidth }}
+          />
+        )}
         <PixelText
           aria-hidden="true"
           size={size}
@@ -249,7 +424,10 @@ export const PixelInput = forwardRef(function PixelInput(
           onScroll={sync}
           onKeyUp={sync}
           onSelect={sync}
-          onMouseDown={() => openInputProxy()}
+          onMouseDown={(event) => {
+            event.preventDefault();
+            openInputProxy(event);
+          }}
           onFocus={(event) => {
             sync();
             onFocus?.(event);
@@ -264,6 +442,13 @@ export const PixelInput = forwardRef(function PixelInput(
           spellCheck={false}
           {...rest}
         />
+        {proxyActive && selectionStart === selectionEnd && (
+          <span
+            aria-hidden="true"
+            className="pxi__proxy-caret"
+            style={{ left: caretLeft, backgroundColor: proxyCaretColor || undefined }}
+          />
+        )}
       </span>
     </span>
   );
