@@ -59,6 +59,7 @@ export function InventoryPanel({ settings, set, send }) {
         onChange={setQuery}
         placeholder="Search inventory..."
         count={loading ? "..." : (results.length ?? null)}
+        overlayInputProxy
       />
 
       {results.length === 0 ? (

@@ -133,6 +133,7 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
 
     let passthrough = true;
     let pointerDownOnUI = false;
+    let proxyFieldPending = false;
 
     function setPassthrough(value) {
       if (passthrough === value) return;
@@ -160,21 +161,39 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
     }
 
     function onMouseDown(event) {
-      if (isOverUI(event.clientX, event.clientY)) {
-        pointerDownOnUI = true;
+      const element = document.elementFromPoint(event.clientX, event.clientY);
+      const overUI = isOverUI(event.clientX, event.clientY);
+
+      if (overUI) {
+        const isProxyField =
+          element instanceof Element &&
+          element.closest("[data-overlay-input-proxy]") !== null;
+        pointerDownOnUI = !isProxyField;
         setPassthrough(false);
+        if (isProxyField) {
+          proxyFieldPending = true;
+        } else {
+          window.electronAPI?.closeOverlayInputProxy?.();
+        }
       }
     }
 
     function onMouseUp(event) {
       pointerDownOnUI = false;
-      setPassthrough(!isOverUI(event.clientX, event.clientY));
+      const overUI = isOverUI(event.clientX, event.clientY);
+      setPassthrough(!overUI);
     }
 
     function onBlur() {
       pointerDownOnUI = false;
-      setPassthrough(true);
+      // Focusing the temporary input window blurs this non-focusable parent.
+      // Keep the overlay available so a click on another panel can reach it.
+      if (!proxyFieldPending) setPassthrough(true);
     }
+
+    const stopProxyClosed = window.electronAPI?.onOverlayInputProxyClosed?.(() => {
+      proxyFieldPending = false;
+    });
 
     document.addEventListener("mousemove", onMouseMove, true);
     document.addEventListener("mousedown", onMouseDown, true);
@@ -186,6 +205,7 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
       document.removeEventListener("mousedown", onMouseDown, true);
       document.removeEventListener("mouseup", onMouseUp, true);
       window.removeEventListener("blur", onBlur);
+      stopProxyClosed?.();
 
       window.electronAPI?.setOverlayMousePassthrough(true);
     };
