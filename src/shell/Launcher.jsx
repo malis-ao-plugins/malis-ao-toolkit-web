@@ -133,7 +133,6 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
 
     let passthrough = true;
     let pointerDownOnUI = false;
-    let proxyFieldPending = false;
 
     function setPassthrough(value) {
       if (passthrough === value) return;
@@ -161,20 +160,11 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
     }
 
     function onMouseDown(event) {
-      const element = document.elementFromPoint(event.clientX, event.clientY);
       const overUI = isOverUI(event.clientX, event.clientY);
 
       if (overUI) {
-        const isProxyField =
-          element instanceof Element &&
-          element.closest("[data-overlay-input-proxy]") !== null;
-        pointerDownOnUI = !isProxyField;
+        pointerDownOnUI = true;
         setPassthrough(false);
-        if (isProxyField) {
-          proxyFieldPending = true;
-        } else {
-          window.electronAPI?.closeOverlayInputProxy?.();
-        }
       }
     }
 
@@ -187,13 +177,9 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
     function onBlur() {
       pointerDownOnUI = false;
       // When focus leaves the overlay, return to click-through mode so the
-      // game can receive input. The proxy field keeps its own pending guard.
-      if (!proxyFieldPending) setPassthrough(true);
+      // game can receive input.
+      setPassthrough(true);
     }
-
-    const stopProxyClosed = window.electronAPI?.onOverlayInputProxyClosed?.(() => {
-      proxyFieldPending = false;
-    });
 
     document.addEventListener("mousemove", onMouseMove, true);
     document.addEventListener("mousedown", onMouseDown, true);
@@ -205,7 +191,6 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
       document.removeEventListener("mousedown", onMouseDown, true);
       document.removeEventListener("mouseup", onMouseUp, true);
       window.removeEventListener("blur", onBlur);
-      stopProxyClosed?.();
 
       window.electronAPI?.setOverlayMousePassthrough(true);
     };

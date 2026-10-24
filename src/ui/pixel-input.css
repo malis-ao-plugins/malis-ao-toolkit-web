@@ -40,29 +40,6 @@
   pointer-events: none;
 }
 
-.pxi__proxy-selection {
-  position: absolute;
-  top: calc((100% - var(--pxi-cell-h)) / 2);
-  z-index: 0;
-  height: var(--pxi-cell-h);
-  pointer-events: none;
-  background: color-mix(in srgb, var(--c-info) 45%, transparent);
-}
-
-.pxi__proxy-caret {
-  position: absolute;
-  top: calc((100% - var(--pxi-cell-h)) / 2);
-  z-index: 2;
-  width: 1px;
-  height: var(--pxi-cell-h);
-  pointer-events: none;
-  animation: pxi-proxy-caret-blink 1s steps(2, start) infinite;
-}
-
-@keyframes pxi-proxy-caret-blink {
-  to { visibility: hidden; }
-}
-
 .pxi__ink.pxt--fallback {
   position: absolute;
 }

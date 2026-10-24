@@ -13,7 +13,6 @@ export function SearchInput({
   count,
   right,
   className,
-  overlayInputProxy = false,
 }) {
   return (
     <div className={cx("ph-search", className)}>
@@ -22,7 +21,6 @@ export function SearchInput({
           className="ph-input"
           value={value}
           placeholder={placeholder}
-          overlayInputProxy={overlayInputProxy}
           onChange={(e) => onChange?.(e.target.value)}
         />
         {value && (
