@@ -15,6 +15,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
       height,
     }),
 
+  setOverlayMousePassthrough: (passthrough) =>
+  ipcRenderer.send("overlay:set-mouse-passthrough", passthrough),
   /**
    * Request an overlay window from the Electron main process.
    * @param {string} appId

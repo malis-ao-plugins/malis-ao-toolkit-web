@@ -77,10 +77,19 @@ function createWindow(
       preload: path.join(__dirname, "preload.js"),
     },
   });
-
+  
+  win.isAoOverlay = overlay;
   if (overlay) {
     // Pass mouse input through to the game underneath.
     win.setIgnoreMouseEvents(true, { forward: true });
+  }
+
+  if (process.argv.includes("--devtools")) {
+    win.webContents.once("did-finish-load", () => {
+      win.webContents.openDevTools({
+        mode: "detach",
+      });
+    });
   }
 
   win.loadURL(getAppUrl(appId, { overlay })).catch((error) => {
@@ -233,7 +242,17 @@ app.whenReady().then(() => {
     // Normal toolkit startup: preserve the existing hub.
     createWindow();
   }
+  
+  ipcMain.on("overlay:set-mouse-passthrough", (event, passthrough) => {
+	const win = BrowserWindow.fromWebContents(event.sender);
 
+	if (!win || win.isDestroyed() || !win.isAoOverlay) {
+	  return;
+	}
+
+	win.setIgnoreMouseEvents(Boolean(passthrough), { forward: true });
+  });
+  
   // Preserve existing open/focus behaviour for individual app windows.
   ipcMain.on(
     "open-app-window",

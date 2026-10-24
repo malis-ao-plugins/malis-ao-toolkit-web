@@ -123,6 +123,77 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
   const openTimer = useRef(null);
   const dragRef = useRef(null);
 
+  /* Enable the windows to be dragged in overlay mode. */
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("overlay") !== "1"
+    ) {
+      return;
+    }
+
+    let passthrough = true;
+    let pointerDownOnUI = false;
+
+    function setPassthrough(value) {
+      if (passthrough === value) return;
+
+      passthrough = value;
+      window.electronAPI?.setOverlayMousePassthrough(value);
+    }
+
+    function isOverUI(x, y) {
+      const element = document.elementFromPoint(x, y);
+
+      return (
+        element instanceof Element &&
+        element.closest(".app, .lch, [data-overlay-interactive]") !== null
+      );
+    }
+
+    function onMouseMove(event) {
+      if (pointerDownOnUI) {
+        setPassthrough(false);
+        return;
+      }
+
+      setPassthrough(!isOverUI(event.clientX, event.clientY));
+    }
+
+    function onMouseDown(event) {
+      if (isOverUI(event.clientX, event.clientY)) {
+        pointerDownOnUI = true;
+        setPassthrough(false);
+      }
+    }
+
+    function onMouseUp(event) {
+      pointerDownOnUI = false;
+      setPassthrough(!isOverUI(event.clientX, event.clientY));
+    }
+
+    function onBlur() {
+      pointerDownOnUI = false;
+      setPassthrough(true);
+    }
+
+    document.addEventListener("mousemove", onMouseMove, true);
+    document.addEventListener("mousedown", onMouseDown, true);
+    document.addEventListener("mouseup", onMouseUp, true);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
+      document.removeEventListener("mouseup", onMouseUp, true);
+      window.removeEventListener("blur", onBlur);
+
+      window.electronAPI?.setOverlayMousePassthrough(true);
+    };
+  }, []);
+
+  /* */
+
+
   const clearTimers = () => clearTimeout(openTimer.current);
 
   useEffect(() => clearTimers, []);
