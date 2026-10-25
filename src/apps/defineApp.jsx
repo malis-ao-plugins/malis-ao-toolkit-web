@@ -31,6 +31,7 @@ export function defineApp(spec) {
     port,
     name,
     vendor = "Mali's",
+    windowTitle,
     settings: defaultSettings = {},
     state: defaultState = {},
     transient = [],
@@ -67,6 +68,7 @@ export function defineApp(spec) {
     name1: vendor,
     name2: name,
     label: vendor ? `${vendor} ${name}` : name,
+    windowTitle,
 
     initialState: () => ({ settings: defaultSettings, ...defaultState }),
 

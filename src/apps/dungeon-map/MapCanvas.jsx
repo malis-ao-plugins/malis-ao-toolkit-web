@@ -297,7 +297,12 @@ export function MapCanvas({ settings, set, state, setState }) {
   return (
     <div className="dm">
       <div
-        className="dm__stage"
+        className={`dm__stage${
+          settings.transparentBackground ? " dm__stage--transparent" : ""
+        }`}
+        data-overlay-map-clickthrough={
+          settings.mapClickThrough ? "true" : undefined
+        }
         ref={wrapRef}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
@@ -306,7 +311,7 @@ export function MapCanvas({ settings, set, state, setState }) {
         onPointerCancel={endDrag}
       >
         <canvas ref={canvasRef} className="dm__canvas" />
-        {(!loaded || failed) && (
+        {(failed || (!loaded && !settings.transparentBackground)) && (
           <div className="dm__empty">
             <PixelText>
               {failed ? "No WebGL in this window." : "No dungeon. Zone into one."}

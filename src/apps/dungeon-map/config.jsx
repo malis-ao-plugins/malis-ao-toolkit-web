@@ -2,6 +2,7 @@ import { defineApp } from "../defineApp";
 import { MapCanvas } from "./MapCanvas";
 import { flipDungeon, flipMover } from "./payload";
 import { Button, ColorField, NumberInput, PixelText, Stack, Toggle } from "../../ui";
+import { PLAYFIELDS } from "../../lib/data";
 import "./dungeon-map.css";
 
 /**
@@ -36,6 +37,8 @@ const DEFAULTS = {
   showObjective: true,
 
   // empty colour means "follow the skin"; widths are whole device pixels
+  transparentBackground: false,
+  mapClickThrough: false,
   wallColor: "",
   wallWidth: 1,
   doorColor: "",
@@ -71,6 +74,90 @@ function StyleField({ label, color, width, min, max, onColor, onWidth }) {
         onCommit={onWidth}
       />
     </div>
+  );
+}
+
+function TransparencyIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      focusable="false"
+    >
+      <rect x="1.5" y="1.5" width="13" height="13" fill="none" stroke="currentColor" />
+      <path
+        d="M3 3h3v3H3zM9 3h3v3H9zM6 6h3v3H6zM3 9h3v3H3zM9 9h3v3H9z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function PassThroughIcon() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      shapeRendering="crispEdges"
+      focusable="false"
+    >
+      <path
+        d="M9 2h5v2H9zM12 4h2v3h-2zM9 7h5v2H9zM12 9h2v3h-2zM9 12h5v2H9z"
+        fill="currentColor"
+      />
+      <path
+        d="M2 2v10l3-3 2 5 2-1-2-5h4L2 2z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+function MapHeaderControls({ settings, set }) {
+  const transparent = !!settings.transparentBackground;
+  const clickThrough = !!settings.mapClickThrough;
+  return (
+    <>
+      <Button
+        size="sm"
+        variant={transparent ? "primary" : "default"}
+        className="dm__icon-button"
+        title={
+          transparent
+            ? "Use a solid map background"
+            : "Make the map background transparent"
+        }
+        aria-label={
+          transparent
+            ? "Use a solid map background"
+            : "Make the map background transparent"
+        }
+        aria-pressed={transparent}
+        onClick={() => set({ transparentBackground: !transparent })}
+      >
+        <TransparencyIcon />
+      </Button>
+      <Button
+        size="sm"
+        variant={clickThrough ? "primary" : "default"}
+        className="dm__icon-button"
+        title={
+          clickThrough
+            ? "Capture mouse input in the map area"
+            : "Pass mouse input through the map area"
+        }
+        aria-label={
+          clickThrough
+            ? "Capture mouse input in the map area"
+            : "Pass mouse input through the map area"
+        }
+        aria-pressed={clickThrough}
+        onClick={() => set({ mapClickThrough: !clickThrough })}
+      >
+        <PassThroughIcon />
+      </Button>
+    </>
   );
 }
 
@@ -162,6 +249,26 @@ export default defineApp({
   port: 7071,
   name: "Dungeon Map",
   vendor: "Mali's",
+  header: MapHeaderControls,
+  windowTitle: ({ state }) => {
+    const dungeon = state.dungeon;
+    if (!dungeon) return "DUNGEON MAP";
+
+    const playfieldId =
+      dungeon.pf !== null &&
+      dungeon.pf !== undefined &&
+      dungeon.pf !== "" &&
+      Number.isFinite(Number(dungeon.pf))
+      ? Number(dungeon.pf)
+      : null;
+    const knownName = PLAYFIELDS.find(
+      (playfield) => playfield.id === playfieldId,
+    )?.name;
+    const playfieldName = knownName || dungeon.name || "Unknown playfield";
+    const id = playfieldId === null ? "" : ` (${playfieldId})`;
+
+    return `DUNGEON MAP - ${playfieldName}${id}`;
+  },
 
   settings: DEFAULTS,
 

@@ -19,10 +19,15 @@ export default function Header({
   pushConfig,
   onMinimise,
 }) {
+  const title =
+    activeConf?.windowTitle?.({ state: activeState }) ??
+    activeConf?.name2 ??
+    "Toolkit";
+
   return (
     <div className="header">
-      <PixelText upper className="header-title" title={activeConf?.label}>
-        {activeConf?.name2 ?? "Toolkit"}
+      <PixelText upper className="header-title" title={title}>
+        {title}
       </PixelText>
 
       <div

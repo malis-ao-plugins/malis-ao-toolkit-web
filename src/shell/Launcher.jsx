@@ -144,6 +144,41 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
     function isOverUI(x, y) {
       const element = document.elementFromPoint(x, y);
 
+      const mapStage = document.querySelector(
+        '.dm__stage[data-overlay-map-clickthrough="true"]',
+      );
+      const mapApp = mapStage?.closest(".app");
+      if (mapStage && mapApp) {
+        const isInside = (node) => {
+          if (!node) return false;
+          const rect = node.getBoundingClientRect();
+          return (
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom
+          );
+        };
+        const appRect = mapApp.getBoundingClientRect();
+        const insideMapApp =
+          x >= appRect.left &&
+          x <= appRect.right &&
+          y >= appRect.top &&
+          y <= appRect.bottom;
+
+        if (insideMapApp) {
+          const topBar = mapApp.querySelector(".window-drag-handle");
+          const mapArea = mapApp.querySelector(".dm__stage");
+          if (isInside(topBar)) return true;
+          if (isInside(mapArea)) return false;
+
+          // Transparent space inside the map window should reach the game.
+          if (!element?.closest(".app") || element.closest(".app") === mapApp) {
+            return false;
+          }
+        }
+      }
+
       return (
         element instanceof Element &&
         element.closest(".app, .lch, [data-overlay-interactive]") !== null
