@@ -2,7 +2,6 @@ import { defineApp } from "../defineApp";
 import { MapCanvas } from "./MapCanvas";
 import { flipDungeon, flipMover } from "./payload";
 import { Button, ColorField, NumberInput, PixelText, Stack, Toggle } from "../../ui";
-import { PLAYFIELDS } from "../../lib/data";
 import "./dungeon-map.css";
 
 /**
@@ -250,25 +249,6 @@ export default defineApp({
   name: "Dungeon Map",
   vendor: "Mali's",
   header: MapHeaderControls,
-  windowTitle: ({ state }) => {
-    const dungeon = state.dungeon;
-    if (!dungeon) return "DUNGEON MAP";
-
-    const playfieldId =
-      dungeon.pf !== null &&
-      dungeon.pf !== undefined &&
-      dungeon.pf !== "" &&
-      Number.isFinite(Number(dungeon.pf))
-      ? Number(dungeon.pf)
-      : null;
-    const knownName = PLAYFIELDS.find(
-      (playfield) => playfield.id === playfieldId,
-    )?.name;
-    const playfieldName = knownName || dungeon.name || "Unknown playfield";
-    const id = playfieldId === null ? "" : ` (${playfieldId})`;
-
-    return `DUNGEON MAP - ${playfieldName}${id}`;
-  },
 
   settings: DEFAULTS,
 

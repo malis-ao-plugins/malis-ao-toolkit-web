@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { PixelText, Row, Segmented } from "../../ui";
 import { bounds, cameraFor, fit, floorsOf, roomsOnFloor, unproject } from "./draw";
 import { createRenderer } from "./gl/renderer";
+import { PLAYFIELDS } from "../../lib/data";
 
 /** Kit tokens, read once per mount so the map follows the skin. */
 function readColors(el) {
@@ -293,6 +294,26 @@ export function MapCanvas({ settings, set, state, setState }) {
   };
 
   const loaded = rooms.length > 0;
+  const dungeon = state.dungeon;
+  const rawPlayfieldId = dungeon?.pf;
+  const playfieldId =
+    rawPlayfieldId !== null &&
+    rawPlayfieldId !== undefined &&
+    rawPlayfieldId !== "" &&
+    Number.isFinite(Number(rawPlayfieldId))
+      ? Number(rawPlayfieldId)
+      : null;
+  const knownPlayfieldName = PLAYFIELDS.find(
+    (playfield) => playfield.id === playfieldId,
+  )?.name;
+  const playfieldName = knownPlayfieldName || dungeon?.name;
+  const playfieldLabel = dungeon
+    ? playfieldName
+      ? `${playfieldName}${playfieldId === null ? "" : ` (${playfieldId})`}`
+      : playfieldId === null
+        ? "Unknown playfield"
+        : `Playfield ${playfieldId}`
+    : null;
 
   return (
     <div className="dm">
@@ -310,6 +331,11 @@ export function MapCanvas({ settings, set, state, setState }) {
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
+        {playfieldLabel && (
+          <PixelText upper className="dm__playfield">
+            {playfieldLabel}
+          </PixelText>
+        )}
         <canvas ref={canvasRef} className="dm__canvas" />
         {(failed || (!loaded && !settings.transparentBackground)) && (
           <div className="dm__empty">

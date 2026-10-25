@@ -81,6 +81,18 @@ html.overlay-mode .app:has(.dm__stage--transparent) .ph-panel__body {
   margin: auto;
 }
 
+.dm__playfield {
+  position: absolute;
+  z-index: 1;
+  top: var(--u2);
+  left: var(--u2);
+  max-width: calc(100% - var(--u4));
+  overflow: hidden;
+  color: #fff;
+  pointer-events: none;
+  text-shadow: 1px 1px 2px #000, -1px -1px 2px #000;
+}
+
 .dm__empty {
   position: absolute;
   inset: 0;
