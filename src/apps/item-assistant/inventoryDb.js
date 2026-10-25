@@ -19,7 +19,7 @@ export class InventoryDbError extends Error {
 async function request(path) {
   let res;
   try {
-    res = await fetch(`${BASE}${path}`);
+    res = await fetch(`${BASE}${path}`, { cache: "no-store" });
   } catch (cause) {
     throw new InventoryDbError(`item assistant unreachable: ${path}`, { cause });
   }

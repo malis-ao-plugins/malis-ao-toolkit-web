@@ -9,6 +9,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^13.5.0",
+    "get-windows": "^9.3.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-scripts": "5.0.1",
@@ -29,6 +30,7 @@
   "build": {
     "appId": "com.malis.aotoolkit",
     "productName": "Mali's AO Toolkit",
+    "npmRebuild": false,
     "files": [
       "build/**/*",
       "electron.js",
@@ -65,7 +67,7 @@
   "devDependencies": {
     "concurrently": "^9.1.2",
     "cross-env": "^7.0.3",
-    "electron": "^35.0.0",
+    "electron": "^44.9.1",
     "electron-builder": "^26.0.0",
     "purgecss": "^8.0.0",
     "wait-on": "^8.0.3"

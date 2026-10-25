@@ -36,6 +36,7 @@
 .pxi__ink {
   position: absolute;
   top: calc((100% - var(--pxi-cell-h)) / 2);
+  z-index: 1;
   pointer-events: none;
 }
 

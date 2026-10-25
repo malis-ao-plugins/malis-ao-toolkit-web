@@ -29,6 +29,13 @@ npm run electron:dev     # CRA dev server + Electron pointed at it
 npm run electron:build   # production build, then electron-builder into dist/
 ```
 
+Testing the overlay with the game running:
+
+```
+npm start
+npx cross-env NODE_ENV=development electron . --overlay
+```
+
 ## Tests, lint and build
 
 ```bash

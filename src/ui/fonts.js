@@ -237,6 +237,17 @@ export function fontFor(size = 13, weight = 400) {
   return getFont(best.name);
 }
 
+/** Registry key for the face selected by `fontFor`. */
+export function fontKeyFor(size = 13, weight = 400) {
+  const font = fontFor(size, weight);
+  return FACES.find(
+    (face) =>
+      face.family === font.name &&
+      face.size === font.size &&
+      face.bold === !!font.atlas.bold,
+  )?.name;
+}
+
 /* ── Lining the real text up with the drawn text ───────────────────────────
 
    Every drawn string has an invisible real one behind it, so that selecting
@@ -286,6 +297,12 @@ export function metricsFamily(size = 13, weight = 400) {
   });
 
   return null;
+}
+
+/** Install the atlas-matched CSS face in another renderer process. */
+export function installMetricsFontByName(name) {
+  const font = getFont(name);
+  return font ? installMetricsFont(font) : Promise.resolve(null);
 }
 
 const SAMPLE =

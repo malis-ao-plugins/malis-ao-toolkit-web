@@ -13,9 +13,9 @@ import {
  * The view was previously 290 lines with six effects interleaved with the
  * markup. The work is really three stages, so it is written as three:
  *
- *   1. characters   — the plugin's list, fetched once
- *   2. records      — every item row for the selected character(s), with its
- *                     location resolved from the container tree
+ *   1. characters   — the plugin's list, refreshed periodically
+ *   2. records      — every item row for the selected character(s), refreshed
+ *                     periodically with its location resolved from the tree
  *   3. results      — those records joined to the item database, so names,
  *                     icons and QL ranges come from the same source the rest
  *                     of the toolkit uses
@@ -26,6 +26,8 @@ import {
 
 /** How long a pause in typing counts as "done typing". */
 const SETTLE_MS = 160;
+const INVENTORY_REFRESH_MS = 2500;
+const CHARACTER_REFRESH_MS = 15000;
 
 // Parent types that are top-level containers — nothing above them to name.
 const TOP_LEVEL = { 104: "Inventory", 105: "Bank" };
@@ -65,6 +67,36 @@ function resolveLocation(parentType, parentInstance, byInstance) {
   };
 }
 
+function sameRecords(current, next) {
+  return (
+    current.length === next.length &&
+    current.every((row, index) => {
+      const candidate = next[index];
+      return (
+        row.itemId === candidate.itemId &&
+        row.highId === candidate.highId &&
+        row.ql === candidate.ql &&
+        row.charid === candidate.charid &&
+        row.slot === candidate.slot &&
+        row.parentType === candidate.parentType &&
+        row.parentInstance === candidate.parentInstance &&
+        row.locationName === candidate.locationName &&
+        row.locationParent === candidate.locationParent
+      );
+    })
+  );
+}
+
+function sameCharacters(current, next) {
+  return (
+    current.length === next.length &&
+    current.every(
+      (character, index) =>
+        character.id === next[index].id && character.name === next[index].name,
+    )
+  );
+}
+
 export function useInventory({ characterId, query }) {
   const [characters, setCharacters] = useState([]);
   const [records, setRecords] = useState([]);
@@ -74,11 +106,28 @@ export function useInventory({ characterId, query }) {
   // ── 1. characters ───────────────────────────────────────────────────────
   useEffect(() => {
     let alive = true;
-    getCharacters()
-      .then((list) => alive && setCharacters(list))
-      .catch((err) => console.error("[item-assistant] characters", err));
+    let lastErrorAt = 0;
+    const refresh = async () => {
+      try {
+        const next = await getCharacters();
+        if (!alive) return;
+        setCharacters((current) =>
+          sameCharacters(current, next) ? current : next,
+        );
+        lastErrorAt = 0;
+      } catch (err) {
+        if (alive && Date.now() - lastErrorAt > 30000) {
+          console.error("[item-assistant] characters", err);
+          lastErrorAt = Date.now();
+        }
+      }
+    };
+
+    refresh();
+    const timer = setInterval(refresh, CHARACTER_REFRESH_MS);
     return () => {
       alive = false;
+      clearInterval(timer);
     };
   }, []);
 
@@ -87,8 +136,6 @@ export function useInventory({ characterId, query }) {
     () => (characterId != null ? [characterId] : characters.map((c) => c.id)),
     [characterId, characters],
   );
-  const charKey = charIds.join(",");
-
   useEffect(() => {
     if (!charIds.length) {
       setRecords([]);
@@ -96,22 +143,28 @@ export function useInventory({ characterId, query }) {
     }
 
     let alive = true;
+    let refreshing = false;
+    let lastErrorAt = 0;
 
-    Promise.all(
-      charIds.map(async (charid) => {
-        const [items, containers] = await Promise.all([
-          getCharacterItems(charid),
-          getCharacterContainers(charid),
-        ]);
-        return { charid, items, containers };
-      }),
-    )
-      .then((perCharacter) => {
+    const refresh = async () => {
+      if (refreshing) return;
+      refreshing = true;
+      try {
+        const perCharacter = await Promise.all(
+          charIds.map(async (charid) => {
+            const [items, containers] = await Promise.all([
+              getCharacterItems(charid),
+              getCharacterContainers(charid),
+            ]);
+            return { charid, items, containers };
+          }),
+        );
         if (!alive) return;
-        setRecords(
-          perCharacter.flatMap(({ charid, items, containers }) => {
+
+        const nextRecords = perCharacter.flatMap(
+          ({ charid, items, containers }) => {
             const byInstance = Object.fromEntries(
-              containers.map((c) => [c.instance, c]),
+              containers.map((container) => [container.instance, container]),
             );
             return items.map((row) => ({
               itemId: row.item_id,
@@ -123,16 +176,30 @@ export function useInventory({ characterId, query }) {
               parentInstance: row.parent_instance,
               ...resolveLocation(row.parent_type, row.parent_instance, byInstance),
             }));
-          }),
+          },
         );
-      })
-      .catch((err) => console.error("[item-assistant] inventory", err));
+        setRecords((current) =>
+          sameRecords(current, nextRecords) ? current : nextRecords,
+        );
+        lastErrorAt = 0;
+      } catch (err) {
+        if (alive && Date.now() - lastErrorAt > 30000) {
+          console.error("[item-assistant] inventory", err);
+          lastErrorAt = Date.now();
+        }
+      } finally {
+        refreshing = false;
+      }
+    };
+
+    refresh();
+    const timer = setInterval(refresh, INVENTORY_REFRESH_MS);
 
     return () => {
       alive = false;
+      clearInterval(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [charKey]);
+  }, [charIds]);
 
   // ── 3. results ──────────────────────────────────────────────────────────
 

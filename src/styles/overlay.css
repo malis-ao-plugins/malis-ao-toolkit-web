@@ -1,0 +1,22 @@
+
+/* Transparent window background, only in overlay mode */
+html.overlay-mode,
+html.overlay-mode body,
+html.overlay-mode #root {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
+
+html.overlay-mode,
+html.overlay-mode body {
+  margin: 0;
+  overflow: hidden;
+}
+
+/* Make the top-level React container transparent */
+html.overlay-mode #root > * {
+  background: transparent !important;
+  background-color: transparent !important;
+  background-image: none !important;
+}
