@@ -58,7 +58,7 @@ export function InventoryPanel({ settings, set, state, send }) {
       <SearchInput
         value={query}
         onChange={setQuery}
-        placeholder="Search inventory..."
+        placeholder="Search... ql:200+ loc:bank"
         count={loading ? "..." : (results.length ?? null)}
       />
 

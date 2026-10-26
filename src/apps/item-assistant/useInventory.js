@@ -6,6 +6,7 @@ import {
   getCharacterItems,
   getCharacters,
 } from "./inventoryDb";
+import { matchesFilters, parseQuery } from "./searchQuery";
 
 /**
  * Everything the inventory panel needs, in one hook.
@@ -18,7 +19,8 @@ import {
  *                     location resolved from the container tree
  *   3. results      — those records joined to the item database, so names,
  *                     icons and QL ranges come from the same source the rest
- *                     of the toolkit uses
+ *                     of the toolkit uses, then narrowed by the search's
+ *                     filters (see searchQuery.js)
  *
  * Splitting them means a change to the search does not risk the container
  * walk, and each stage can be read on its own.
@@ -202,7 +204,11 @@ export function useInventory({ characterId, query, version }) {
     let alive = true;
     setLoading(true);
 
-    searchItems({ idPairs, name: settled, limit: idPairs.length })
+    // The words go to the database as the name; the filters (ql:, loc:,
+    // char:, ...) need the inventory's own fields, so they apply below.
+    const parsed = parseQuery(settled);
+
+    searchItems({ idPairs, name: parsed.name, limit: idPairs.length })
       .then(async (items) => {
         if (!alive) return;
 
@@ -242,7 +248,7 @@ export function useInventory({ characterId, query, version }) {
               parentInstance: rec.parentInstance,
               key: `${item.low_id}-${rec.charid}-${rec.parentInstance}-${rec.slot}-${seq++}`,
             })),
-          ),
+          ).filter((row) => matchesFilters(row, parsed)),
         );
         setLoading(false);
       })
