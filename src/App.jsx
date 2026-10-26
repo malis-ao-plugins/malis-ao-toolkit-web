@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import { APP_CONFIGS } from "./apps.config";
-import { useAppSessions } from "./hooks/useAppSessions";
+import { ALL, useAppSessions, viewState } from "./hooks/useAppSessions";
 import { useShownApps } from "./shell/useShownApps";
 import { Launcher } from "./shell/Launcher";
 import { SettingsWindow } from "./shell/SettingsWindow";
@@ -46,6 +46,37 @@ const firstPos = (index) => {
 };
 
 /**
+ * Which client a window shows, remembered per app. A client that is gone
+ * falls back to the first one there is, without forgetting the choice, so
+ * the window goes back to it when it returns.
+ */
+function useSelectedClient(appId, clients) {
+  const storage = `client_${appId}`;
+  const [chosen, setChosen] = useState(() => {
+    try {
+      return Number(localStorage.getItem(storage)) || null;
+    } catch {
+      return null;
+    }
+  });
+
+  const select = useCallback(
+    (client) => {
+      setChosen(client);
+      try {
+        localStorage.setItem(storage, String(client));
+      } catch {
+        /* private mode */
+      }
+    },
+    [storage],
+  );
+
+  const ids = clients.map((c) => c.client);
+  return [ids.includes(chosen) ? chosen : (ids[0] ?? null), select];
+}
+
+/**
  * One app's window, insulated from the others.
  *
  * Every incoming message replaces the whole states object, so without this
@@ -60,7 +91,8 @@ const firstPos = (index) => {
 const AppSlot = memo(function AppSlot({
   config,
   connected,
-  state,
+  appStates,
+  clients,
   send,
   push,
   hide,
@@ -68,14 +100,28 @@ const AppSlot = memo(function AppSlot({
   initialPos,
   z,
 }) {
+  const [client, selectClient] = useSelectedClient(config.id, clients);
+  const key = config.multiClient && client != null ? String(client) : ALL;
+
+  // Rebuilt only when this window's own record or the shared one changes.
+  const own = appStates[key];
+  const shared = appStates[ALL];
+  const state = useMemo(
+    () => viewState(config, { [ALL]: shared, [key]: own }, key),
+    [config, key, own, shared],
+  );
+
   const session = useMemo(
     () => ({
       connected,
       state,
-      send: (msg) => send(config.id, msg),
-      push: (partial) => push(config.id, partial),
+      clients,
+      client,
+      selectClient,
+      send: (msg) => send(config.id, key, msg),
+      push: (partial) => push(config.id, key, partial),
     }),
-    [connected, state, send, push, config.id],
+    [connected, state, clients, client, selectClient, send, push, config.id, key],
   );
 
   const onMinimise = useCallback(() => hide(config.id), [hide, config.id]);
@@ -94,7 +140,19 @@ const AppSlot = memo(function AppSlot({
 });
 
 export default function App() {
-  const { connections, states, send, push } = useAppSessions(APP_CONFIGS);
+  const { connections, clients, states, send, push } = useAppSessions(APP_CONFIGS);
+
+  // Each app's clients, held by identity until the hub's list changes.
+  const appClients = useMemo(
+    () =>
+      Object.fromEntries(
+        APP_CONFIGS.map((c) => [
+          c.id,
+          clients.filter((client) => client.apps?.includes(c.id)),
+        ]),
+      ),
+    [clients],
+  );
   const { isShown, hide, toggle } = useShownApps();
   const { theme, set: setTheme, reset: resetTheme } = useTheme();
   const [options, setOptions] = useState(false);
@@ -141,7 +199,8 @@ export default function App() {
             key={config.id}
             config={config}
             connected={connections[config.id]}
-            state={states[config.id]}
+            appStates={states[config.id]}
+            clients={appClients[config.id]}
             send={send}
             push={push}
             hide={hide}

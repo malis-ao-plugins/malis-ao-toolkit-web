@@ -1,7 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
-import { useAppSessions } from "./useAppSessions";
+import { ALL, HUB_URL, useAppSessions, viewState } from "./useAppSessions";
 
-/** Minimal stand-in for the browser socket the hook opens per app. */
+/** Minimal stand-in for the browser socket the hook opens to the hub. */
 class FakeSocket {
   static instances = [];
   static OPEN = 1;
@@ -41,12 +41,25 @@ const config = (overrides = {}) => ({
   handleMessage: (data) =>
     data.type === "hit" ? { lastHit: data.item, seen: data.item } : null,
   transientKeys: ["rolling", "lastHit"],
+  multiClient: false,
+  clientSettings: false,
   ...overrides,
 });
 
 const CONFIGS = [config()];
 
-const stored = () => JSON.parse(localStorage.getItem(KEY) ?? "null");
+const stored = (key = KEY) => JSON.parse(localStorage.getItem(key) ?? "null");
+
+const socket = () => FakeSocket.instances[0];
+
+/** The hub's list of clients; every one runs app_1 unless told otherwise. */
+const clients = (...list) =>
+  socket().deliver({
+    hub: "clients",
+    clients: list.map((c) =>
+      typeof c === "number" ? { client: c, name: `C${c}`, apps: ["app_1"] } : c,
+    ),
+  });
 
 beforeEach(() => {
   localStorage.clear();
@@ -61,60 +74,91 @@ afterEach(() => {
 const mount = (configs = CONFIGS) => renderHook(() => useAppSessions(configs));
 
 describe("connection state", () => {
-  it("opens one socket per app, on its own port", () => {
-    mount();
+  it("opens one socket, to the hub", () => {
+    mount([config(), config({ id: "app_2", port: 7002 })]);
     expect(FakeSocket.instances).toHaveLength(1);
-    expect(FakeSocket.instances[0].url).toBe("ws://localhost:7001/ws");
+    expect(socket().url).toBe(HUB_URL);
   });
 
-  it("reports connected only once the socket opens", () => {
+  it("reports an app connected once a client runs it", () => {
     const { result } = mount();
+    act(() => socket().open());
     expect(result.current.connections.app_1).toBe(false);
 
-    act(() => FakeSocket.instances[0].open());
+    act(() => clients(1));
     expect(result.current.connections.app_1).toBe(true);
   });
 
-  it("reports disconnected when the socket closes", () => {
+  it("reports an app no client runs as disconnected", () => {
     const { result } = mount();
-    act(() => FakeSocket.instances[0].open());
-    act(() => FakeSocket.instances[0].close());
+    act(() => socket().open());
+    act(() => clients({ client: 1, name: "C1", apps: ["app_9"] }));
 
     expect(result.current.connections.app_1).toBe(false);
+  });
+
+  it("forgets the clients when the socket closes", () => {
+    const { result } = mount();
+    act(() => socket().open());
+    act(() => clients(1));
+    act(() => socket().close());
+
+    expect(result.current.connections.app_1).toBe(false);
+    expect(result.current.clients).toEqual([]);
   });
 });
 
 describe("messages", () => {
-  it("applies the partial state an app's handler returns", () => {
+  it("lands a message from any client in a single-state app's one state", () => {
     const { result } = mount();
-    act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 9 } }));
+    act(() => socket().deliver({ app: "app_1", client: 5, type: "hit", item: { id: 9 } }));
 
-    expect(result.current.states.app_1.lastHit).toEqual({ id: 9 });
+    expect(result.current.states.app_1[ALL].lastHit).toEqual({ id: 9 });
   });
 
-  it("applies a handler's function of the current state", () => {
+  it("keeps each client's state apart in a multi-client app", () => {
+    const { result } = mount([config({ multiClient: true })]);
+    act(() => {
+      socket().deliver({ app: "app_1", client: 1, type: "hit", item: { id: 1 } });
+      socket().deliver({ app: "app_1", client: 2, type: "hit", item: { id: 2 } });
+    });
+
+    expect(result.current.states.app_1["1"].lastHit).toEqual({ id: 1 });
+    expect(result.current.states.app_1["2"].lastHit).toEqual({ id: 2 });
+  });
+
+  it("gives a client that speaks before it is listed the app's defaults", () => {
+    const { result } = mount([config({ multiClient: true, clientSettings: true })]);
+    act(() => socket().deliver({ app: "app_1", client: 3, type: "hit", item: { id: 1 } }));
+
+    expect(result.current.states.app_1["3"].settings).toEqual({ volume: 1 });
+    expect(result.current.states.app_1["3"].rolling).toBe(false);
+  });
+
+  it("applies a handler's function of the state the window shows", () => {
     const { result } = mount([
       config({
+        multiClient: true,
+        clientSettings: true,
         handleMessage: (data) => (s) => ({
           settings: { ...s.settings, list: data.list },
         }),
       }),
     ]);
-    const socket = FakeSocket.instances[0];
     act(() => {
-      socket.deliver({ list: [1] });
-      socket.deliver({ list: [2] });
+      socket().deliver({ app: "app_1", client: 1, list: [1] });
+      socket().deliver({ app: "app_1", client: 1, list: [2] });
     });
 
-    expect(result.current.states.app_1.settings).toEqual({ volume: 1, list: [2] });
-    expect(socket.sent).toEqual([]);
+    expect(result.current.states.app_1["1"].settings).toEqual({ volume: 1, list: [2] });
+    expect(socket().sent).toEqual([]);
   });
 
-  it("ignores a message no handler claims", () => {
+  it("ignores a message for an app it does not know", () => {
     const { result } = mount();
     const before = result.current.states.app_1;
 
-    act(() => FakeSocket.instances[0].deliver({ type: "unknown" }));
+    act(() => socket().deliver({ app: "app_9", client: 1, type: "hit" }));
     expect(result.current.states.app_1).toBe(before);
   });
 
@@ -122,8 +166,28 @@ describe("messages", () => {
     const { result } = mount();
     const before = result.current.states.app_1;
 
-    act(() => FakeSocket.instances[0].onmessage?.({ data: "<html>" }));
+    act(() => socket().onmessage?.({ data: "<html>" }));
     expect(result.current.states.app_1).toBe(before);
+  });
+});
+
+describe("what a window shows", () => {
+  it("puts the shared settings into a client's own state", () => {
+    const c = config({ multiClient: true });
+    const shown = viewState(c, { [ALL]: { settings: { volume: 4 } }, 1: { seen: 1 } }, "1");
+
+    expect(shown).toEqual({ seen: 1, settings: { volume: 4 } });
+  });
+
+  it("shows a client's own settings when they are per client", () => {
+    const c = config({ multiClient: true, clientSettings: true });
+    const shown = viewState(
+      c,
+      { [ALL]: { settings: { volume: 4 } }, 1: { settings: { volume: 2 } } },
+      "1",
+    );
+
+    expect(shown.settings).toEqual({ volume: 2 });
   });
 });
 
@@ -137,15 +201,24 @@ describe("persistence", () => {
 
   it("keeps transient state out of storage", () => {
     const { result } = mount();
-    act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 9 } }));
+    act(() => socket().deliver({ app: "app_1", client: 1, type: "hit", item: { id: 9 } }));
     flushSaves();
 
     // `seen` came from the same message and is not transient, so the write
     // definitely happened — `lastHit` was left out of it deliberately.
-    expect(result.current.states.app_1.lastHit).toEqual({ id: 9 });
+    expect(result.current.states.app_1[ALL].lastHit).toEqual({ id: 9 });
     expect(stored().seen).toEqual({ id: 9 });
     expect(stored()).not.toHaveProperty("lastHit");
     expect(stored()).not.toHaveProperty("rolling");
+  });
+
+  it("stores a client's state under its own key", () => {
+    mount([config({ multiClient: true, clientSettings: true })]);
+    act(() => socket().deliver({ app: "app_1", client: 7, type: "hit", item: { id: 1 } }));
+    flushSaves();
+
+    expect(stored(`${KEY}@7`).seen).toEqual({ id: 1 });
+    expect(stored(`${KEY}@7`).settings).toEqual({ volume: 1 });
   });
 
   it("ignores transient state that an earlier version persisted", () => {
@@ -157,9 +230,9 @@ describe("persistence", () => {
     const { result } = mount();
 
     // This is the bug that decremented the roll list on every reload.
-    expect(result.current.states.app_1.lastHit).toBeUndefined();
-    expect(result.current.states.app_1.rolling).toBe(false);
-    expect(result.current.states.app_1.seen).toEqual({ id: 9 });
+    expect(result.current.states.app_1[ALL].lastHit).toBeUndefined();
+    expect(result.current.states.app_1[ALL].rolling).toBe(false);
+    expect(result.current.states.app_1[ALL].seen).toEqual({ id: 9 });
   });
 
   it("keeps a setting the saved state has never heard of", () => {
@@ -170,22 +243,17 @@ describe("persistence", () => {
       config({ initialState: () => ({ settings: { volume: 1, muted: false }, rolling: false }) }),
     ]);
 
-    expect(result.current.states.app_1.settings).toEqual({ volume: 4, muted: false });
+    expect(result.current.states.app_1[ALL].settings).toEqual({ volume: 4, muted: false });
   });
 
-  it("restores ordinary state over the declared defaults", () => {
+  it("starts a new client from the settings saved before clients existed", () => {
     localStorage.setItem(KEY, JSON.stringify({ settings: { volume: 4 } }));
 
-    const { result } = mount();
-    expect(result.current.states.app_1.settings).toEqual({ volume: 4 });
-  });
+    const { result } = mount([config({ multiClient: true, clientSettings: true })]);
+    act(() => socket().open());
+    act(() => clients(1));
 
-  it("persists everything when an app declares nothing transient", () => {
-    mount([config({ transientKeys: [] })]);
-    act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 1 } }));
-    flushSaves();
-
-    expect(stored()).toHaveProperty("lastHit");
+    expect(result.current.states.app_1["1"].settings).toEqual({ volume: 4 });
   });
 
   it("collapses a burst of messages into one write", () => {
@@ -194,12 +262,12 @@ describe("persistence", () => {
 
     act(() => {
       for (let i = 0; i < 20; i += 1) {
-        FakeSocket.instances[0].deliver({ type: "hit", item: { id: i } });
+        socket().deliver({ app: "app_1", client: 1, type: "hit", item: { id: i } });
       }
     });
 
-    // The dungeon map sends a position 10 times a second. Twenty of those must
-    // not be twenty writes.
+    // The dungeon map sends a position every frame. Twenty of those must not
+    // be twenty writes.
     expect(writes).not.toHaveBeenCalled();
 
     flushSaves();
@@ -211,7 +279,7 @@ describe("persistence", () => {
 
   it("writes what is still queued when the window goes away", () => {
     const { unmount } = mount();
-    act(() => FakeSocket.instances[0].deliver({ type: "hit", item: { id: 4 } }));
+    act(() => socket().deliver({ app: "app_1", client: 1, type: "hit", item: { id: 4 } }));
     expect(stored()).toBeNull();
 
     unmount();
@@ -220,43 +288,82 @@ describe("persistence", () => {
 });
 
 describe("sending", () => {
-  it("sends the current settings as soon as the socket opens", () => {
+  it("sends each client its settings when it appears", () => {
     localStorage.setItem(KEY, JSON.stringify({ settings: { volume: 7 } }));
     mount();
-    act(() => FakeSocket.instances[0].open());
+    act(() => socket().open());
+    act(() => clients(1, 2));
 
-    expect(FakeSocket.instances[0].sent).toEqual([
-      { type: "updateConfig", settings: { volume: 7 } },
+    expect(socket().sent).toEqual([
+      { type: "updateConfig", settings: { volume: 7 }, app: "app_1", client: 1 },
+      { type: "updateConfig", settings: { volume: 7 }, app: "app_1", client: 2 },
     ]);
   });
 
-  it("mirrors a settings change to the plugin", () => {
-    const { result } = mount();
-    act(() => FakeSocket.instances[0].open());
-    FakeSocket.instances[0].sent = [];
-    act(() => result.current.push("app_1", { settings: { volume: 3 } }));
+  it("does not resend settings to a client still in the list", () => {
+    mount();
+    act(() => socket().open());
+    act(() => clients(1));
+    socket().sent = [];
+    act(() => clients(1, 2));
 
-    expect(FakeSocket.instances[0].sent).toEqual([
-      { type: "updateConfig", settings: { volume: 3 } },
+    expect(socket().sent.map((m) => m.client)).toEqual([2]);
+  });
+
+  it("mirrors a shared settings change to every client", () => {
+    const { result } = mount();
+    act(() => socket().open());
+    act(() => clients(1, 2));
+    socket().sent = [];
+    act(() => result.current.push("app_1", ALL, { settings: { volume: 3 } }));
+
+    expect(socket().sent).toEqual([
+      { type: "updateConfig", settings: { volume: 3 }, app: "app_1", client: 1 },
+      { type: "updateConfig", settings: { volume: 3 }, app: "app_1", client: 2 },
     ]);
-    expect(result.current.states.app_1.settings).toEqual({ volume: 3 });
+    expect(result.current.states.app_1[ALL].settings).toEqual({ volume: 3 });
+  });
+
+  it("sends a per-client settings change to that client only", () => {
+    const { result } = mount([config({ multiClient: true, clientSettings: true })]);
+    act(() => socket().open());
+    act(() => clients(1, 2));
+    socket().sent = [];
+    act(() => result.current.push("app_1", "2", { settings: { volume: 3 } }));
+
+    expect(socket().sent).toEqual([
+      { type: "updateConfig", settings: { volume: 3 }, app: "app_1", client: 2 },
+    ]);
+    expect(result.current.states.app_1["1"].settings).toEqual({ volume: 1 });
+    expect(result.current.states.app_1["2"].settings).toEqual({ volume: 3 });
+  });
+
+  it("sends a message to the client a window shows", () => {
+    const { result } = mount([config({ multiClient: true })]);
+    act(() => socket().open());
+    act(() => clients(1, 2));
+    socket().sent = [];
+    act(() => result.current.send("app_1", "1", { type: "start" }));
+
+    expect(socket().sent).toEqual([{ type: "start", app: "app_1", client: 1 }]);
   });
 
   it("does not announce a state change that is not a setting", () => {
     const { result } = mount();
-    act(() => FakeSocket.instances[0].open());
-    FakeSocket.instances[0].sent = [];
-    act(() => result.current.push("app_1", { rolling: true }));
+    act(() => socket().open());
+    act(() => clients(1));
+    socket().sent = [];
+    act(() => result.current.push("app_1", ALL, { rolling: true }));
 
-    expect(FakeSocket.instances[0].sent).toEqual([]);
-    expect(result.current.states.app_1.rolling).toBe(true);
+    expect(socket().sent).toEqual([]);
+    expect(result.current.states.app_1[ALL].rolling).toBe(true);
   });
 
   it("drops a message when the socket is not open", () => {
     const { result } = mount();
-    act(() => result.current.send("app_1", { type: "start" }));
+    act(() => result.current.send("app_1", "1", { type: "start" }));
 
-    expect(FakeSocket.instances[0].sent).toEqual([]);
+    expect(socket().sent).toEqual([]);
   });
 });
 
@@ -274,7 +381,7 @@ describe("loading saved settings", () => {
       }),
     ]);
 
-    expect(result.current.states.app_1.settings).toEqual({
+    expect(result.current.states.app_1[ALL].settings).toEqual({
       volume: 1,
       zones: { a: { on: false }, b: { on: true } },
       list: [3],

@@ -15,6 +15,11 @@
  *   setState(p) merge into state — persisted locally, never sent
  *   send(msg)  raw message to the plugin
  *
+ * `multiClient` gives the app a state per game client, with a tab for each
+ * in its window; `clientSettings` makes its settings per client as well
+ * (see hooks/useAppSessions.js). Without them the app keeps one state that
+ * every client feeds.
+ *
  * `transient` names the state keys that must not outlive the session: a
  * one-off event from the plugin, or a flag that mirrors something only the
  * plugin knows. They are never written to storage and are reset to their
@@ -34,6 +39,8 @@ export function defineApp(spec) {
     settings: defaultSettings = {},
     state: defaultState = {},
     transient = [],
+    multiClient = false,
+    clientSettings = false,
     messages = {},
     header: Header,
     derive,
@@ -69,6 +76,9 @@ export function defineApp(spec) {
     label: vendor ? `${vendor} ${name}` : name,
 
     initialState: () => ({ settings: defaultSettings, ...defaultState }),
+
+    multiClient,
+    clientSettings,
 
     // State the shell must not persist. A `missionHit` replayed from storage
     // on the next load would decrement the roll list for a mission that was

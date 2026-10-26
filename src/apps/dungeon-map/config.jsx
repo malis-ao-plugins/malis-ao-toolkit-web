@@ -165,6 +165,9 @@ export default defineApp({
 
   settings: DEFAULTS,
 
+  // Each character is in its own dungeon; how the map looks is shared.
+  multiClient: true,
+
   state: {
     dungeon: null,
     player: null,

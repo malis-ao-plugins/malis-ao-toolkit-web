@@ -124,6 +124,10 @@ export default defineApp({
     ),
   },
 
+  // Each character rolls on its own, against its own roll list.
+  multiClient: true,
+  clientSettings: true,
+
   state: { rolling: false },
 
   // `rolling` mirrors the plugin, which says so again whenever we connect.

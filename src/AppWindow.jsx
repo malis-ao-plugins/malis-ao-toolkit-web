@@ -103,6 +103,18 @@ export function AppWindow({ config, session, initialPos, onMinimise, z = 10, onR
 
       {session.connected ? (
         <>
+          {/* One tab per character, when more than one runs this app. */}
+          {config.multiClient && session.clients.length > 1 && (
+            <Tabs
+              tabs={session.clients.map((c) => ({
+                id: String(c.client),
+                label: c.name,
+              }))}
+              activeId={String(session.client)}
+              onSelect={(id) => session.selectClient(Number(id))}
+            />
+          )}
+
           {config.defaultTabs.length > 1 && (
             <Tabs
               tabs={config.defaultTabs}
