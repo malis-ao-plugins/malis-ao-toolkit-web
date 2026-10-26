@@ -36,6 +36,8 @@ npm start
 npx cross-env NODE_ENV=development electron . --overlay
 ```
 
+The overlay sits on whichever injected client is in front and hides when none is. Add `--overlay-direct-input` to be able to type into its text fields; without it the overlay never takes keyboard focus from the game.
+
 ## Tests, lint and build
 
 ```bash
