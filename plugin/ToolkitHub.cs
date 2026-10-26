@@ -21,8 +21,10 @@ using AOSharp.Core.UI;
 /// Every message names its app and its client (the character), so the page
 /// keeps each client's state apart and can talk to one client at a time:
 ///
-///   plugin → page   { app, client, name, ...payload }
-///   page → plugin   { app, client, ...payload }
+///   plugin → page   { ...payload, app, client }
+///   page → plugin   { ...payload, app, client }
+///
+/// Character names travel in the list of clients the hub sends the page.
 ///
 /// Messages between the hub's own ends carry "hub" instead of "app".
 ///
@@ -174,18 +176,20 @@ public static class ToolkitHub
     }
 
     /// <summary>
-    /// Adds app, client and name to a plugin's JSON object. Spliced rather than
-    /// parsed: the dungeon map sends one every frame.
+    /// Adds app and client to a plugin's JSON object. Spliced rather than
+    /// parsed: the dungeon map sends one every frame. They go last, because a
+    /// JSON reader keeps the last of two equal keys, and a payload may well
+    /// have its own "name" or "client" (the dungeon snapshot names its map).
     /// </summary>
     private static string Stamp(string json, string appId)
     {
         string body = json.Trim();
-        if (!body.StartsWith('{'))
+        if (!body.StartsWith('{') || !body.EndsWith('}'))
             return body;
 
-        string rest = body[1..].TrimStart();
-        string head = $"{{\"app\":{JsonSerializer.Serialize(appId)},\"client\":{_client},\"name\":{JsonSerializer.Serialize(_name)}";
-        return rest.StartsWith('}') ? head + rest : head + "," + rest;
+        string rest = body[..^1].TrimEnd();
+        string tail = $"\"app\":{JsonSerializer.Serialize(appId)},\"client\":{_client}}}";
+        return rest.EndsWith('{') ? rest + tail : rest + "," + tail;
     }
 
     private static void SendHello()
