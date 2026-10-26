@@ -13,7 +13,7 @@ import {
  * The view was previously 290 lines with six effects interleaved with the
  * markup. The work is really three stages, so it is written as three:
  *
- *   1. characters   — the plugin's list, fetched once
+ *   1. characters   — the plugin's list
  *   2. records      — every item row for the selected character(s), with its
  *                     location resolved from the container tree
  *   3. results      — those records joined to the item database, so names,
@@ -22,13 +22,19 @@ import {
  *
  * Splitting them means a change to the search does not risk the container
  * walk, and each stage can be read on its own.
+ *
+ * Stages 1 and 2 run again whenever `version` changes. The plugin bumps it
+ * after every change it commits and when the page connects, so the view is
+ * current without polling.
  */
 
 /** How long a pause in typing counts as "done typing". */
 const SETTLE_MS = 160;
 
 // Parent types that are top-level containers — nothing above them to name.
-const TOP_LEVEL = { 104: "Inventory", 105: "Bank" };
+// The plugin stores bank rows under IdentityType.Bank (0xDEAD), not the
+// by-reference type (105) the client uses for a bank slot.
+const TOP_LEVEL = { 104: "Inventory", 57005: "Bank" };
 
 /**
  * Where an item lives, and what that container itself sits in.
@@ -65,7 +71,7 @@ function resolveLocation(parentType, parentInstance, byInstance) {
   };
 }
 
-export function useInventory({ characterId, query }) {
+export function useInventory({ characterId, query, version }) {
   const [characters, setCharacters] = useState([]);
   const [records, setRecords] = useState([]);
   const [results, setResults] = useState([]);
@@ -75,12 +81,23 @@ export function useInventory({ characterId, query }) {
   useEffect(() => {
     let alive = true;
     getCharacters()
-      .then((list) => alive && setCharacters(list))
+      // The same list keeps its identity, so a bump that added no character
+      // does not re-run the search through `nameOf`.
+      .then(
+        (list) =>
+          alive &&
+          setCharacters((current) =>
+            current.length === list.length &&
+            current.every((c, i) => c.id === list[i].id && c.name === list[i].name)
+              ? current
+              : list,
+          ),
+      )
       .catch((err) => console.error("[item-assistant] characters", err));
     return () => {
       alive = false;
     };
-  }, []);
+  }, [version]);
 
   // ── 2. records ──────────────────────────────────────────────────────────
   const charIds = useMemo(
@@ -132,7 +149,7 @@ export function useInventory({ characterId, query }) {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [charKey]);
+  }, [charKey, version]);
 
   // ── 3. results ──────────────────────────────────────────────────────────
 

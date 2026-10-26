@@ -15,13 +15,14 @@ const ALL = "";
  * item-assistant.css), because at the 320px overlay target only the name and
  * the pull button are worth the space.
  */
-export function InventoryPanel({ settings, set, send }) {
+export function InventoryPanel({ settings, set, state, send }) {
   const [query, setQuery] = useState("");
   const characterId = settings.characterId ?? null;
 
   const { characters, results, loading, total } = useInventory({
     characterId,
     query,
+    version: state.inventoryVersion,
   });
 
   const options = [

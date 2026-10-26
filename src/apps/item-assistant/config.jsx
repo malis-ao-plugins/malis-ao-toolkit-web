@@ -10,6 +10,17 @@ export default defineApp({
     characterId: null, // null = every character
   },
 
+  // Bumped whenever the plugin commits a change, and once on every connect.
+  // The inventory re-fetches on the bump; there is no polling.
+  state: { inventoryVersion: 0 },
+  transient: ["inventoryVersion"],
+
+  messages: {
+    inventoryChanged: () => (s) => ({
+      inventoryVersion: (s.inventoryVersion ?? 0) + 1,
+    }),
+  },
+
   panels: {
     inventory: {
       title: "Inventory",
