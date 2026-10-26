@@ -1,6 +1,17 @@
-import { forwardRef, useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { PixelText, useFontRefresh } from "./pixel";
-import { cssSizeFor, fontFor, measure, metricsFamily } from "./fonts";
+import {
+  cssSizeFor,
+  fontFor,
+  measure,
+  metricsFamily,
+} from "./fonts";
 import "./pixel-input.css";
 
 /**
@@ -44,6 +55,7 @@ export const PixelInput = forwardRef(function PixelInput(
     className = "",
     style,
     inputClassName = "",
+    onFocus,
     ...rest
   },
   forwardedRef,
@@ -54,9 +66,13 @@ export const PixelInput = forwardRef(function PixelInput(
 
   const face = fontFor(size, weight);
   const metric = metricsFamily(size, weight);
+  const dpr = window.devicePixelRatio || 1;
+  const pixelScale = Math.max(1, Math.round(dpr)) / dpr;
   const innerRef = useRef(null);
   const [offset, setOffset] = useState(0);
   const [box, setBox] = useState(0);
+  const directInputEnabled =
+    new URLSearchParams(window.location.search).get("directInputEnabled") === "1";
 
   const setRefs = useCallback(
     (el) => {
@@ -94,7 +110,7 @@ export const PixelInput = forwardRef(function PixelInput(
    * scrolls instead, and `offset` follows it.
    */
   const inkLeft = (() => {
-    const painted = measure(empty ? placeholder : shown, size, weight);
+    const painted = measure(empty ? placeholder : shown, size, weight) * pixelScale;
     const slack = Math.max(0, box - painted);
     if (align === "center") return Math.round(slack / 2) - offset;
     if (align === "right") return Math.round(slack) - offset;
@@ -132,7 +148,19 @@ export const PixelInput = forwardRef(function PixelInput(
           onScroll={sync}
           onKeyUp={sync}
           onSelect={sync}
-          onFocus={sync}
+          onMouseDown={(event) => {
+            if (
+              directInputEnabled &&
+              !event.currentTarget.disabled &&
+              !event.currentTarget.readOnly
+            ) {
+              window.electronAPI?.focusOverlayDirectInput?.();
+            }
+          }}
+          onFocus={(event) => {
+            sync();
+            onFocus?.(event);
+          }}
           style={{
             fontFamily: metric
               ? `"${metric}", monospace`

@@ -123,6 +123,117 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
   const openTimer = useRef(null);
   const dragRef = useRef(null);
 
+  /* Enable the windows to be dragged in overlay mode. */
+  useEffect(() => {
+    if (
+      new URLSearchParams(window.location.search).get("overlay") !== "1"
+    ) {
+      return;
+    }
+
+    let passthrough = true;
+    let pointerDownOnUI = false;
+
+    function setPassthrough(value) {
+      if (passthrough === value) return;
+
+      passthrough = value;
+      window.electronAPI?.setOverlayMousePassthrough(value);
+    }
+
+    function isOverUI(x, y) {
+      const element = document.elementFromPoint(x, y);
+
+      const mapStage = document.querySelector(
+        '.dm__stage[data-overlay-map-clickthrough="true"]',
+      );
+      const mapApp = mapStage?.closest(".app");
+      if (mapStage && mapApp) {
+        const isInside = (node) => {
+          if (!node) return false;
+          const rect = node.getBoundingClientRect();
+          return (
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom
+          );
+        };
+        const appRect = mapApp.getBoundingClientRect();
+        const insideMapApp =
+          x >= appRect.left &&
+          x <= appRect.right &&
+          y >= appRect.top &&
+          y <= appRect.bottom;
+
+        if (insideMapApp) {
+          const topBar = mapApp.querySelector(".window-drag-handle");
+          const mapArea = mapApp.querySelector(".dm__stage");
+          if (isInside(topBar)) return true;
+          if (isInside(mapArea)) return false;
+
+          // Transparent space inside the map window should reach the game.
+          if (!element?.closest(".app") || element.closest(".app") === mapApp) {
+            return false;
+          }
+        }
+      }
+
+      return (
+        element instanceof Element &&
+        element.closest(".app, .lch, [data-overlay-interactive]") !== null
+      );
+    }
+
+    function onMouseMove(event) {
+      if (pointerDownOnUI) {
+        setPassthrough(false);
+        return;
+      }
+
+      setPassthrough(!isOverUI(event.clientX, event.clientY));
+    }
+
+    function onMouseDown(event) {
+      const overUI = isOverUI(event.clientX, event.clientY);
+
+      if (overUI) {
+        pointerDownOnUI = true;
+        setPassthrough(false);
+      }
+    }
+
+    function onMouseUp(event) {
+      pointerDownOnUI = false;
+      const overUI = isOverUI(event.clientX, event.clientY);
+      setPassthrough(!overUI);
+    }
+
+    function onBlur() {
+      pointerDownOnUI = false;
+      // When focus leaves the overlay, return to click-through mode so the
+      // game can receive input.
+      setPassthrough(true);
+    }
+
+    document.addEventListener("mousemove", onMouseMove, true);
+    document.addEventListener("mousedown", onMouseDown, true);
+    document.addEventListener("mouseup", onMouseUp, true);
+    window.addEventListener("blur", onBlur);
+
+    return () => {
+      document.removeEventListener("mousemove", onMouseMove, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
+      document.removeEventListener("mouseup", onMouseUp, true);
+      window.removeEventListener("blur", onBlur);
+
+      window.electronAPI?.setOverlayMousePassthrough(true);
+    };
+  }, []);
+
+  /* */
+
+
   const clearTimers = () => clearTimeout(openTimer.current);
 
   useEffect(() => clearTimers, []);

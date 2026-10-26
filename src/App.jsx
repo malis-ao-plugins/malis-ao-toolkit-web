@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { APP_CONFIGS } from "./apps.config";
 import { ALL, useAppSessions, viewState } from "./hooks/useAppSessions";
 import { useShownApps } from "./shell/useShownApps";
@@ -76,6 +76,9 @@ function useSelectedClient(appId, clients) {
   return [ids.includes(chosen) ? chosen : (ids[0] ?? null), select];
 }
 
+/** Running as the in-game overlay (electron.js --overlay). */
+const OVERLAY = new URLSearchParams(window.location.search).get("overlay") === "1";
+
 /**
  * One app's window, insulated from the others.
  *
@@ -93,6 +96,7 @@ const AppSlot = memo(function AppSlot({
   connected,
   appStates,
   clients,
+  focused,
   send,
   push,
   hide,
@@ -101,6 +105,15 @@ const AppSlot = memo(function AppSlot({
   z,
 }) {
   const [client, selectClient] = useSelectedClient(config.id, clients);
+
+  // Bringing a client to the front shows its tab. Clicking another tab still
+  // works; the next focus change decides again.
+  useEffect(() => {
+    if (focused != null && clients.some((c) => c.client === focused)) {
+      selectClient(focused);
+    }
+  }, [focused, clients, selectClient]);
+
   const key = config.multiClient && client != null ? String(client) : ALL;
 
   // Rebuilt only when this window's own record or the shared one changes.
@@ -140,7 +153,18 @@ const AppSlot = memo(function AppSlot({
 });
 
 export default function App() {
-  const { connections, clients, states, send, push } = useAppSessions(APP_CONFIGS);
+  const { connections, clients, windows, focused, states, send, push } =
+    useAppSessions(APP_CONFIGS);
+
+  // The overlay sits on the client in front, and hides when none is.
+  const game = focused != null ? windows[String(focused)] : null;
+  const gameBounds = game?.bounds;
+  useEffect(() => {
+    if (!OVERLAY) return;
+    window.electronAPI?.setGameWindow?.(
+      gameBounds ? { visible: true, bounds: gameBounds } : { visible: false, bounds: null },
+    );
+  }, [gameBounds]);
 
   // Each app's clients, held by identity until the hub's list changes.
   const appClients = useMemo(
@@ -201,6 +225,7 @@ export default function App() {
             connected={connections[config.id]}
             appStates={states[config.id]}
             clients={appClients[config.id]}
+            focused={focused}
             send={send}
             push={push}
             hide={hide}

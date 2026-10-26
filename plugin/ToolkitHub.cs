@@ -25,10 +25,18 @@ using AOSharp.Core.UI;
 ///   page → plugin   { app, client, ...payload }
 ///
 /// Messages between the hub's own ends carry "hub" instead of "app".
+///
+/// The hub also reports this client's game window, as app "$window": whether
+/// it is in front, minimized, and its game area in physical screen pixels
+/// (AOSharp Core's GameWindow). The overlay sits on whichever client is in
+/// front, and the page switches to that client's tabs.
 /// </summary>
 public static class ToolkitHub
 {
     public const int Port = 7067;
+
+    /// <summary>The pseudo-app the game window's state travels as.</summary>
+    public const string WindowApp = "$window";
 
     private const string ResourcePrefix = "www/";
 
@@ -122,6 +130,7 @@ public static class ToolkitHub
             _name = player?.Name ?? $"Client {_client}";
 
             Game.OnUpdate += OnUpdate;
+            GameWindow.Changed += OnGameWindowChanged;
             _cts = new CancellationTokenSource();
             _loop = Task.Run(() => RunAsync(_cts.Token));
         }
@@ -136,6 +145,7 @@ public static class ToolkitHub
                 return;
 
             Game.OnUpdate -= OnUpdate;
+            GameWindow.Changed -= OnGameWindowChanged;
             _cts?.Cancel();
             loop = _loop;
             _loop = null;
@@ -236,8 +246,24 @@ public static class ToolkitHub
 
     private static void PageConnected()
     {
+        SendWindow();
         foreach (var app in Apps.Values)
             app.RaisePageConnected();
+    }
+
+    private static void OnGameWindowChanged(object? sender, EventArgs e) => SendWindow();
+
+    /// <summary>The game window as the page and the overlay want it.</summary>
+    private static void SendWindow()
+    {
+        var bounds = GameWindow.ClientBounds;
+        Send(WindowApp, JsonSerializer.Serialize(new
+        {
+            type = "window",
+            foreground = GameWindow.IsForeground,
+            minimized = GameWindow.IsMinimized,
+            bounds = new { x = bounds.X, y = bounds.Y, width = bounds.Width, height = bounds.Height },
+        }));
     }
 
     /// <summary>Host: a message from a page goes to the client it names.</summary>

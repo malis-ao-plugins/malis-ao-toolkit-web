@@ -9,6 +9,9 @@ export const HUB_URL = "ws://localhost:7067/ws";
 /** The state key of an app that keeps one state for every client. */
 export const ALL = "*";
 
+/** The pseudo-app each client's game window arrives as (see ToolkitHub). */
+export const WINDOW_APP = "$window";
+
 /**
  * One socket to the toolkit hub, and every app's state, per client.
  *
@@ -29,6 +32,10 @@ export const ALL = "*";
  * State lives in `states[appId][key]`, where key is ALL or a client id. The
  * ALL record is stored under the key apps always used, so saved settings carry
  * over, and a client seen for the first time starts from it.
+ *
+ * Each client also reports its game window, as WINDOW_APP: whether it is in
+ * front, minimised, and its game area in physical pixels. `windows` holds the
+ * latest per client, and `focused` is the client in front, if any.
  *
  * Reconnection is a flat 2s retry. The hub comes and goes with the game
  * clients, so a dropped socket is the normal case rather than an error.
@@ -158,6 +165,7 @@ export function useAppSessions(configs) {
 
   const [open, setOpen] = useState(false);
   const [clients, setClients] = useState([]);
+  const [windows, setWindows] = useState({});
   const clientsRef = useRef(clients);
   clientsRef.current = clients;
 
@@ -315,6 +323,13 @@ export function useAppSessions(configs) {
     (list) => {
       setClients(list);
 
+      // A client that left takes its window with it.
+      setWindows((prev) => {
+        const ids = new Set(list.map((c) => String(c.client)));
+        const kept = Object.entries(prev).filter(([id]) => ids.has(id));
+        return kept.length === Object.keys(prev).length ? prev : Object.fromEntries(kept);
+      });
+
       const present = new Set();
       const fresh = [];
       for (const { client, apps = [] } of list) {
@@ -380,6 +395,7 @@ export function useAppSessions(configs) {
         if (!alive.current) return;
         setOpen(false);
         setClients([]);
+        setWindows({});
         announced.current.clear();
         retry.current = setTimeout(connect, 2000);
       };
@@ -396,6 +412,15 @@ export function useAppSessions(configs) {
 
         if (data?.hub === "clients") {
           onClients(Array.isArray(data.clients) ? data.clients : []);
+          return;
+        }
+
+        if (data?.app === WINDOW_APP) {
+          const { foreground, minimized, bounds } = data;
+          setWindows((prev) => ({
+            ...prev,
+            [String(data.client)]: { foreground: !!foreground, minimized: !!minimized, bounds },
+          }));
           return;
         }
 
@@ -428,7 +453,15 @@ export function useAppSessions(configs) {
     [configs, open, clients],
   );
 
-  return { connections, clients, states, send, push };
+  // The client in front: the one the overlay sits on and the tabs follow.
+  const focused = useMemo(() => {
+    const entry = Object.entries(windows).find(
+      ([, w]) => w.foreground && !w.minimized,
+    );
+    return entry ? Number(entry[0]) : null;
+  }, [windows]);
+
+  return { connections, clients, windows, focused, states, send, push };
 }
 
 export default useAppSessions;
