@@ -130,7 +130,7 @@ export function SettingsWindow({
           <Panel title="Overlay">
             <Stack gap={2}>
               <PixelText fit className="set__hint">
-                Lets the overlay take the keyboard from the game
+                Clicking a text field takes the keyboard from the game
               </PixelText>
               <Toggle
                 label="Type into the overlay"
