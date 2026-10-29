@@ -71,8 +71,6 @@ export const PixelInput = forwardRef(function PixelInput(
   const innerRef = useRef(null);
   const [offset, setOffset] = useState(0);
   const [box, setBox] = useState(0);
-  const directInputEnabled =
-    new URLSearchParams(window.location.search).get("directInputEnabled") === "1";
 
   const setRefs = useCallback(
     (el) => {
@@ -149,11 +147,8 @@ export const PixelInput = forwardRef(function PixelInput(
           onKeyUp={sync}
           onSelect={sync}
           onMouseDown={(event) => {
-            if (
-              directInputEnabled &&
-              !event.currentTarget.disabled &&
-              !event.currentTarget.readOnly
-            ) {
+            // Only heeded over the game, with typing into the overlay on.
+            if (!event.currentTarget.disabled && !event.currentTarget.readOnly) {
               window.electronAPI?.focusOverlayDirectInput?.();
             }
           }}

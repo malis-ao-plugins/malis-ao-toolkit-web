@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PixelText } from "../ui";
+import { layoutKey, useOverlay } from "./overlay";
 import "./launcher.css";
 
 const PUCK = 32;
@@ -18,9 +19,9 @@ const FOLD_MS = 240;
 
 const POS_KEY = "launcherPos";
 
-function loadPos() {
+function loadPos(key) {
   try {
-    return JSON.parse(localStorage.getItem(POS_KEY)) ?? { x: 24, y: 24 };
+    return JSON.parse(localStorage.getItem(key)) ?? { x: 24, y: 24 };
   } catch {
     return { x: 24, y: 24 };
   }
@@ -118,18 +119,33 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
   const [mounted, setMounted] = useState(false);
   const [folding, setFolding] = useState(false);
   const [cycle, setCycle] = useState(0);
-  const [pos, setPos] = useState(loadPos);
+
+  // Over the game the puck has its own place, as the windows do.
+  const overlay = useOverlay();
+  const posKey = layoutKey(POS_KEY, overlay);
+  const [held, setHeld] = useState(() => ({ key: posKey, pos: loadPos(posKey) }));
+  if (held.key !== posKey) setHeld({ key: posKey, pos: loadPos(posKey) });
+  const setPos = (pos) => setHeld((h) => ({ ...h, pos }));
+
+  // Kept on screen where it is shown, not where it is kept: the window
+  // shrinks every time it leaves the game.
+  const [, setViewport] = useState(0);
+  useEffect(() => {
+    const resized = () => setViewport((n) => n + 1);
+    window.addEventListener("resize", resized);
+    return () => window.removeEventListener("resize", resized);
+  }, []);
+  const pos = {
+    x: Math.max(0, Math.min(held.pos.x, window.innerWidth - PUCK)),
+    y: Math.max(0, Math.min(held.pos.y, window.innerHeight - PUCK)),
+  };
 
   const openTimer = useRef(null);
   const dragRef = useRef(null);
 
-  /* Enable the windows to be dragged in overlay mode. */
+  /* Over the game, let the mouse through except where the UI is. */
   useEffect(() => {
-    if (
-      new URLSearchParams(window.location.search).get("overlay") !== "1"
-    ) {
-      return;
-    }
+    if (!overlay) return;
 
     let passthrough = true;
     let pointerDownOnUI = false;
@@ -229,7 +245,7 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
 
       window.electronAPI?.setOverlayMousePassthrough(true);
     };
-  }, []);
+  }, [overlay]);
 
   /* */
 
@@ -240,11 +256,11 @@ export function Launcher({ apps, connections, isShown, onToggle, onOptions, opti
 
   useEffect(() => {
     try {
-      localStorage.setItem(POS_KEY, JSON.stringify(pos));
+      localStorage.setItem(held.key, JSON.stringify(held.pos));
     } catch {
       /* ignore */
     }
-  }, [pos]);
+  }, [held]);
 
   useEffect(() => {
     if (open) {

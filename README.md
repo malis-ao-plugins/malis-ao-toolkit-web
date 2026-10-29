@@ -29,14 +29,7 @@ npm run electron:dev     # CRA dev server + Electron pointed at it
 npm run electron:build   # production build, then electron-builder into dist/
 ```
 
-Testing the overlay with the game running:
-
-```
-npm start
-npx cross-env NODE_ENV=development electron . --overlay
-```
-
-The overlay sits on whichever injected client is in front and hides when none is. Add `--overlay-direct-input` to be able to type into its text fields; without it the overlay never takes keyboard focus from the game.
+There is no separate overlay mode to launch. The toolkit opens as an ordinary window, moves over whichever injected client is in front, and goes back to a minimised window when none is. Over the game it keeps its own layout, so windows placed there stay put when it shrinks back. To type into its text fields while it is over the game, switch on **Type into the overlay** under Interface in the launcher; without it the overlay never takes keyboard focus from the game. Only one copy runs at a time: launching it again brings the running one forward.
 
 ## Tests, lint and build
 

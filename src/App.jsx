@@ -5,6 +5,7 @@ import { useShownApps } from "./shell/useShownApps";
 import { Launcher } from "./shell/Launcher";
 import { SettingsWindow } from "./shell/SettingsWindow";
 import { useTheme } from "./shell/theme";
+import { useOverlayDirectInput } from "./shell/overlay";
 import AppWindow from "./AppWindow";
 import { DEFAULT_FRAME } from "./hooks/useWindowFrame";
 
@@ -75,9 +76,6 @@ function useSelectedClient(appId, clients) {
   const ids = clients.map((c) => c.client);
   return [ids.includes(chosen) ? chosen : (ids[0] ?? null), select];
 }
-
-/** Running as the in-game overlay (electron.js --overlay). */
-const OVERLAY = new URLSearchParams(window.location.search).get("overlay") === "1";
 
 /**
  * One app's window, insulated from the others.
@@ -156,11 +154,10 @@ export default function App() {
   const { connections, clients, windows, focused, states, send, push } =
     useAppSessions(APP_CONFIGS);
 
-  // The overlay sits on the client in front, and hides when none is.
+  // The window moves over the client in front, and back when none is.
   const game = focused != null ? windows[String(focused)] : null;
   const gameBounds = game?.bounds;
   useEffect(() => {
-    if (!OVERLAY) return;
     window.electronAPI?.setGameWindow?.(
       gameBounds ? { visible: true, bounds: gameBounds } : { visible: false, bounds: null },
     );
@@ -179,6 +176,7 @@ export default function App() {
   );
   const { isShown, hide, toggle } = useShownApps();
   const { theme, set: setTheme, reset: resetTheme } = useTheme();
+  const [directInput, setDirectInput] = useOverlayDirectInput();
   const [options, setOptions] = useState(false);
 
   // Which window is in front. Windows stacked in declaration order before,
@@ -211,6 +209,8 @@ export default function App() {
           theme={theme}
           onChange={setTheme}
           onReset={resetTheme}
+          directInput={directInput}
+          onDirectInput={setDirectInput}
           onClose={() => setOptions(false)}
         />
       )}

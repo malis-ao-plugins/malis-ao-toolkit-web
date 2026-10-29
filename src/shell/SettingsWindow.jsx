@@ -6,6 +6,7 @@ import {
   PixelText,
   Row,
   Stack,
+  Toggle,
 } from "../ui";
 import { useWindowFrame } from "../hooks/useWindowFrame";
 import { useWindowFlight } from "../hooks/useWindowFlight";
@@ -60,7 +61,14 @@ const TEXT = ["#ffffff", "#ccd6e0", "#9aa7b6", "#7c8b9c", "#4d5a6a"];
 
 const SWATCHES_FOR = { surface: SURFACES, text: TEXT };
 
-export function SettingsWindow({ theme, onChange, onReset, onClose }) {
+export function SettingsWindow({
+  theme,
+  onChange,
+  onReset,
+  directInput,
+  onDirectInput,
+  onClose,
+}) {
   // Wider than an app window: a colour row is swatches plus a picker, and
   // the frame hook takes a whole frame as its first-run position.
   const { frame, handlers, windowRef, dragging } = useWindowFrame("shell_settings", {
@@ -117,6 +125,22 @@ export function SettingsWindow({ theme, onChange, onReset, onClose }) {
       </div>
 
       <div className="body">
+        {/* Only the desktop app goes over the game; a browser tab cannot. */}
+        {window.electronAPI && (
+          <Panel title="Overlay">
+            <Stack gap={2}>
+              <PixelText fit className="set__hint">
+                Lets the overlay take the keyboard from the game
+              </PixelText>
+              <Toggle
+                label="Type into the overlay"
+                on={!!directInput}
+                onChange={onDirectInput}
+              />
+            </Stack>
+          </Panel>
+        )}
+
         {GROUPS.map((group) => {
           const fields = THEME.filter((field) => field.group === group.id);
 

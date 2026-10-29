@@ -25,17 +25,6 @@ function hasFlag(flag) {
   return process.argv.includes(flag);
 }
 
-function getFlagValue(name, fallback = null) {
-  const prefix = `${name}=`;
-  const arg = process.argv.find((value) => value.startsWith(prefix));
-  return arg ? arg.slice(prefix.length) : fallback;
-}
-
-function getNumberFlag(name, fallback) {
-  const value = Number(getFlagValue(name));
-  return Number.isFinite(value) && value > 0 ? value : fallback;
-}
-
 function traceOverlay(event, details = {}) {
   if (process.env.NODE_ENV === "development") {
     console.log(`[overlay] ${event}`, details);
@@ -44,7 +33,7 @@ function traceOverlay(event, details = {}) {
 
 // ── URLs ─────────────────────────────────────────────────────────────────────
 
-function getAppUrl(appId, { overlay = false, directInputEnabled = false } = {}) {
+function getAppUrl(appId) {
   // loadURL in both cases: file:// with a query string is not loadFile's job.
   const url =
     process.env.NODE_ENV === "development"
@@ -52,8 +41,6 @@ function getAppUrl(appId, { overlay = false, directInputEnabled = false } = {}) 
       : pathToFileURL(path.join(__dirname, "build", "index.html"));
 
   if (appId) url.searchParams.set("app", appId);
-  if (overlay) url.searchParams.set("overlay", "1");
-  if (directInputEnabled) url.searchParams.set("directInputEnabled", "1");
 
   return url.toString();
 }
@@ -61,19 +48,13 @@ function getAppUrl(appId, { overlay = false, directInputEnabled = false } = {}) 
 // ── window creation ──────────────────────────────────────────────────────────
 
 /**
- * An ordinary toolkit window, or with `overlay` the in-game overlay: a
- * transparent, always-on-top window that lets the mouse through to the game
- * except where the toolkit's own UI is (see the hit test in Launcher.jsx).
- *
- * With `directInput` the overlay can take keyboard focus, so its text fields
- * can be typed into; without it the overlay never takes focus from the game.
+ * A toolkit window. With `followsGame` it is the main one: an ordinary window
+ * that moves over the game whenever an injected client is in front (see
+ * followGame). It is transparent from the start, because a window cannot be
+ * made transparent later; the page paints its own background while it is an
+ * ordinary window.
  */
-function createWindow(
-  appId = null,
-  width = 720,
-  height = 634,
-  { overlay = false, directInput = false } = {},
-) {
+function createWindow(appId = null, width = 720, height = 634, { followsGame = false } = {}) {
   const win = new BrowserWindow({
     width,
     height,
@@ -82,17 +63,11 @@ function createWindow(
     autoHideMenuBar: true,
     icon: path.join(__dirname, "build", "avatar.ico"),
 
-    ...(overlay
+    ...(followsGame
       ? {
           transparent: true,
           backgroundColor: "#00000000",
-          alwaysOnTop: true,
-          skipTaskbar: true,
           hasShadow: false,
-          focusable: directInput,
-          resizable: false,
-          movable: false,
-          show: false,
         }
       : {}),
 
@@ -100,22 +75,16 @@ function createWindow(
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
+      // The page has to answer while minimised: it is what tells this
+      // process the game came to the front, and it acknowledges the switch.
+      ...(followsGame ? { backgroundThrottling: false } : {}),
     },
   });
 
-  win.isAoOverlay = overlay;
-  win.overlayDirectInputEnabled = overlay && directInput;
-  win.overlayDirectInputRequestedUntil = 0;
   win.setMenu(null);
   win.setMenuBarVisibility(false);
 
-  if (overlay) {
-    // Above the game, including a borderless full-screen one.
-    win.setAlwaysOnTop(true, "screen-saver");
-    // Pass mouse input through to the game underneath.
-    win.setIgnoreMouseEvents(true, { forward: true });
-    trackGameWindow(win);
-  }
+  if (followsGame) followGame(win);
 
   if (hasFlag("--devtools")) {
     win.webContents.once("did-finish-load", () => {
@@ -123,35 +92,43 @@ function createWindow(
     });
   }
 
-  win
-    .loadURL(getAppUrl(appId, { overlay, directInputEnabled: win.overlayDirectInputEnabled }))
-    .catch((error) => {
-      console.error("Failed to load Mali's AO Toolkit window:", error);
-    });
+  win.loadURL(getAppUrl(appId)).catch((error) => {
+    console.error("Failed to load Mali's AO Toolkit window:", error);
+  });
 
   return win;
 }
 
-// ── overlay placement ────────────────────────────────────────────────────────
+// ── following the game ───────────────────────────────────────────────────────
 
 /**
- * Where the overlay goes comes from the game, not from watching the desktop.
+ * Where the window goes comes from the game, not from watching the desktop.
  *
  * Every injected client reports its window through the toolkit hub (AOSharp
  * Core's GameWindow): whether it is in front, whether it is minimised, and its
  * game area in physical screen pixels. The page picks the client in front and
  * forwards it here as { visible, bounds }. Nothing polls.
+ *
+ * A client in front turns the window into the overlay: over the game, on top,
+ * out of the taskbar, letting the mouse through except where the UI is (the
+ * hit test in Launcher.jsx), and taking no keyboard focus unless typing into
+ * it is switched on in the options. None in front puts it back where it was,
+ * minimised, so it does not land on top of whatever was switched to.
+ *
+ * Going over the game waits for the page to say it has turned transparent;
+ * stretched over the screen first, its window background would cover it.
  */
-function trackGameWindow(win) {
-  let ready = false;
+function followGame(win) {
+  let mode = "window"; // "window" | "entering" | "overlay"
   let game = { visible: false, bounds: null };
+  let normalBounds = null;
   let lastBounds = null;
+  let enterTimer = null;
   let blurTimer = null;
 
-  win.once("ready-to-show", () => {
-    ready = true;
-    place();
-  });
+  win.overlayActive = () => mode === "overlay";
+  win.overlayDirectInput = false;
+  win.overlayDirectInputRequestedUntil = 0;
 
   // Typing into the overlay takes focus from the game, which then reports
   // itself as not in front. The overlay stays up while it has focus, and for
@@ -159,17 +136,63 @@ function trackGameWindow(win) {
   const holdingFocus = () =>
     win.isFocused() || Date.now() < win.overlayDirectInputRequestedUntil;
 
-  function place() {
-    if (win.isDestroyed() || !ready) return;
+  function enter() {
+    normalBounds = win.getNormalBounds();
+    mode = "entering";
+    traceOverlay("going over the game");
 
-    if (!game.visible || !game.bounds) {
-      if (holdingFocus()) return;
-      if (win.isVisible()) {
-        traceOverlay("hidden: no client in front");
-        win.hide();
-      }
+    win.setSkipTaskbar(true);
+    win.setResizable(false);
+    win.setFocusable(win.overlayDirectInput);
+    win.setIgnoreMouseEvents(true, { forward: true });
+    win.webContents.send("overlay:mode", true);
+
+    // In case the page never answers: better a flash than no overlay.
+    enterTimer = setTimeout(entered, 500);
+  }
+
+  function entered() {
+    if (mode !== "entering") return;
+    clearTimeout(enterTimer);
+    mode = "overlay";
+    lastBounds = null;
+    place();
+  }
+
+  function leave() {
+    clearTimeout(enterTimer);
+    mode = "window";
+    lastBounds = null;
+    traceOverlay("back to a window: no client in front");
+
+    win.hide();
+    win.setAlwaysOnTop(false);
+    win.setIgnoreMouseEvents(false);
+    win.setFocusable(true);
+    win.setResizable(true);
+    win.setSkipTaskbar(false);
+    if (normalBounds) win.setBounds(normalBounds);
+    win.webContents.send("overlay:mode", false);
+    win.minimize();
+  }
+
+  function place() {
+    if (win.isDestroyed()) return;
+
+    const showing = game.visible && game.bounds;
+
+    if (mode === "window") {
+      if (showing) enter();
       return;
     }
+
+    if (!showing) {
+      if (mode === "overlay" && holdingFocus()) return;
+      leave();
+      return;
+    }
+
+    if (mode === "entering") return;
 
     // BrowserWindow bounds are in DIPs; the game reports physical pixels.
     const physical = {
@@ -189,6 +212,12 @@ function trackGameWindow(win) {
       height: Math.round(dip.height),
     };
 
+    // Shown before it is sized: a minimised window takes no bounds.
+    if (!win.isVisible() || win.isMinimized()) {
+      traceOverlay("shown over the client in front", bounds);
+      win.showInactive();
+    }
+
     if (
       !lastBounds ||
       lastBounds.x !== bounds.x ||
@@ -200,10 +229,6 @@ function trackGameWindow(win) {
       lastBounds = bounds;
     }
 
-    if (!win.isVisible()) {
-      traceOverlay("shown over the client in front", bounds);
-      win.showInactive();
-    }
     win.setAlwaysOnTop(true, "screen-saver");
   }
 
@@ -212,14 +237,27 @@ function trackGameWindow(win) {
     place();
   };
 
+  win.overlayApplied = (on) => {
+    if (on) entered();
+  };
+
+  win.overlaySetDirectInput = (on) => {
+    win.overlayDirectInput = on;
+    if (mode !== "window") win.setFocusable(on);
+  };
+
   // Focus leaving the overlay for something other than the game: nothing
   // will report a change, so look again once focus has settled.
   win.on("blur", () => {
+    if (mode !== "overlay") return;
     clearTimeout(blurTimer);
     blurTimer = setTimeout(place, 300);
   });
 
-  win.on("closed", () => clearTimeout(blurTimer));
+  win.on("closed", () => {
+    clearTimeout(blurTimer);
+    clearTimeout(enterTimer);
+  });
 }
 
 // ── lifecycle ─────────────────────────────────────────────────────────────────
@@ -227,43 +265,62 @@ function trackGameWindow(win) {
 /** Track per-app windows so we focus instead of duplicating */
 const appWindows = new Map(); // appId → BrowserWindow
 
-app.whenReady().then(() => {
-  if (hasFlag("--overlay")) {
-    createWindow(
-      getFlagValue("--overlay-tool"),
-      getNumberFlag("--overlay-width", 720),
-      getNumberFlag("--overlay-height", 634),
-      { overlay: true, directInput: hasFlag("--overlay-direct-input") },
-    );
-  } else {
-    createWindow(); // the "all apps" hub window
-  }
+/** The window that follows the game. */
+let mainWindow = null;
+
+// One toolkit at a time. A second copy would share this one's profile and
+// fight it for the caches, and both would follow the game. Launching it again
+// brings this one forward instead, unless it is over the game already.
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    if (!mainWindow || mainWindow.isDestroyed() || mainWindow.overlayActive()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
+  });
+
+  app.whenReady().then(ready);
+}
+
+function ready() {
+  mainWindow = createWindow(null, 720, 634, { followsGame: true });
 
   // ── IPC: the overlay ──────────────────────────────────────────────────────
 
   const overlayOf = (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);
-    return win && !win.isDestroyed() && win.isAoOverlay ? win : null;
+    return win && !win.isDestroyed() && win.overlayPlace ? win : null;
   };
 
   ipcMain.on("overlay:set-mouse-passthrough", (event, passthrough) => {
-    overlayOf(event)?.setIgnoreMouseEvents(Boolean(passthrough), { forward: true });
+    const win = overlayOf(event);
+    if (!win?.overlayActive()) return;
+    win.setIgnoreMouseEvents(Boolean(passthrough), { forward: true });
   });
 
   ipcMain.on("overlay:game-window", (event, game) => {
-    overlayOf(event)?.overlayPlace?.({
+    overlayOf(event)?.overlayPlace({
       visible: Boolean(game?.visible),
       bounds: game?.bounds ?? null,
     });
   });
 
+  ipcMain.on("overlay:mode-applied", (event, on) => {
+    overlayOf(event)?.overlayApplied(Boolean(on));
+  });
+
+  ipcMain.on("overlay:set-direct-input", (event, on) => {
+    overlayOf(event)?.overlaySetDirectInput(Boolean(on));
+  });
+
   ipcMain.on("overlay:focus-direct-input", (event) => {
     const win = overlayOf(event);
-    if (!win?.overlayDirectInputEnabled) return;
+    if (!win?.overlayActive() || !win.overlayDirectInput) return;
 
     win.overlayDirectInputRequestedUntil = Date.now() + 1200;
     win.setIgnoreMouseEvents(false, { forward: true });
-    if (!win.isVisible()) win.showInactive();
     win.focus();
     traceOverlay("direct input focus requested", { focused: win.isFocused() });
   });
@@ -282,7 +339,7 @@ app.whenReady().then(() => {
       win.on("closed", () => appWindows.delete(appId));
     },
   );
-});
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();

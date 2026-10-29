@@ -23,4 +23,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
    *   bounds in physical screen pixels, as the client reports them
    */
   setGameWindow: (game) => ipcRenderer.send("overlay:game-window", game),
+
+  /** Overlay: whether it may take keyboard focus for its text fields. */
+  setOverlayDirectInput: (on) => ipcRenderer.send("overlay:set-direct-input", on),
+
+  /**
+   * The window has moved over the game (true) or back (false).
+   * @param {(on: boolean) => void} listener
+   */
+  onOverlayMode: (listener) =>
+    ipcRenderer.on("overlay:mode", (_event, on) => listener(on)),
+
+  /** The page now looks the part, and the window may be placed. */
+  overlayModeApplied: (on) => ipcRenderer.send("overlay:mode-applied", on),
 });

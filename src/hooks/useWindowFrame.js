@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { layoutKey, useOverlay } from "../shell/overlay";
 
 const PREFIX = "windowFrame_";
 
@@ -56,57 +57,75 @@ function fit(frame, box) {
     y: Math.round(Math.min(Math.max(0, frame.y), Math.max(0, box.height - height))),
   };
 }
-function load(id) {
+function load(key) {
   try {
     return {
       ...DEFAULT_FRAME,
-      ...(JSON.parse(localStorage.getItem(PREFIX + id)) ?? {}),
+      ...(JSON.parse(localStorage.getItem(key)) ?? {}),
     };
   } catch {
     return { ...DEFAULT_FRAME };
   }
 }
 
+function first(key, initialPos) {
+  const saved = load(key);
+  let stored = null;
+  try {
+    stored = localStorage.getItem(key);
+  } catch {
+    /* private mode */
+  }
+  return initialPos && !stored ? { ...saved, ...initialPos } : saved;
+}
+
 const INTERACTIVE = "button, a, input, select, textarea, [role='button']";
 
 export function useWindowFrame(id, initialPos) {
-  const [frame, setFrame] = useState(() => {
-    const saved = load(id);
-    return initialPos && !localStorage.getItem(PREFIX + id)
-      ? { ...saved, ...initialPos }
-      : saved;
-  });
+  // Over the game a window has its own place: a layout made for the whole
+  // screen does not fit the ordinary window, nor the other way round.
+  const key = layoutKey(PREFIX + id, useOverlay());
+  const [held, setHeld] = useState(() => ({ key, frame: first(key, initialPos) }));
+  if (held.key !== key) setHeld({ key, frame: first(key, initialPos) });
 
-  const frameRef = useRef(frame);
-  frameRef.current = frame;
+  const setFrame = useCallback(
+    (frame) => setHeld((h) => ({ ...h, frame })),
+    [],
+  );
 
   /** The window element, so a gesture can move it without a render. */
   const nodeRef = useRef(null);
 
-  // A frame saved when the browser was bigger, or a browser that has since
-  // been made smaller, would put a window out of reach.
+  // A frame saved when the window was bigger, or a window that has since
+  // been made smaller, would put a window out of reach. It is fitted where it
+  // is shown rather than where it is kept: the window shrinks every time it
+  // leaves the game, and the layout over the game has to survive that.
+  const [, setViewport] = useState(0);
   useEffect(() => {
-    const settle = () => {
-      setFrame((f) => {
-        const next = fit(f, bounds(nodeRef.current));
-        return next.x === f.x && next.y === f.y && next.width === f.width && next.height === f.height
-          ? f
-          : next;
-      });
-    };
-
-    settle();
-    window.addEventListener("resize", settle);
-    return () => window.removeEventListener("resize", settle);
+    const resized = () => setViewport((n) => n + 1);
+    window.addEventListener("resize", resized);
+    return () => window.removeEventListener("resize", resized);
   }, []);
+
+  const fitted = fit(held.frame, bounds(nodeRef.current));
+  const frame =
+    fitted.x === held.frame.x &&
+    fitted.y === held.frame.y &&
+    fitted.width === held.frame.width &&
+    fitted.height === held.frame.height
+      ? held.frame
+      : fitted;
+
+  const frameRef = useRef(frame);
+  frameRef.current = frame;
 
   useEffect(() => {
     try {
-      localStorage.setItem(PREFIX + id, JSON.stringify(frame));
+      localStorage.setItem(held.key, JSON.stringify(held.frame));
     } catch {
       /* private mode */
     }
-  }, [id, frame]);
+  }, [held]);
 
   const gesture = useRef(null);
 
@@ -203,7 +222,7 @@ export function useWindowFrame(id, initialPos) {
 
     // One render, and one write to storage, for the whole gesture.
     if (g.latest) setFrame(g.latest);
-  }, []);
+  }, [setFrame]);
 
   /** Spread onto the title bar (mode "move") or a resize grip. */
   const handlers = useCallback(
