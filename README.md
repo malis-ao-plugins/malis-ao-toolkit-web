@@ -29,7 +29,7 @@ npm run electron:dev     # CRA dev server + Electron pointed at it
 npm run electron:build   # production build, then electron-builder into dist/
 ```
 
-There is no separate overlay mode to launch. The toolkit opens as an ordinary window, moves over whichever injected client is in front, and goes back to a minimised window when none is. Over the game it keeps its own layout, so windows placed there stay put when it shrinks back. To type into its text fields while it is over the game, switch on **Type into the overlay** under Interface in the launcher; without it the overlay never takes keyboard focus from the game. Only one copy runs at a time: launching it again brings the running one forward.
+There is no separate overlay mode to launch. The toolkit opens as an ordinary window, moves over whichever injected client is in front, and goes back to a minimised window when none is. Over the game it keeps its own layout, so windows placed there stay put when it shrinks back. Over the game it takes no keyboard focus, except that clicking one of its text fields takes the keyboard from the game until the game is clicked again. **Type into the overlay** under Interface in the launcher switches that off, and then the overlay never takes the keyboard. Only one copy runs at a time: launching it again brings the running one forward.
 
 ## Tests, lint and build
 

@@ -1,6 +1,7 @@
 import {
   forwardRef,
   useCallback,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -43,6 +44,17 @@ import "./pixel-input.css";
  *     the painted layer is offset by the same amount, rounded to a whole
  *     pixel.
  */
+/**
+ * Over the game, a text field the player presses takes the keyboard from the
+ * game (electron.js, overlayTakeKeyboard). Nothing happens in a browser, in an
+ * ordinary window, or with typing into the overlay switched off.
+ */
+function takeKeyboard(field) {
+  if (field && !field.disabled && !field.readOnly) {
+    window.electronAPI?.focusOverlayDirectInput?.();
+  }
+}
+
 export const PixelInput = forwardRef(function PixelInput(
   {
     value,
@@ -89,6 +101,19 @@ export const PixelInput = forwardRef(function PixelInput(
   }, []);
 
   useLayoutEffect(sync, [value, sync]);
+
+  // A read-only field that turns editable under the pointer asks too.
+  // NumberInput does that on a click, and its pointerdown handler cancels
+  // the mousedown that would otherwise have asked.
+  const editable = !rest.readOnly && !rest.disabled;
+  const wasEditable = useRef(editable);
+  useEffect(() => {
+    const field = innerRef.current;
+    if (editable && !wasEditable.current && field === document.activeElement) {
+      takeKeyboard(field);
+    }
+    wasEditable.current = editable;
+  }, [editable]);
 
   const text = String(value ?? "");
   const shown = upper ? text.toUpperCase() : text;
@@ -146,12 +171,7 @@ export const PixelInput = forwardRef(function PixelInput(
           onScroll={sync}
           onKeyUp={sync}
           onSelect={sync}
-          onMouseDown={(event) => {
-            // Only heeded over the game, with typing into the overlay on.
-            if (!event.currentTarget.disabled && !event.currentTarget.readOnly) {
-              window.electronAPI?.focusOverlayDirectInput?.();
-            }
-          }}
+          onMouseDown={(event) => takeKeyboard(event.currentTarget)}
           onFocus={(event) => {
             sync();
             onFocus?.(event);

@@ -111,9 +111,11 @@ function createWindow(appId = null, width = 720, height = 634, { followsGame = f
  *
  * A client in front turns the window into the overlay: over the game, on top,
  * out of the taskbar, letting the mouse through except where the UI is (the
- * hit test in Launcher.jsx), and taking no keyboard focus unless typing into
- * it is switched on in the options. None in front puts it back where it was,
- * minimised, so it does not land on top of whatever was switched to.
+ * hit test in Launcher.jsx), and taking no keyboard focus. Pressing one of its
+ * text fields takes the keyboard from the game until the game is clicked
+ * again, unless that is switched off in the options. None in front puts it
+ * back where it was, minimised, so it does not land on top of whatever was
+ * switched to.
  *
  * Going over the game waits for the page to say it has turned transparent;
  * stretched over the screen first, its window background would cover it.
@@ -125,6 +127,8 @@ function followGame(win) {
   let lastBounds = null;
   let enterTimer = null;
   let blurTimer = null;
+  // The overlay is holding the keyboard for a text field.
+  let keyboard = false;
 
   win.overlayActive = () => mode === "overlay";
   win.overlayDirectInput = false;
@@ -141,9 +145,10 @@ function followGame(win) {
     mode = "entering";
     traceOverlay("going over the game");
 
+    keyboard = false;
     win.setSkipTaskbar(true);
     win.setResizable(false);
-    win.setFocusable(win.overlayDirectInput);
+    win.setFocusable(false);
     win.setIgnoreMouseEvents(true, { forward: true });
     win.webContents.send("overlay:mode", true);
 
@@ -163,6 +168,7 @@ function followGame(win) {
     clearTimeout(enterTimer);
     mode = "window";
     lastBounds = null;
+    keyboard = false;
     traceOverlay("back to a window: no client in front");
 
     win.hide();
@@ -241,15 +247,47 @@ function followGame(win) {
     if (on) entered();
   };
 
+  /**
+   * A text field was pressed: take the keyboard from the game.
+   *
+   * The overlay is not focusable while it is over the game, so a click on a
+   * button or a window frame leaves the keyboard with the game and the
+   * character keeps moving. Only a text field makes it focusable, and only
+   * until it loses focus again: the game, clicked, takes the keyboard back.
+   */
+  win.overlayTakeKeyboard = () => {
+    if (mode !== "overlay" || !win.overlayDirectInput) return;
+
+    win.overlayDirectInputRequestedUntil = Date.now() + 1200;
+    if (!keyboard) {
+      keyboard = true;
+      win.setFocusable(true);
+      // Being focusable puts it back in the taskbar.
+      win.setSkipTaskbar(true);
+    }
+    win.setIgnoreMouseEvents(false, { forward: true });
+    win.focus();
+    traceOverlay("keyboard taken for a text field", { focused: win.isFocused() });
+  };
+
+  // Not focusable again, which also keeps it out of the taskbar.
+  function giveBackKeyboard() {
+    if (!keyboard) return;
+    keyboard = false;
+    win.setFocusable(false);
+    traceOverlay("keyboard back to the game");
+  }
+
   win.overlaySetDirectInput = (on) => {
     win.overlayDirectInput = on;
-    if (mode !== "window") win.setFocusable(on);
+    if (!on) giveBackKeyboard();
   };
 
   // Focus leaving the overlay for something other than the game: nothing
   // will report a change, so look again once focus has settled.
   win.on("blur", () => {
     if (mode !== "overlay") return;
+    giveBackKeyboard();
     clearTimeout(blurTimer);
     blurTimer = setTimeout(place, 300);
   });
@@ -316,13 +354,7 @@ function ready() {
   });
 
   ipcMain.on("overlay:focus-direct-input", (event) => {
-    const win = overlayOf(event);
-    if (!win?.overlayActive() || !win.overlayDirectInput) return;
-
-    win.overlayDirectInputRequestedUntil = Date.now() + 1200;
-    win.setIgnoreMouseEvents(false, { forward: true });
-    win.focus();
-    traceOverlay("direct input focus requested", { focused: win.isFocused() });
+    overlayOf(event)?.overlayTakeKeyboard();
   });
 
   // ── IPC: open (or focus) a single-app window ─────────────────────────────

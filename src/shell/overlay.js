@@ -48,18 +48,21 @@ export function layoutKey(key, over = overlay) {
   return over ? `${key}_overlay` : key;
 }
 
-const DIRECT_INPUT_KEY = "overlayDirectInput";
+// Not "overlayDirectInput": that was written as off on every load while off
+// was the default, so it says nothing about what anyone chose.
+const DIRECT_INPUT_KEY = "overlayTyping";
 
 /**
- * Whether the overlay may take keyboard focus from the game, so its text
- * fields can be typed into. Off, it never takes focus.
+ * Whether a text field in the overlay takes the keyboard from the game when
+ * it is pressed, until the game is clicked again. On unless switched off.
+ * Off, the overlay never takes focus.
  */
 export function useOverlayDirectInput() {
   const [on, setOn] = useState(() => {
     try {
-      return localStorage.getItem(DIRECT_INPUT_KEY) === "1";
+      return localStorage.getItem(DIRECT_INPUT_KEY) !== "0";
     } catch {
-      return false;
+      return true;
     }
   });
 
